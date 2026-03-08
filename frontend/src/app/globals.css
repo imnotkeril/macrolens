@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-bg text-text-primary antialiased;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 80, 200, 0.08), transparent),
+      radial-gradient(circle at 20% 80%, rgba(60, 60, 120, 0.04), transparent);
+  }
+  ::selection {
+    background: rgba(167, 139, 250, 0.3);
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-border bg-bg-card p-5 backdrop-blur-sm;
+  }
+  .card-header {
+    @apply text-xs font-medium uppercase tracking-widest text-text-muted mb-4;
+  }
+  .glass {
+    @apply bg-bg-card border border-border backdrop-blur-md rounded-xl;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium;
+  }
+  .kpi {
+    @apply card flex flex-col items-center justify-center text-center py-6;
+  }
+  .kpi-value {
+    @apply text-3xl font-extralight tracking-tight tabular-nums;
+  }
+  .kpi-label {
+    @apply text-xs font-medium uppercase tracking-widest text-text-muted mt-2;
+  }
+  .nav-link {
+    @apply text-sm font-light text-text-secondary
+           hover:text-text-primary transition-colors duration-200;
+  }
+  .nav-link-active {
+    @apply text-accent font-normal;
+  }
+  .glow-dot {
+    @apply rounded-full shadow-[0_0_12px_rgba(167,139,250,0.5)];
+  }
+}
+
+.stars {
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.15), transparent),
+    radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.1), transparent),
+    radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.08), transparent),
+    radial-gradient(1px 1px at 60% 40%, rgba(255,255,255,0.12), transparent),
+    radial-gradient(1px 1px at 90% 80%, rgba(255,255,255,0.06), transparent),
+    radial-gradient(1px 1px at 15% 55%, rgba(255,255,255,0.1), transparent),
+    radial-gradient(1px 1px at 45% 90%, rgba(255,255,255,0.07), transparent),
+    radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,0.09), transparent),
+    radial-gradient(1.5px 1.5px at 50% 30%, rgba(255,255,255,0.18), transparent),
+    radial-gradient(1px 1px at 25% 15%, rgba(255,255,255,0.11), transparent);
+}
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }

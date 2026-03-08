@@ -1,0 +1,79 @@
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+.eggs/
+*.egg
+dist/
+build/
+
+# Backend
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+backend/*.db
+backend/*.sqlite3
+*.log
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo
+.npm
+.yarn/
+.pnp.*
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker (optional: uncomment if you don’t want to track local overrides)
+# docker-compose.override.yml
+# .docker/
+
+# Secrets and keys (never commit)
+*.pem
+secrets/
+.env.example.local
+
+# Test and coverage
+.coverage
+coverage/
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Misc
+*.bak
+*.tmp
+.cache/
+
+# Strategy / internal docs and plans (do not publish to GitHub)
+docs/
+
+# Cursor / IDE plans
+.cursor/
