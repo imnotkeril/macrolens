@@ -1,0 +1,62 @@
+{
+  "trained_at": "2026-04-19T15:33:55.819332+00:00",
+  "train_rows": 131,
+  "val_rows": 36,
+  "test_rows": 52,
+  "feature_names": [
+    "growth_score",
+    "fed_policy_score",
+    "yield_10y_minus_2y",
+    "hy_spread_proxy",
+    "curve_pattern_embed"
+  ],
+  "train_end": "<bound method Timestamp.date of Timestamp('2018-12-01 00:00:00')>",
+  "val_end": "<bound method Timestamp.date of Timestamp('2021-12-01 00:00:00')>",
+  "label_mode": "asset_implied_v1",
+  "label_stats": {
+    "mode": "asset_implied_v1",
+    "asset_resolved": 215,
+    "rule_fallback_rows": 4,
+    "auxiliary_asset_scale": 0.35
+  },
+  "metrics": {
+    "balanced_test_acc_proxy": 0.4230769230769231
+  },
+  "ensemble_weights": {
+    "rule": 0.2239049758043365,
+    "hmm": 0.04983673310314171,
+    "gbdt": 0.4105219775815628,
+    "cycle": 0.31573631351095904
+  },
+  "hmm_states": 4,
+  "state_to_quadrant": [
+    0,
+    1,
+    0,
+    1
+  ],
+  "macro_models": [
+    "SPY_h1",
+    "SPY_h3",
+    "SPY_h6",
+    "GLD_h1",
+    "GLD_h3",
+    "GLD_h6",
+    "TLT_h1",
+    "TLT_h3",
+    "TLT_h6",
+    "UNRATE_h1",
+    "UNRATE_h3",
+    "UNRATE_h6"
+  ],
+  "recession_model": {
+    "trained": false,
+    "label_stats": {
+      "rows": 0,
+      "horizon_months": 12,
+      "positives": 0
+    },
+    "skip_reason": "insufficient_class_balance"
+  },
+  "bundle_id": "40be191ed2248d4a"
+}

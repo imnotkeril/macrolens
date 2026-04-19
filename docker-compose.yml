@@ -1,3 +1,5 @@
+# Run from project root: docker compose up
+# If you moved the project, set PROJECT_ROOT in .env to the new path (e.g. E:\Dev\Python\macrolens)
 services:
   db:
     image: postgres:16-alpine
@@ -27,36 +29,63 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ${PROJECT_ROOT:-.}/backend
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://macrolens:macrolens_secret@db:5432/macrolens
       REDIS_URL: redis://redis:6379/0
-      FRED_API_KEY: ${FRED_API_KEY}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      # Years of history for FRED/Yahoo bulk loads (e.g. 26 ≈ since ~2000 from 2026). See .env.example.
+      HISTORICAL_YEARS: ${HISTORICAL_YEARS:-10}
+      # Forecast Lab training window start (ISO date).
+      FORECAST_LAB_DATE_FROM: ${FORECAST_LAB_DATE_FROM:-2008-01-01}
+      FORECAST_LAB_SUMMARY_ALIGN_MONTH_END: ${FORECAST_LAB_SUMMARY_ALIGN_MONTH_END:-false}
+      FORECAST_LAB_LABEL_MODE: ${FORECAST_LAB_LABEL_MODE:-asset_implied_v1}
+      FORECAST_LAB_MEMORY_INGEST_ENABLED: ${FORECAST_LAB_MEMORY_INGEST_ENABLED:-false}
+      FORECAST_LAB_INCLUDE_DASHBOARD_CONTEXT: ${FORECAST_LAB_INCLUDE_DASHBOARD_CONTEXT:-true}
+      FORECAST_LAB_AUXILIARY_ASSET_WEIGHT: ${FORECAST_LAB_AUXILIARY_ASSET_WEIGHT:-0.35}
+      FORECAST_LAB_ENSEMBLE_INCLUDE_CYCLE: ${FORECAST_LAB_ENSEMBLE_INCLUDE_CYCLE:-true}
+      FORECAST_LAB_TRAIN_RECESSION_MODEL: ${FORECAST_LAB_TRAIN_RECESSION_MODEL:-true}
       DEBUG_LOG_PATH: /app/debug-7f91af.log
+      # Agents / memory (optional; see .env.example in repo root)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      MEMORY_EMBEDDING_BACKEND: ${MEMORY_EMBEDDING_BACKEND:-auto}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-120}
+      EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-60}
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:-0}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_SESSION_PATH: ${TELEGRAM_SESSION_PATH:-}
+      TELEGRAM_CHANNEL_WHITELIST: ${TELEGRAM_CHANNEL_WHITELIST:-}
+      TELEGRAM_INGESTION_ENABLED: ${TELEGRAM_INGESTION_ENABLED:-false}
+      TELEGRAM_INGEST_MAX_MESSAGES: ${TELEGRAM_INGEST_MAX_MESSAGES:-80}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - ${PROJECT_ROOT:-.}/backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:
-      context: ./frontend
+      context: ${PROJECT_ROOT:-.}/frontend
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      # Next rewrites /api → backend (browser uses same-origin; do not rely on localhost:8000 in the client).
+      BACKEND_INTERNAL_URL: http://backend:8000
     depends_on:
       - backend
     volumes:
-      - ./frontend:/app
+      - ${PROJECT_ROOT:-.}/frontend:/app
       - /app/node_modules
 
 volumes:

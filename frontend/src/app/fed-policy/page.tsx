@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import LWChart from "@/components/LWChart";
+import { FedPolicyAiSection } from "@/components/FedPolicyAiSection";
 import DashboardGrid from "@/components/DashboardGrid";
 import type { PanelConfig } from "@/components/DashboardGrid";
 
@@ -232,6 +233,8 @@ export default function FedPolicyPage() {
           Monitor monetary policy stance · rate trajectory · balance sheet dynamics
         </p>
       </div>
+
+      <FedPolicyAiSection />
 
       {/* ══ ROW 1: Policy Status + Methodology ══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

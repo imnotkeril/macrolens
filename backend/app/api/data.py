@@ -1,8 +1,12 @@
 import logging
 import asyncio
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from sqlalchemy import select, func
 
+from app.config import get_settings
+from app.database import async_session
+from app.models.indicator import Indicator
 from app.services.data_collector import DataCollector
 from app.services.progress_store import (
     init_refresh_progress,
@@ -24,6 +28,91 @@ async def get_refresh_progress_endpoint():
     return get_refresh_progress()
 
 
+@router.post("/backfill-history")
+async def backfill_history(
+    years: int | None = Query(
+        None,
+        ge=1,
+        le=80,
+        description="Rolling window in years from today; omit to use HISTORICAL_YEARS from settings.",
+    ),
+):
+    """One-shot bulk load for the rolling window: all seeded indicators, yields, Fed, FX, market/regime/macro (FRED + Yahoo)."""
+    if _refresh_lock.locked():
+        raise HTTPException(status_code=409, detail="Another data job is already in progress")
+    if not get_settings().fred_api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="FRED_API_KEY is not set; cannot run historical backfill.",
+        )
+
+    resolved = years if years is not None else get_settings().historical_years
+    init_refresh_progress()
+
+    async with _refresh_lock:
+        collector = DataCollector(historical_years=resolved)
+        errors: list[str] = []
+
+        set_refresh_progress(
+            phase="backfill_start",
+            percent=0.0,
+            message=f"Backfill: {resolved} years to today",
+            log_line=f"[0%] Window = {resolved} years (rolling from today)",
+        )
+
+        try:
+            async with async_session() as db:
+                r = await db.execute(select(func.count(Indicator.id)))
+                indicator_count = r.scalar() or 0
+            if indicator_count == 0:
+                set_refresh_progress(
+                    phase="seed",
+                    percent=2.0,
+                    message="Seeding indicators…",
+                    log_line="[2%] Seeding indicators…",
+                )
+                from app.seed import seed_indicators
+
+                await seed_indicators()
+                set_refresh_progress(log_line="[2%] Indicators seeded.")
+        except Exception as e:
+            logger.exception("Backfill seed failed")
+            errors.append(f"seed: {str(e)}")
+            set_refresh_progress(log_line=f"[2%] Seed failed: {e}", error=str(e))
+
+        try:
+            set_refresh_progress(
+                phase="historical_bulk",
+                percent=5.0,
+                message="Bulk historical load (FRED + Yahoo)…",
+                log_line="[5%] load_historical_data…",
+            )
+            await collector.load_historical_data()
+            set_refresh_progress(
+                percent=95.0,
+                message="Bulk historical load finished.",
+                log_line="[95%] load_historical_data done.",
+            )
+        except Exception as e:
+            logger.exception("Backfill load_historical_data failed")
+            errors.append(f"historical: {str(e)}")
+            set_refresh_progress(log_line=f"[5%] Historical load failed: {e}", error=str(e))
+
+        set_refresh_progress(
+            percent=100.0,
+            message="Backfill completed." if not errors else "Backfill completed with errors.",
+            log_line="[100%] Done." if not errors else "[100%] Done with errors.",
+            done=True,
+            error="; ".join(errors) if errors else None,
+        )
+
+    return {
+        "status": "completed" if not errors else "completed_with_errors",
+        "historical_years": resolved,
+        "errors": errors,
+    }
+
+
 @router.post("/refresh")
 async def refresh_all_data():
     """Trigger a full data refresh (all collectors) on demand."""
@@ -36,6 +125,43 @@ async def refresh_all_data():
     async with _refresh_lock:
         collector = DataCollector()
         errors: list[str] = []
+
+        # Ensure indicators table is seeded (Economic Indicators + inflation data)
+        try:
+            async with async_session() as db:
+                r = await db.execute(select(func.count(Indicator.id)))
+                indicator_count = r.scalar() or 0
+            if indicator_count == 0:
+                set_refresh_progress(
+                    phase="seed",
+                    percent=0.0,
+                    message="Seeding 30 indicators (first run)…",
+                    log_line="[0%] Seeding indicators…",
+                )
+                from app.seed import seed_indicators
+                await seed_indicators()
+                set_refresh_progress(log_line="[0%] Indicators seeded.")
+                logger.info("Seeded indicators (was 0)")
+        except Exception as e:
+            logger.exception("Indicator seed failed")
+            errors.append(f"seed: {str(e)}")
+            set_refresh_progress(log_line="[0%] Seed failed.", error=str(e))
+
+        # If indicators have very little history, backfill from FRED so charts show full range
+        try:
+            if await collector.need_indicators_historical():
+                set_refresh_progress(
+                    phase="indicators_historical",
+                    percent=0.0,
+                    message="Backfilling indicator history from FRED…",
+                    log_line="[0%] Backfilling indicators…",
+                )
+                await collector.load_historical_indicators_only()
+                set_refresh_progress(log_line="[0%] Indicator backfill done.")
+        except Exception as e:
+            logger.exception("Indicator backfill failed")
+            errors.append(f"indicators_historical: {str(e)}")
+            set_refresh_progress(log_line="[0%] Indicator backfill failed.", error=str(e))
 
         # If DB has little history (regime/yield/fed), load historical data first so ML dataset can be built
         try:

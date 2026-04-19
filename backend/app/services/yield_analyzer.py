@@ -140,22 +140,28 @@ class YieldAnalyzer:
         return spreads
 
     async def get_dynamics(self) -> CurveDynamics:
-        """Determine current yield curve pattern by comparing short vs long end changes."""
-        today = date.today()
-        one_month_ago = today - timedelta(days=30)
-        three_months_ago = today - timedelta(days=90)
+        """Determine current yield curve pattern (as-of today, PIT)."""
+        return await self.get_dynamics_at_date(date.today())
 
-        short_now = await self._get_yield_near_date("2Y", today)
-        long_now = await self._get_yield_near_date("10Y", today)
-        short_1m = await self._get_yield_near_date("2Y", one_month_ago)
-        long_1m = await self._get_yield_near_date("10Y", one_month_ago)
-        short_3m = await self._get_yield_near_date("2Y", three_months_ago)
-        long_3m = await self._get_yield_near_date("10Y", three_months_ago)
+    async def get_dynamics_at_date(self, as_of: date) -> CurveDynamics:
+        """
+        Point-in-time curve dynamics: compare yields on or before `as_of` vs ~30d / ~90d earlier.
+        No future data after `as_of`.
+        """
+        one_month_ago = as_of - timedelta(days=30)
+        three_months_ago = as_of - timedelta(days=90)
 
-        sc_1m = (short_now - short_1m) if short_now and short_1m else 0
-        lc_1m = (long_now - long_1m) if long_now and long_1m else 0
-        sc_3m = (short_now - short_3m) if short_now and short_3m else 0
-        lc_3m = (long_now - long_3m) if long_now and long_3m else 0
+        short_now = await self._get_yield_on_or_before("2Y", as_of)
+        long_now = await self._get_yield_on_or_before("10Y", as_of)
+        short_1m = await self._get_yield_on_or_before("2Y", one_month_ago)
+        long_1m = await self._get_yield_on_or_before("10Y", one_month_ago)
+        short_3m = await self._get_yield_on_or_before("2Y", three_months_ago)
+        long_3m = await self._get_yield_on_or_before("10Y", three_months_ago)
+
+        sc_1m = (short_now - short_1m) if short_now is not None and short_1m is not None else 0.0
+        lc_1m = (long_now - long_1m) if long_now is not None and long_1m is not None else 0.0
+        sc_3m = (short_now - short_3m) if short_now is not None and short_3m is not None else 0.0
+        lc_3m = (long_now - long_3m) if long_now is not None and long_3m is not None else 0.0
 
         pattern, description = self._classify_pattern(sc_1m, lc_1m)
 
@@ -258,6 +264,17 @@ class YieldAnalyzer:
                 YieldData.maturity == maturity,
                 YieldData.date.between(target - timedelta(days=7), target + timedelta(days=7)),
             )
+            .order_by(desc(YieldData.date))
+            .limit(1)
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def _get_yield_on_or_before(self, maturity: str, as_of: date) -> float | None:
+        """Latest nominal yield for maturity with observation date <= as_of (PIT)."""
+        query = (
+            select(YieldData.nominal_yield)
+            .where(YieldData.maturity == maturity, YieldData.date <= as_of)
             .order_by(desc(YieldData.date))
             .limit(1)
         )

@@ -1,0 +1,32 @@
+# Independent copy of product semantics for Forecast Lab validation / auxiliary metrics.
+# Horizons in months for pairwise return sign checks (diagnostics).
+evaluation_horizon_months: 1
+
+quadrant_phases:
+  Q1_GOLDILOCKS:
+    label: "Risk ON"
+    pairs:
+      - asset_long: "IWM"
+        asset_short: "SPY"
+        expected_sign: positive
+      - asset_long: "XLY"
+        asset_short: "XLP"
+        expected_sign: positive
+  Q2_REFLATION:
+    label: "GROWTH"
+    pairs:
+      - asset_long: "GLD"
+        asset_short: "SPY"
+        expected_sign: positive
+  Q3_OVERHEATING:
+    label: "VALUE"
+    pairs:
+      - asset_long: "VTV"
+        asset_short: "VUG"
+        expected_sign: positive
+  Q4_STAGFLATION:
+    label: "Risk OFF"
+    pairs:
+      - asset_long: "XLP"
+        asset_short: "XLY"
+        expected_sign: positive

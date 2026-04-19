@@ -121,6 +121,35 @@ def _determine_quadrant(growth: float, fed: float) -> str:
     return "Q4_STAGFLATION"
 
 
+def latest_month_end_on_or_before(as_of: date) -> date:
+    """Last calendar day of the month strictly before ``as_of``'s month (typical PIT month-end bar)."""
+    first = as_of.replace(day=1)
+    return first - timedelta(days=1)
+
+
+async def get_latest_ml_feature_row(
+    db: AsyncSession,
+    as_of: date | None = None,
+) -> tuple[float, float, float | None, dict[str, float]]:
+    """
+    Navigator + Fed + Cycle features at the latest completed month-end on or before ``as_of``.
+    Returns (growth_score, fed_policy_score, cycle_score, feature_row) for ML1/ML2 inference.
+    """
+    as_of = as_of or date.today()
+    month_end = latest_month_end_on_or_before(as_of)
+    row = await _build_row_for_month(db, month_end)
+    if not row:
+        z = {k: 0.0 for k in FEATURE_COLUMNS}
+        return 0.0, 0.0, None, z
+    feature_row = {k: float(row.get(k) or 0.0) for k in FEATURE_COLUMNS}
+    return (
+        float(row.get("growth_score", 0.0)),
+        float(row.get("fed_policy_score", 0.0)),
+        float(row["cycle_score"]) if row.get("cycle_score") is not None else None,
+        feature_row,
+    )
+
+
 async def _build_row_for_month(db: AsyncSession, month_end: date) -> dict | None:
     """Build one dataset row for month_end using the given session. Returns None on error."""
     try:
@@ -139,6 +168,10 @@ async def _build_row_for_month(db: AsyncSession, month_end: date) -> dict | None
 
     row = {
         "date": month_end.isoformat(),
+        "as_of_date": month_end.isoformat(),
+        # For current data sources we approximate publication availability at month-end close.
+        "release_date": month_end.isoformat(),
+        "available_at": month_end.isoformat(),
         "growth_score": round(growth, 4),
         "fed_policy_score": round(fed, 4),
         "quadrant": quadrant,
@@ -157,6 +190,24 @@ async def _build_row_for_month(db: AsyncSession, month_end: date) -> dict | None
     ]:
         row[k] = cycle_features.get(k)
     return row
+
+
+def run_leakage_audit(df: pd.DataFrame) -> dict:
+    """Simple PIT leak check: available_at must not be after feature date."""
+    if df.empty:
+        return {"passed": False, "issues": ["empty_dataset"], "checked_rows": 0}
+    if "available_at" not in df.columns:
+        return {"passed": False, "issues": ["missing_available_at"], "checked_rows": len(df)}
+
+    issues = []
+    for idx, row in df.iterrows():
+        d = str(row.get("date", ""))
+        a = str(row.get("available_at", ""))
+        if a and d and a > d:
+            issues.append(f"row_{idx}: available_at>{d}")
+            if len(issues) >= 10:
+                break
+    return {"passed": len(issues) == 0, "issues": issues, "checked_rows": len(df)}
 
 
 async def diagnose_build_one_month(month_end: date) -> str | None:

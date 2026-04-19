@@ -33,6 +33,7 @@ from app.services.ml_dataset_builder import (
     build_dataset_single_indicator,
     diagnose_build_one_month,
     FEATURE_COLUMNS,
+    run_leakage_audit,
 )
 from app.services.ml_regime_models import run_train_pipeline
 from app.services.navigator_engine import NavigatorEngine
@@ -350,6 +351,18 @@ async def dataset_info():
     )
 
 
+@router.get("/leakage-audit")
+async def leakage_audit():
+    settings = get_settings()
+    path = _resolve_ml_path(settings.ml_dataset_path)
+    if not path.exists():
+        return {"passed": False, "issues": ["dataset_not_found"], "checked_rows": 0}
+    import pandas as pd
+
+    df = pd.read_parquet(path)
+    return run_leakage_audit(df)
+
+
 async def _run_training_background() -> None:
     """Run dataset build + train in background. Updates progress_store; no return value."""
     global _train_task
@@ -367,6 +380,10 @@ async def _run_training_background() -> None:
         if df.empty or len(df) < 24:
             _debug_log("insufficient data, not saving", {"len_df": len(df)}, "H5")
             set_train_progress(done=True, error="Insufficient data (need at least 24 months)")
+            return
+        leak = run_leakage_audit(df)
+        if not leak.get("passed", False):
+            set_train_progress(done=True, error=f"Leakage audit failed: {leak.get('issues', [])[:3]}")
             return
         set_train_progress(
             percent=50.0, message="Training models…", log_line="[50%] Dataset built. Training models…"

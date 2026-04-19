@@ -1,0 +1,15 @@
+# Macro panel: monthly series + forecast horizons (months forward).
+horizons: [1, 3, 6]
+series:
+  - id: SPY
+    source: market
+    display_name: "S&P 500 (level proxy)"
+  - id: GLD
+    source: market
+    display_name: "Gold (GLD)"
+  - id: TLT
+    source: market
+    display_name: "Long Treasuries (TLT)"
+  - id: UNRATE
+    source: indicator_fred_id
+    display_name: "Unemployment rate"

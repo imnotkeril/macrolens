@@ -1,0 +1,39 @@
+# Expected CrossAssetSignal.signal (bullish | bearish | neutral) per navigator quadrant.
+# Names must match navigator_engine.get_cross_asset_signals() exactly.
+# Used for confidence scoring (TZ §5 — alignment with methodology, not quadrant switching).
+
+Q1_GOLDILOCKS:
+  cross_asset:
+    Gold: bullish
+    Dollar (DXY): bullish
+    Copper: bullish
+    VIX: bullish
+    Yield Curve (2Y10Y): bullish
+    10Y Real Yield: bullish
+
+Q2_REFLATION:
+  cross_asset:
+    Gold: bullish
+    Dollar (DXY): neutral
+    Copper: bearish
+    VIX: neutral
+    Yield Curve (2Y10Y): bullish
+    10Y Real Yield: bullish
+
+Q3_OVERHEATING:
+  cross_asset:
+    Gold: bearish
+    Dollar (DXY): neutral
+    Copper: bullish
+    VIX: neutral
+    Yield Curve (2Y10Y): bearish
+    10Y Real Yield: bearish
+
+Q4_STAGFLATION:
+  cross_asset:
+    Gold: bearish
+    Dollar (DXY): bearish
+    Copper: bearish
+    VIX: bearish
+    Yield Curve (2Y10Y): bearish
+    10Y Real Yield: bearish

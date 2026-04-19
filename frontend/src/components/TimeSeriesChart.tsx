@@ -13,7 +13,7 @@ interface LineConfig {
 }
 
 interface Props {
-  data: Record<string, unknown>[];
+  data: Array<{ date: string }>;
   lines: LineConfig[];
   thresholds?: { value: number; color: string; label: string }[];
   recessionBands?: RecessionBand[];

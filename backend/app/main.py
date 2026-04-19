@@ -6,9 +6,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base, async_session
+import app.models  # noqa: F401 — register all ORM tables for create_all
 from app.api import indicators, fed, yield_curve, navigator, alerts, calendar, market, regime, data
 from app.tasks.scheduler import start_scheduler, shutdown_scheduler
 from app.services.indicator_analyzer import IndicatorAnalyzer
+from app.services.memory_bootstrap import bootstrap_memory_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +30,35 @@ except Exception as e:
     ml = None
     _ml_available = False
 
+try:
+    from app.api import forecast_lab
+    _forecast_lab_available = True
+except Exception as e:
+    logger.warning("Forecast Lab API not loaded: %s", e)
+    forecast_lab = None
+    _forecast_lab_available = False
+
+try:
+    from app.api import ml2, agents, memory
+    _intelligence_available = True
+except Exception as e:
+    logger.warning("Intelligence APIs not loaded: %s.", e)
+    ml2 = None
+    agents = None
+    memory = None
+    _intelligence_available = False
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        from app.services.forecast_lab.progress import recover_progress_after_restart
+
+        recover_progress_after_restart()
+    except Exception:
+        logger.debug("Forecast Lab progress recovery skipped", exc_info=True)
+
+    await bootstrap_memory_schemas(engine)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -80,6 +108,12 @@ app.include_router(regime.router, prefix="/api/regime", tags=["Regime"])
 app.include_router(data.router, prefix="/api/data", tags=["Data"])
 if _ml_available and ml is not None:
     app.include_router(ml.router, prefix="/api/ml", tags=["ML Regime"])
+if _forecast_lab_available and forecast_lab is not None:
+    app.include_router(forecast_lab.router, prefix="/api/forecast-lab", tags=["Forecast Lab"])
+if _intelligence_available:
+    app.include_router(ml2.router, prefix="/api/ml2", tags=["ML2"])
+    app.include_router(agents.router, prefix="/api/agents", tags=["Agents"])
+    app.include_router(memory.router, prefix="/api/memory", tags=["Memory"])
 
 
 @app.get("/api/health")

@@ -8,6 +8,10 @@ interface Props {
   history?: NavigatorPosition[];
   forward?: NavigatorPosition[];
   large?: boolean;
+  /** Short line under title, e.g. Forecast Lab phase + confidence */
+  ensembleCaption?: string | null;
+  /** Probability-weighted (macro, Fed) scores for ensemble dot position; from API mix_* when trained */
+  ensembleMix?: { growth: number; fed: number } | null;
 }
 
 // Order: top-left, top-right, bottom-left, bottom-right (per macro_strategy_full.md)
@@ -32,20 +36,44 @@ function scoreToPct(score: number) {
   return ((score + 2) / 4) * 100;
 }
 
+/**
+ * Vertical position: fed_policy_score is -2 (easy) … +2 (tight). Chart labels: EASY at top, TIGHT at bottom.
+ * Must use +fed here — using -fed inverts the axis (tight fed was plotted under EASY).
+ */
+function fedToPlotY(fed: number) {
+  return scoreToPct(fed);
+}
+
 // X = Macro Sentiment (left negative, right positive), Y = FED Policy (top easy, bottom tight)
-export function NavigatorMatrix({ position, history, forward, large }: Props) {
+export function NavigatorMatrix({ position, history, forward, large, ensembleCaption, ensembleMix }: Props) {
   const dotX = scoreToPct(position.growth_score);
-  const dotY = scoreToPct(-position.fed_policy_score);
+  const dotY = fedToPlotY(position.fed_policy_score);
+  const ensG = position.ensemble_growth_score;
+  const ensF = position.ensemble_fed_policy_score;
+  const hasEnsNow = ensG != null && ensF != null;
+  const purpleG = ensembleMix != null ? ensembleMix.growth : ensG;
+  const purpleF = ensembleMix != null ? ensembleMix.fed : ensF;
 
   return (
     <div className="card animate-fade-in">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-xs font-medium uppercase tracking-widest text-text-muted">
-          Trading Navigator
-        </h3>
-        <span className="text-xs text-text-muted">
-          {(position.confidence * 100).toFixed(0)}% confidence
-        </span>
+      <div className="flex flex-col gap-1 mb-5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-medium uppercase tracking-widest text-text-muted">
+            Trading Navigator
+          </h3>
+          <span className="text-xs text-text-muted">
+            {(position.confidence * 100).toFixed(0)}% confidence
+          </span>
+        </div>
+        {ensembleCaption ? (
+          <p className="text-[10px] font-light text-violet-300/90 tracking-wide">{ensembleCaption}</p>
+        ) : null}
+        {position.matrix_quadrant && position.matrix_quadrant !== position.quadrant ? (
+          <p className="text-[10px] font-light text-amber-200/80">
+            Matrix (macro×Fed): {position.matrix_quadrant.replace(/_/g, " ")} · Regime (recommendations):{" "}
+            {position.quadrant.replace(/_/g, " ")}
+          </p>
+        ) : null}
       </div>
 
       <div className={cn("relative w-full mx-auto", large ? "min-h-[420px] h-[420px]" : "h-56")}>
@@ -85,10 +113,10 @@ export function NavigatorMatrix({ position, history, forward, large }: Props) {
         <div className="absolute inset-y-0 left-1/2 w-px bg-white/8 pointer-events-none" />
         <div className="absolute inset-x-0 top-1/2 h-px bg-white/8 pointer-events-none" />
 
-        {/* Past: 1y ago, 6m ago (reds) */}
+        {/* Past: 1y ago, 6m ago (reds) — violet = current FL ensemble only */}
         {history && history.map((h, i) => {
           const hx = scoreToPct(h.growth_score);
-          const hy = scoreToPct(-h.fed_policy_score);
+          const hy = fedToPlotY(h.fed_policy_score);
           const dotCfg = HISTORY_DOTS[i] ?? HISTORY_DOTS[0];
           return (
             <div
@@ -106,7 +134,7 @@ export function NavigatorMatrix({ position, history, forward, large }: Props) {
         {/* Forward: 6m, 1y (greens) */}
         {forward && forward.map((f, i) => {
           const fx = scoreToPct(f.growth_score);
-          const fy = scoreToPct(-f.fed_policy_score);
+          const fy = fedToPlotY(f.fed_policy_score);
           const dotCfg = FORWARD_DOTS[i] ?? FORWARD_DOTS[0];
           return (
             <div
@@ -121,38 +149,33 @@ export function NavigatorMatrix({ position, history, forward, large }: Props) {
           );
         })}
 
-        {/* Current position dot (gray) */}
+        {/* Forecast Lab dot (violet): probability-weighted position in score space when mix is available */}
+        {hasEnsNow && purpleG != null && purpleF != null ? (
+          <div
+            className="absolute h-3 w-3 rounded-full bg-violet-500/90 border-2 border-violet-200 shadow-[0_0_14px_rgba(139,92,246,0.45)] transition-all duration-700 ease-out z-[21]"
+            style={{
+              left: `${scoreToPct(purpleG)}%`,
+              top: `${fedToPlotY(purpleF)}%`,
+              transform: "translate(-50%, -50%)",
+            }}
+            title={
+              ensembleMix
+                ? `Forecast Lab ensemble (P-weighted mean in score space): macro ${purpleG.toFixed(2)}, fed ${purpleF.toFixed(2)}`
+                : `Forecast Lab ensemble (phase corner anchor): macro ${purpleG.toFixed(2)}, fed ${purpleF.toFixed(2)}`
+            }
+          />
+        ) : null}
+
+        {/* Current position dot — fundamentals (gray) */}
         <div
           className="absolute h-3.5 w-3.5 rounded-full bg-zinc-400 border-2 border-zinc-500 shadow-[0_0_12px_rgba(113,113,122,0.5)] transition-all duration-700 ease-out z-10"
           style={{ left: `${dotX}%`, top: `${dotY}%`, transform: "translate(-50%, -50%)" }}
-          title={`Now: Sentiment ${position.growth_score}, Fed ${position.fed_policy_score}`}
+          title={`Now (macro×Fed axes): Sentiment ${position.growth_score}, Fed ${position.fed_policy_score}`}
         />
       </div>
 
-      {/* Score strip: Macro Sentiment (growth_score), FED Policy (fed_policy_score) */}
-      <div className="mt-6 flex items-center justify-center gap-8 text-sm font-light">
-        <div>
-          <span className="text-text-muted">Macro Sentiment </span>
-          <span className={position.growth_score >= 0 ? "text-accent-green" : "text-accent-red"}>
-            {position.growth_score >= 0 ? "+" : ""}{position.growth_score.toFixed(2)}
-          </span>
-        </div>
-        <div className="h-4 w-px bg-border" />
-        <div>
-          <span className="text-text-muted">FED Policy </span>
-          <span className={position.fed_policy_score <= 0 ? "text-accent-green" : "text-accent-red"}>
-            {position.fed_policy_score >= 0 ? "+" : ""}{position.fed_policy_score.toFixed(2)}
-          </span>
-        </div>
-        <div className="h-4 w-px bg-border" />
-        <div>
-          <span className="text-text-muted">Direction </span>
-          <span className="text-text-primary">{position.direction}</span>
-        </div>
-      </div>
-
       {/* Legend for dots */}
-      {(history?.length || forward?.length) ? (
+      {(history?.length || forward?.length || hasEnsNow) ? (
         <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[10px] text-text-muted">
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-red-300 border border-red-400" />
@@ -164,7 +187,11 @@ export function NavigatorMatrix({ position, history, forward, large }: Props) {
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-full bg-zinc-400 border-2 border-zinc-500" />
-            Now
+            Now (axes)
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-violet-500 border border-violet-200" />
+            FL ensemble
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-300 border border-emerald-400" />

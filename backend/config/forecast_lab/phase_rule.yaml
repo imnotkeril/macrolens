@@ -1,0 +1,14 @@
+# Rule baseline (L1). First matching row wins (same logic as Navigator thresholds).
+rules:
+  - quadrant: Q1_GOLDILOCKS
+    growth_gte: 0.0
+    fed_lte: 0.0
+  - quadrant: Q2_REFLATION
+    growth_lt: 0.0
+    fed_lte: 0.0
+  - quadrant: Q3_OVERHEATING
+    growth_gte: 0.0
+    fed_gt: 0.0
+  - quadrant: Q4_STAGFLATION
+    growth_lt: 0.0
+    fed_gt: 0.0

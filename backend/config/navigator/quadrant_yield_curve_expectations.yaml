@@ -1,0 +1,15 @@
+# Methodology: expected yield curve dynamics (YieldAnalyzer pattern names) per navigator quadrant.
+# Used for phase context / confidence alignment — not for switching quadrant (still growth × fed).
+# Patterns: bear_steepening | bull_steepening | bear_flattening | bull_flattening | stable | mixed
+Q1_GOLDILOCKS:
+  expected_curve_patterns:
+    - bull_steepening
+Q2_REFLATION:
+  expected_curve_patterns:
+    - bull_flattening
+Q3_OVERHEATING:
+  expected_curve_patterns:
+    - bear_steepening
+Q4_STAGFLATION:
+  expected_curve_patterns:
+    - bear_flattening

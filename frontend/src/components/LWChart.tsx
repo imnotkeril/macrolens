@@ -16,6 +16,7 @@ import {
   HistogramSeries,
   LineStyle,
   CrosshairMode,
+  ColorType,
 } from "lightweight-charts";
 import type {
   IChartApi,
@@ -52,7 +53,7 @@ export interface RecessionBand {
 }
 
 export interface LWChartProps {
-  data: Record<string, unknown>[];
+  data: Array<{ date: string }>;
   series: SeriesConfig[];
   thresholds?: ThresholdLine[];
   recessionBands?: RecessionBand[];
@@ -61,6 +62,8 @@ export interface LWChartProps {
   scrollable?: boolean;
   formatValue?: (v: number) => string;
   yDomain?: [number | "auto", number | "auto"];
+  /** Locks the right price scale (e.g. 0–100 for hawk/dovish index). Requires lightweight-charts v5 autoscaleInfoProvider. */
+  fixedPriceRange?: { min: number; max: number };
   autoSize?: boolean;
   onCrosshairMove?: (time: Time | null, point: { x: number; y: number } | null) => void;
   onVisibleRangeChange?: (range: LogicalRange | null) => void;
@@ -86,10 +89,11 @@ const PERIODS = [
 
 /* ── Dark theme ───────────────────────────────────────────── */
 
+/* v5: layout.background must include ColorType or the library keeps default white. */
 const DARK_THEME = {
   layout: {
-    background: { color: "transparent" },
-    textColor: "#71717a",
+    background: { type: ColorType.Solid, color: "#13131a" },
+    textColor: "#a1a1aa",
     fontFamily: "Inter, system-ui, sans-serif",
     fontSize: 10,
   },
@@ -148,7 +152,7 @@ function addRecessionOverlay(
 
   const series = chart.addSeries(AreaSeries, {
     priceScaleId: "recession",
-    lineWidth: 0,
+    lineWidth: 1,
     topColor: "rgba(255,255,255,0.03)",
     bottomColor: "rgba(255,255,255,0.03)",
     lineColor: "transparent",
@@ -179,6 +183,7 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
     scrollable = false,
     formatValue,
     yDomain,
+    fixedPriceRange,
     autoSize = true,
     onCrosshairMove,
     onVisibleRangeChange,
@@ -190,7 +195,7 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
   const seriesRefs = useRef<Map<string, ISeriesApi<SeriesType>>>(new Map());
   const legendRef = useRef<HTMLDivElement>(null);
   const mainSeriesKeyRef = useRef<string | null>(null);
-  const filteredRef = useRef<Record<string, unknown>[]>([]);
+  const filteredRef = useRef<Array<{ date: string }>>([]);
   const [period, setPeriod] = useState("1Y");
 
   const filtered = useMemo(() => {
@@ -228,7 +233,11 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
         const pt = key
           ? filteredRef.current.find((d) => String(d.date) === timeStr)
           : null;
-        const value = pt && key && pt[key] != null ? (pt[key] as number) : null;
+        const pointData = pt as Record<string, unknown> | undefined;
+        const value =
+          pointData && key && pointData[key] != null
+            ? (pointData[key] as number)
+            : null;
         try {
           if (value != null && Number.isFinite(value)) {
             chartRef.current.setCrosshairPosition(value, time, mainSeries);
@@ -298,10 +307,10 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
 
     for (const cfg of seriesConfigs) {
       const points: LineData<Time>[] = filtered
-        .filter((d) => d[cfg.key] != null)
+        .filter((d) => (d as Record<string, unknown>)[cfg.key] != null)
         .map((d) => ({
           time: (d.date as string) as Time,
-          value: d[cfg.key] as number,
+          value: (d as Record<string, unknown>)[cfg.key] as number,
         }));
 
       let s: ISeriesApi<SeriesType>;
@@ -342,6 +351,17 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
 
       s.setData(points);
       sMap.set(cfg.key, s);
+
+      if (fixedPriceRange) {
+        s.applyOptions({
+          autoscaleInfoProvider: () => ({
+            priceRange: {
+              minValue: fixedPriceRange.min,
+              maxValue: fixedPriceRange.max,
+            },
+          }),
+        });
+      }
 
       /* Threshold price lines */
       if (thresholds) {
@@ -415,7 +435,7 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
     };
     // Recreate chart whenever data or config changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered, seriesConfigs, thresholds, recessionBands, height, autoSize, scrollable]);
+  }, [filtered, seriesConfigs, thresholds, recessionBands, height, autoSize, scrollable, yDomain, formatValue, fixedPriceRange]);
 
   return (
     <div>

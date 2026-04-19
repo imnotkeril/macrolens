@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import DashboardGrid from "@/components/DashboardGrid";
+import { AiContextStrip } from "@/components/AiContextStrip";
 import LWChart from "@/components/LWChart";
 
 const FedPolicyContent = dynamic(
@@ -24,6 +25,8 @@ import {
   getYieldCurveHistory,
   getCurveDynamics,
   getSpreadHistory,
+  getMasterRecommendation,
+  getAgentSignals,
 } from "@/lib/api";
 import { YieldCurveChart } from "@/components/YieldCurveChart";
 import type {
@@ -39,6 +42,8 @@ import type {
   YieldCurveSnapshot,
   CurveDynamics,
   TimeSeriesPoint,
+  MasterRecommendation,
+  AgentSignalItem,
 } from "@/types";
 
 /* ── Curve pattern config ────────────────────────────────── */
@@ -125,7 +130,7 @@ type MacroPage = (typeof MACRO_PAGES)[number]["id"];
 function mergeWithSpx(
   spx: RatioPoint[],
   indicator: RatioPoint[]
-): Record<string, unknown>[] {
+): Array<{ date: string; spx: number; value: number }> {
   const map = new Map<string, { spx?: number; value?: number }>();
   for (const pt of spx) {
     map.set(pt.date, { spx: pt.value });
@@ -138,10 +143,10 @@ function mergeWithSpx(
       map.set(pt.date, { value: pt.value });
     }
   }
-  return [...map.entries()]
+  return Array.from(map.entries())
     .filter(([, v]) => v.spx != null && v.value != null)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, v]) => ({ date, spx: v.spx, value: v.value }));
+    .map(([date, v]) => ({ date, spx: v.spx as number, value: v.value as number }));
 }
 
 function dualPanel(
@@ -208,6 +213,8 @@ export default function AnalysisPage() {
   const [macro, setMacro] = useState<MacroOverviewData | null>(null);
   const [macroLoading, setMacroLoading] = useState(false);
   const [macroLoaded, setMacroLoaded] = useState(false);
+  const [masterRec, setMasterRec] = useState<MasterRecommendation | null>(null);
+  const [agentSignals, setAgentSignals] = useState<AgentSignalItem[]>([]);
 
   /* Inflation state */
   const [infl, setInfl] = useState<InflationDashboardData | null>(null);
@@ -283,8 +290,11 @@ export default function AnalysisPage() {
   const loadMacro = useCallback(() => {
     if (macroLoaded) return;
     setMacroLoading(true);
-    getMacroOverview()
-      .then(setMacro)
+    Promise.all([
+      getMacroOverview().then(setMacro).catch(() => {}),
+      getMasterRecommendation().then(setMasterRec).catch(() => {}),
+      getAgentSignals().then(setAgentSignals).catch(() => setAgentSignals([])),
+    ])
       .catch(() => {})
       .finally(() => {
         setMacroLoading(false);
@@ -309,7 +319,12 @@ export default function AnalysisPage() {
     if (tab === "sectors") loadSectorsData(sectorPeriod);
     if (tab === "rates") { loadRates(); loadYieldCurve(); }
     if (tab === "breadth") loadBreadth();
-    if (tab === "macro") loadMacro();
+    if (tab === "macro") {
+      loadMacro();
+      // Always refresh Master + specialist signals when opening Macro (loadMacro only runs overview once).
+      void getMasterRecommendation().then(setMasterRec).catch(() => {});
+      void getAgentSignals().then(setAgentSignals).catch(() => setAgentSignals([]));
+    }
     if (tab === "inflation") loadInflation();
   }, [tab, indicesPeriod, sectorPeriod, loadIndices, loadSectorsData, loadRates, loadYieldCurve, loadBreadth, loadMacro, loadInflation]);
 
@@ -413,7 +428,7 @@ export default function AnalysisPage() {
     const keys = SENTIMENT_CONFIG.map((c) => c.key);
     const dateMap = new Map<string, Record<string, number>>();
     for (const cfg of SENTIMENT_CONFIG) {
-      const arr = (sentiment as Record<string, RatioPoint[]>)[cfg.key];
+      const arr = (sentiment as unknown as Record<string, RatioPoint[]>)[cfg.key];
       if (!arr?.length) continue;
       for (const pt of arr) {
         if (!dateMap.has(pt.date)) dateMap.set(pt.date, {});
@@ -436,7 +451,7 @@ export default function AnalysisPage() {
   const sentimentLegend = useMemo(() => {
     if (!sentiment) return [];
     return SENTIMENT_CONFIG.map((cfg) => {
-      const arr = (sentiment as Record<string, RatioPoint[]>)[cfg.key];
+      const arr = (sentiment as unknown as Record<string, RatioPoint[]>)[cfg.key];
       const last = arr?.length ? arr[arr.length - 1].value : null;
       return { label: cfg.label, color: cfg.color, value: last };
     }).filter((l) => l.value !== null);
@@ -446,9 +461,9 @@ export default function AnalysisPage() {
     if (sectorPerfs.length === 0) return null;
     const allDates = new Set<string>();
     sectorPerfs.forEach((s) => s.series.forEach((pt) => allDates.add(pt.date)));
-    const dates = [...allDates].sort();
+    const dates = Array.from(allDates).sort();
     const data = dates.map((d) => {
-      const row: Record<string, unknown> = { date: d };
+      const row: { date: string; [key: string]: unknown } = { date: d };
       sectorPerfs.forEach((s) => {
         const pt = s.series.find((p) => p.date === d);
         row[s.symbol] = pt?.value ?? null;
@@ -635,7 +650,7 @@ export default function AnalysisPage() {
       if (existing) existing.new_low = -Math.abs(pt.value);
       else dateMap.set(pt.date, { new_high: 0, new_low: -Math.abs(pt.value) });
     }
-    return [...dateMap.entries()]
+    return Array.from(dateMap.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, vals]) => ({ date, ...vals }));
   }, [breadth.NYHGH, breadth.NYLOW]);
@@ -939,6 +954,8 @@ export default function AnalysisPage() {
           </button>
         ))}
       </div>
+
+      <AiContextStrip tabId={tab} />
 
       {/* ── Major Indices & Bitcoin ──────────────────────── */}
       {tab === "indices" && (
@@ -1416,6 +1433,64 @@ export default function AnalysisPage() {
 
           {macroLoading ? renderLoading("Loading macro data…") : (
             <>
+              {(masterRec || agentSignals.length > 0) && (
+                <div className="rounded-xl border border-border bg-bg-card p-4 space-y-4">
+                  {masterRec ? (
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-text-muted mb-1">Master Agent · synthesis</div>
+                      {masterRec.regime && (
+                        <p className="text-xs text-accent/90 font-medium mb-1">Regime: {masterRec.regime}</p>
+                      )}
+                      <p className="text-sm text-text-secondary">{masterRec.macro_thesis}</p>
+                      <div className="mt-2 text-xs text-text-muted">
+                        Confidence {(masterRec.risk.confidence * 100).toFixed(0)}% · data quality{" "}
+                        {(masterRec.risk.data_quality_score * 100).toFixed(0)}% ·
+                        {masterRec.risk.no_trade ? " NO TRADE" : " Trade allowed"} · {masterRec.risk.reason_codes.join(", ")}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-text-muted">No Master recommendation yet. Open Predictive and run «Run Agents + Master».</p>
+                  )}
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-text-muted mb-2">
+                      Specialist agents · today ({agentSignals.length})
+                    </div>
+                    <p className="text-[11px] text-text-muted font-light mb-2">
+                      Three pipelines write rows here (macro data, Fed/CB, news). The Master row above is separate synthesis.
+                    </p>
+                    {agentSignals.length === 0 ? (
+                      <p className="text-xs text-text-muted">No specialist signals for today.</p>
+                    ) : (
+                      <div className="overflow-x-auto rounded-lg border border-border/80">
+                        <table className="w-full text-left text-xs">
+                          <thead className="border-b border-border bg-bg-hover/40 text-text-muted">
+                            <tr>
+                              <th className="p-2 font-normal">Agent</th>
+                              <th className="p-2 font-normal">Type</th>
+                              <th className="p-2 font-normal w-16">Score</th>
+                              <th className="p-2 font-normal">Summary</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...agentSignals]
+                              .sort((a, b) => a.agent_name.localeCompare(b.agent_name))
+                              .map((s) => (
+                                <tr key={`${s.agent_name}-${s.signal_type}`} className="border-b border-border/50 last:border-0">
+                                  <td className="p-2 text-text-primary whitespace-nowrap align-top">{s.agent_name}</td>
+                                  <td className="p-2 text-text-muted font-mono text-[10px] align-top">{s.signal_type}</td>
+                                  <td className="p-2 text-text-secondary tabular-nums align-top">
+                                    {s.score === null || s.score === undefined ? "—" : s.score.toFixed(3)}
+                                  </td>
+                                  <td className="p-2 text-text-secondary leading-snug align-top">{s.summary}</td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* Page 1: Fixed Income & Liquidity — single grid so 10 panels = 5 rows of 2 */}
               {macroPage === "fi" && (
                 <div className="animate-fade-in">
@@ -1485,7 +1560,7 @@ export default function AnalysisPage() {
                         <DashboardGrid panels={cpiPanels.row3} columns={2} panelHeight={420} />
                       )}
                     </>
-                  ) : renderLoading("No CPI data available.")}
+                  ) : renderLoading("No CPI data available. Click Refresh in the top bar to load data (first run seeds indicators).")}
                 </div>
               )}
 

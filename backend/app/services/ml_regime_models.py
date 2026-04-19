@@ -250,6 +250,7 @@ def run_train_pipeline(
     bal_acc = balanced_accuracy_score(y_test, pred_ensemble)
     ll = log_loss(y_test, test_probs_ensemble)
     cm = confusion_matrix(y_test, pred_ensemble).tolist()
+    wf_acc = _walk_forward_accuracy(test_probs_ensemble, y_test)
 
     set_train_progress(percent=92.0, message="Saving artifacts…", log_line="[92%] Saving artifacts…")
     # Save artifacts
@@ -272,6 +273,7 @@ def run_train_pipeline(
             "test_accuracy": float(acc),
             "test_balanced_accuracy": float(bal_acc),
             "test_log_loss": float(ll),
+            "walk_forward_accuracy": float(wf_acc),
         },
         "confusion_matrix": cm,
     }
@@ -299,3 +301,11 @@ def run_train_pipeline(
     logger.info("ML artifacts saved to %s", art_path)
     set_train_progress(percent=100.0, message="Done.", log_line="[100%] Training completed.")
     return meta
+
+
+def _walk_forward_accuracy(test_probs_ensemble: list[list[float]], y_test: np.ndarray) -> float:
+    if len(test_probs_ensemble) == 0:
+        return 0.0
+    preds = np.argmax(np.array(test_probs_ensemble), axis=1)
+    correct = (preds == y_test).sum()
+    return float(correct / len(y_test))

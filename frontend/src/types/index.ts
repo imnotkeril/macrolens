@@ -1,3 +1,5 @@
+import type { ExpertPhaseBreakdown, PhaseProbabilities } from "./forecastLab";
+
 // ---- Enums ----
 export type IndicatorCategory = "housing" | "orders" | "income_sales" | "employment" | "inflation";
 export type IndicatorType = "leading" | "coincident" | "lagging";
@@ -145,6 +147,40 @@ export interface NavigatorPosition {
   confidence: number;
   direction: string;
   date: string;
+  ensemble_growth_score?: number | null;
+  ensemble_fed_policy_score?: number | null;
+  /** Macro×Fed matrix only; `quadrant` is Forecast Lab regime when bundle is trained */
+  matrix_quadrant?: string | null;
+}
+
+/** Forecast Lab ensemble snapshot bundled with navigator/current. */
+export interface NavigatorEnsembleOverlay {
+  as_of_date: string;
+  trained: boolean;
+  phase_class: string;
+  phase_probabilities: PhaseProbabilities;
+  confidence: number;
+  /** Corner anchor for headline phase — same as purple dot */
+  growth_score: number;
+  fed_policy_score: number;
+  /** Barycenter of the full probability mix — can sit in another quadrant than the headline */
+  mix_growth_score?: number | null;
+  mix_fed_policy_score?: number | null;
+  ensemble_weights: Record<string, number> | null;
+  experts: ExpertPhaseBreakdown | null;
+}
+
+/** PIT yield curve + methodology alignment (API navigator phase_context). */
+export interface NavigatorPhaseContext {
+  as_of_date: string;
+  curve_pattern: string;
+  curve_description: string;
+  short_end_change_1m_bp: number;
+  long_end_change_1m_bp: number;
+  short_end_change_3m_bp: number;
+  long_end_change_3m_bp: number;
+  methodology_expected_curve_patterns: string[];
+  curve_matches_methodology: boolean | null;
 }
 
 export interface FactorAllocation {
@@ -183,6 +219,8 @@ export interface NavigatorRecommendation {
   asset_allocation: AssetAllocation;
   geographic: Record<string, string>;
   trading_recommendations?: TradingRecommendation[];
+  phase_context?: NavigatorPhaseContext | null;
+  ensemble?: NavigatorEnsembleOverlay | null;
 }
 
 export interface CrossAssetSignal {
@@ -206,6 +244,7 @@ export interface RecessionCheckItem {
   current_value: string;
   threshold: string;
   description: string;
+  data_as_of?: string | null;
 }
 
 export interface RecessionCheck {
@@ -249,11 +288,11 @@ export interface EventImpact {
 }
 
 // ---- Market / Time Series ----
-export interface TimeSeriesPoint {
+export type TimeSeriesPoint = Record<string, unknown> & {
   date: string;
   value: number;
   change_pct?: number | null;
-}
+};
 
 export interface NetLiquidityPoint {
   date: string;
@@ -263,10 +302,10 @@ export interface NetLiquidityPoint {
   rrp: number;
 }
 
-export interface RatioPoint {
+export type RatioPoint = Record<string, unknown> & {
   date: string;
   value: number;
-}
+};
 
 export interface RecessionBand {
   start: string;
@@ -451,11 +490,11 @@ export interface RatesDashboardData {
 }
 
 // ---- Indices & Bitcoin Dashboard ----
-export interface IndexPricePoint {
+export type IndexPricePoint = Record<string, unknown> & {
   date: string;
   price: number;
   ma200: number | null;
-}
+};
 
 export interface IndicesDashboardData {
   spx: IndexPricePoint[];
@@ -637,4 +676,104 @@ export interface TaskProgress {
   logs: string[];
   done: boolean;
   error: string | null;
+}
+
+// ---- ML2 + Agents + Recommendation ----
+export interface ML2FactorItem {
+  factor: string;
+  horizon_months: number;
+  score: number;
+  expected_relative_return: number | null;
+  confidence: number | null;
+}
+
+export interface ML2Predict {
+  as_of_date: string;
+  factors: ML2FactorItem[];
+  anomaly_score: number;
+  is_anomaly: boolean;
+  anomaly_threshold: number;
+  trained: boolean;
+  model_version: string;
+}
+
+export interface ML2Metrics {
+  trained_at: string | null;
+  rows: number | null;
+  horizons: number[];
+  metrics: Record<string, number>;
+  model_version: string;
+}
+
+export interface AgentSignalItem {
+  agent_name: string;
+  signal_type: string;
+  score: number | null;
+  summary: string;
+  payload: Record<string, unknown> | null;
+}
+
+export interface RiskOverlay {
+  confidence: number;
+  uncertainty: number;
+  data_quality_score: number;
+  regime_stability_score: number;
+  no_trade: boolean;
+  reason_codes: string[];
+  risk_constraints: Record<string, unknown>;
+}
+
+export interface MasterRecommendation {
+  as_of_date: string;
+  regime: string;
+  macro_thesis: string;
+  factor_tilts: ML2FactorItem[];
+  top_signals: AgentSignalItem[];
+  historical_analogs: string[];
+  risk: RiskOverlay;
+  payload: Record<string, unknown>;
+}
+
+/** Specialist row shape from GET /api/agents/context-pack */
+export interface ContextPackSignal {
+  agent_name: string;
+  signal_type: string;
+  score: number | null;
+  summary: string;
+  payload: Record<string, unknown>;
+}
+
+export interface AgentContextPack {
+  as_of_date: string;
+  macro: ContextPackSignal | null;
+  fed_cb: ContextPackSignal | null;
+  news: ContextPackSignal | null;
+  master: MasterRecommendation | null;
+}
+
+export interface FedRhetoricPoint {
+  signal_date: string;
+  score: number | null;
+  summary: string;
+  stance?: string | null;
+  hawk_dovish_index: number | null;
+}
+
+export interface MemoryHit {
+  score: number;
+  vector_score?: number;
+  keyword_score?: number;
+  recency_score?: number;
+  quality_score?: number;
+  doc_key: string;
+  title: string;
+  source: string;
+  content: string;
+  created_at?: string | null;
+}
+
+export interface MemoryContextResponse {
+  query: string;
+  domain: string | null;
+  hits: MemoryHit[];
 }

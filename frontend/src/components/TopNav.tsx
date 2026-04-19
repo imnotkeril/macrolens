@@ -3,12 +3,14 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { refreshAllData, getRefreshProgress } from "@/lib/api";
 import type { TaskProgress } from "@/types";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
+  { href: "/forecast-lab", label: "Forecast Lab" },
   { href: "/predictive", label: "Predictive" },
   { href: "/ml-regime", label: "ML Regime" },
   { href: "/analysis", label: "Analysis" },
@@ -21,6 +23,7 @@ const REFRESH_POLL_MS = 1500;
 
 export function TopNav() {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [refreshResult, setRefreshResult] = useState<"ok" | "error" | null>(null);
   const [progress, setProgress] = useState<TaskProgress | null>(null);
@@ -35,7 +38,12 @@ export function TopNav() {
     try {
       const result = await refreshAllData();
       refreshDoneRef.current = true;
-      setRefreshResult(result.errors.length === 0 ? "ok" : "error");
+      const success = result.errors.length === 0;
+      setRefreshResult(success ? "ok" : "error");
+      // Invalidate all data queries so dashboard and other pages refetch and show new dates/data
+      if (success) {
+        void queryClient.invalidateQueries();
+      }
     } catch {
       refreshDoneRef.current = true;
       setRefreshResult("error");
@@ -43,7 +51,7 @@ export function TopNav() {
       setRefreshing(false);
       setTimeout(() => setRefreshResult(null), 4000);
     }
-  }, [refreshing]);
+  }, [refreshing, queryClient]);
 
   useEffect(() => {
     if (!refreshing) return;

@@ -1,18 +1,16 @@
 """
-Trading Navigator Engine: 2x2 matrix (Macro Sentiment x FED Policy).
+Trading Navigator — 2×2 matrix (macro sentiment × Fed policy plane).
 
-Axes (display: X = Macro Sentiment, Y = FED Policy):
-  Macro Sentiment score (-2 negative → +2 positive), from category z-scores (Housing, Orders, Income, Employment).
-  Fed Policy Score (-2 very easy → +2 very tight).
+Rule plane (same as Forecast Lab rule expert): for each as-of date,
+`features_pit.build_feature_row` → growth_score, fed_policy_score →
+`rule_phase.determine_quadrant` / phase_rule.yaml.
 
-Quadrants (Macro Sentiment × FED Policy):
-  Q1 (Risk ON):    Easy Fed + Positive Sentiment
-  Q2 (GROWTH):     Easy Fed + Negative Sentiment
-  Q3 (VALUE):      Tight Fed + Positive Sentiment
-  Q4 (Risk OFF):   Tight Fed + Negative Sentiment
+Five chart dots (now, 6m/1y back, 6m/1y forward extrapolated from PIT rule scores) use that plane.
+Forecast Lab ensemble is overlay only (violet dot + API); it does not choose the quadrant for recommendations.
 
-Macro Sentiment is built from category scores with weights:
-  Housing (0.30), Orders (0.30), Income (0.25), Employment (0.15).
+PIT as-of matches the Macro Dashboard Forecast Lab card: month-end on or before calendar today
+(same as frontend getForecastLabSummary({ alignMonthEnd: true })), so ensemble caption and FL widget
+share one snapshot date and probabilities.
 """
 import logging
 from datetime import date, timedelta
@@ -26,13 +24,34 @@ from app.services.indicator_analyzer import IndicatorAnalyzer
 from app.services.fed_tracker import FedTracker
 from app.services.yield_analyzer import YieldAnalyzer
 from app.schemas.navigator import (
-    NavigatorPosition, NavigatorRecommendation,
-    FactorAllocation, SectorAllocation, AssetAllocation,
-    CrossAssetSignal, RecessionCheck, RecessionCheckItem,
+    NavigatorPosition,
+    NavigatorRecommendation,
+    NavigatorPhaseContext,
+    NavigatorEnsembleOverlay,
+    FactorAllocation,
+    SectorAllocation,
+    AssetAllocation,
+    CrossAssetSignal,
+    RecessionCheck,
+    RecessionCheckItem,
     TradingRecommendation,
 )
+from app.services.navigator_yield_expectations import (
+    curve_pattern_matches_quadrant,
+    expected_curve_patterns_for_quadrant,
+)
+from app.services.navigator_cross_asset_expectations import confidence_from_cross_asset_signals
 
 logger = logging.getLogger(__name__)
+
+RECESSION_CHECKLIST_TOTAL = 8
+
+
+def _dashboard_fl_pit_as_of() -> date:
+    """Last month-end on or before today — aligns with dashboard FL summary (align_month_end=true)."""
+    from app.services.forecast_lab.inference import _effective_as_of
+
+    return _effective_as_of(date.today(), True)
 
 # Factor -> representative ETFs/tickers for factor rotation
 FACTOR_TICKERS: dict[str, list[str]] = {
@@ -206,15 +225,6 @@ class NavigatorEngine:
 
         return max(-2.0, min(2.0, total))
 
-    async def _determine_quadrant(self, growth: float, fed: float) -> str:
-        if growth >= 0 and fed <= 0:
-            return "Q1_GOLDILOCKS"
-        if growth < 0 and fed <= 0:
-            return "Q2_REFLATION"
-        if growth >= 0 and fed > 0:
-            return "Q3_OVERHEATING"
-        return "Q4_STAGFLATION"
-
     async def _compute_direction(self) -> str:
         """Simplified direction of travel based on growth momentum."""
         scores = await self.indicator_analyzer.compute_category_scores()
@@ -228,53 +238,62 @@ class NavigatorEngine:
         return "stable"
 
     async def get_forward_positions(self) -> list[NavigatorPosition]:
-        """Momentum-based extrapolation: 6m and 1y forward (for display as green dots)."""
-        current_growth = await self._compute_growth_score()
-        current_fed = await self.fed_tracker.get_policy_score()
-        target_6m = date.today() - timedelta(days=30 * 6)
-        target_1y = date.today() - timedelta(days=365)
-        growth_6m = await self._compute_historical_growth(target_6m)
-        growth_1y = await self._compute_historical_growth(target_1y)
-        fed_6m = await self.fed_tracker.get_policy_score_at_date(target_6m)
-        fed_1y = await self.fed_tracker.get_policy_score_at_date(target_1y)
-        # Linear extrapolation: 6m fwd = current + (current - 6m_ago), 1y fwd = current + 2*(current - 1y_ago)
-        growth_6m_fwd = max(-2.0, min(2.0, 2.0 * current_growth - growth_6m))
-        growth_1y_fwd = max(-2.0, min(2.0, 3.0 * current_growth - 2.0 * growth_1y))
-        fed_6m_fwd = max(-2.0, min(2.0, 2.0 * current_fed - fed_6m))
-        fed_1y_fwd = max(-2.0, min(2.0, 3.0 * current_fed - 2.0 * fed_1y))
+        """Forward dots: extrapolate PIT rule scores (features_pit), same momentum recipe as before."""
+        from app.services.forecast_lab import features_pit
+        from app.services.forecast_lab.rule_phase import determine_quadrant
+
+        today = _dashboard_fl_pit_as_of()
+        target_6m = today - timedelta(days=30 * 6)
+        target_1y = today - timedelta(days=365)
+        row_now = await features_pit.build_feature_row(self.db, today)
+        row_6m = await features_pit.build_feature_row(self.db, target_6m)
+        row_1y = await features_pit.build_feature_row(self.db, target_1y)
+        g_now, f_now = row_now.growth_score, row_now.fed_policy_score
+        g_6m, f_6m = row_6m.growth_score, row_6m.fed_policy_score
+        g_1y, f_1y = row_1y.growth_score, row_1y.fed_policy_score
+        growth_6m_fwd = max(-2.0, min(2.0, 2.0 * g_now - g_6m))
+        growth_1y_fwd = max(-2.0, min(2.0, 3.0 * g_now - 2.0 * g_1y))
+        fed_6m_fwd = max(-2.0, min(2.0, 2.0 * f_now - f_6m))
+        fed_1y_fwd = max(-2.0, min(2.0, 3.0 * f_now - 2.0 * f_1y))
         positions = []
-        for (g, f, label) in [(growth_6m_fwd, fed_6m_fwd, "6m forward"), (growth_1y_fwd, fed_1y_fwd, "1y forward")]:
-            quadrant = await self._determine_quadrant(g, f)
-            config = QUADRANT_CONFIG[quadrant]
-            positions.append(NavigatorPosition(
-                growth_score=round(g, 2),
-                fed_policy_score=round(f, 2),
-                quadrant=quadrant,
-                quadrant_label=label,
-                confidence=0.0,
-                direction="forward",
-                date=date.today(),
-            ))
+        for g, f, label in [(growth_6m_fwd, fed_6m_fwd, "6m forward"), (growth_1y_fwd, fed_1y_fwd, "1y forward")]:
+            q = determine_quadrant(g, f)
+            positions.append(
+                NavigatorPosition(
+                    growth_score=round(g, 2),
+                    fed_policy_score=round(f, 2),
+                    quadrant=q,
+                    quadrant_label=label,
+                    confidence=0.0,
+                    direction="forward",
+                    date=today,
+                )
+            )
         return positions
 
     async def get_historical_positions(self) -> list[NavigatorPosition]:
-        """Return navigator dots for 6 months ago and 1 year ago."""
+        """Past dots: PIT rule row at 6m / 1y ago (features_pit)."""
+        from app.services.forecast_lab import features_pit
+        from app.services.forecast_lab.rule_phase import determine_quadrant
+
         positions = []
+        anchor = _dashboard_fl_pit_as_of()
         for months_ago, label in [(6, "6m ago"), (12, "1y ago")]:
-            target = date.today() - timedelta(days=30 * months_ago)
-            fed_score = await self.fed_tracker.get_policy_score_at_date(target)
-            growth_score = await self._compute_historical_growth(target)
-            quadrant = await self._determine_quadrant(growth_score, fed_score)
-            config = QUADRANT_CONFIG[quadrant]
-            positions.append(NavigatorPosition(
-                growth_score=round(growth_score, 2),
-                fed_policy_score=round(fed_score, 2),
-                quadrant=quadrant,
-                quadrant_label=label,
-                confidence=0.0,
-                direction="historical",
-                date=target,
-            ))
+            target = anchor - timedelta(days=30 * months_ago)
+            row = await features_pit.build_feature_row(self.db, target)
+            g, f = row.growth_score, row.fed_policy_score
+            q = determine_quadrant(g, f)
+            positions.append(
+                NavigatorPosition(
+                    growth_score=round(g, 2),
+                    fed_policy_score=round(f, 2),
+                    quadrant=q,
+                    quadrant_label=label,
+                    confidence=0.0,
+                    direction="historical",
+                    date=target,
+                )
+            )
         return positions
 
     async def _compute_historical_growth(self, target: date) -> float:
@@ -317,11 +336,46 @@ class NavigatorEngine:
         return max(-2.0, min(2.0, total))
 
     async def get_recommendation(self) -> NavigatorRecommendation:
-        growth_score = await self._compute_growth_score()
-        fed_score = await self.fed_tracker.get_policy_score()
-        quadrant = await self._determine_quadrant(growth_score, fed_score)
+        from app.services.forecast_lab import features_pit
+        from app.services.forecast_lab.rule_phase import determine_quadrant, scores_from_phase_probs, scores_modal_phase
+
+        as_of = _dashboard_fl_pit_as_of()
         direction = await self._compute_direction()
-        confidence = await self._compute_confidence(quadrant)
+        pit = await features_pit.build_feature_row(self.db, as_of)
+        growth_score = pit.growth_score
+        fed_score = pit.fed_policy_score
+        quadrant = determine_quadrant(growth_score, fed_score)
+        dyn = await YieldAnalyzer(self.db).get_dynamics_at_date(as_of)
+
+        ensemble_overlay: NavigatorEnsembleOverlay | None = None
+        try:
+            from app.services.forecast_lab.inference import build_summary
+
+            # as_of already month-end aligned; do not re-shift via settings
+            fl = await build_summary(self.db, as_of, align_month_end=False)
+            pp = fl.phase_probabilities
+            eg_mix, ef_mix = scores_from_phase_probs(
+                [pp.Q1_GOLDILOCKS, pp.Q2_REFLATION, pp.Q3_OVERHEATING, pp.Q4_STAGFLATION]
+            )
+            eg, ef = scores_modal_phase(fl.phase_class)
+            ensemble_overlay = NavigatorEnsembleOverlay(
+                as_of_date=fl.as_of_date,
+                trained=fl.trained,
+                phase_class=fl.phase_class,
+                phase_probabilities=pp,
+                confidence=fl.confidence,
+                growth_score=round(eg, 2),
+                fed_policy_score=round(ef, 2),
+                mix_growth_score=round(eg_mix, 2),
+                mix_fed_policy_score=round(ef_mix, 2),
+                ensemble_weights=fl.ensemble_weights,
+                experts=fl.experts,
+            )
+        except Exception:
+            logger.debug("navigator ensemble overlay skipped", exc_info=True)
+
+        curve_match = curve_pattern_matches_quadrant(quadrant, dyn.pattern)
+        confidence = await self._compute_confidence(quadrant, curve_match)
 
         config = QUADRANT_CONFIG[quadrant]
 
@@ -332,7 +386,10 @@ class NavigatorEngine:
             quadrant_label=config["label"],
             confidence=round(confidence, 2),
             direction=direction,
-            date=date.today(),
+            date=as_of,
+            matrix_quadrant=None,
+            ensemble_growth_score=ensemble_overlay.growth_score if ensemble_overlay else None,
+            ensemble_fed_policy_score=ensemble_overlay.fed_policy_score if ensemble_overlay else None,
         )
 
         factors_with_tickers = [
@@ -348,6 +405,19 @@ class NavigatorEngine:
             TradingRecommendation(name=name, trade_type=ttype, legs=legs, description=desc, rationale=desc)
             for name, ttype, legs, desc in TRADING_RECOMMENDATIONS_BY_QUADRANT.get(quadrant, [])
         ]
+        expected = expected_curve_patterns_for_quadrant(quadrant)
+        phase_ctx = NavigatorPhaseContext(
+            as_of_date=as_of,
+            curve_pattern=dyn.pattern,
+            curve_description=dyn.description,
+            short_end_change_1m_bp=dyn.short_end_change_1m,
+            long_end_change_1m_bp=dyn.long_end_change_1m,
+            short_end_change_3m_bp=dyn.short_end_change_3m,
+            long_end_change_3m_bp=dyn.long_end_change_3m,
+            methodology_expected_curve_patterns=expected,
+            curve_matches_methodology=curve_match,
+        )
+
         return NavigatorRecommendation(
             position=position,
             factor_tilts=factors_with_tickers,
@@ -355,16 +425,16 @@ class NavigatorEngine:
             asset_allocation=config["allocation"],
             geographic=config["geographic"],
             trading_recommendations=trading_recs,
+            phase_context=phase_ctx,
+            ensemble=ensemble_overlay,
         )
 
-    async def _compute_confidence(self, quadrant: str) -> float:
-        """Count how many cross-asset signals confirm the current quadrant."""
+    async def _compute_confidence(self, quadrant: str, curve_match: bool | None) -> float:
+        """Cross-asset alignment vs quadrant expectations + optional yield-curve methodology blend (TZ)."""
         signals = await self.get_cross_asset_signals()
-        if not signals:
-            return 0.5
-
-        confirming = sum(1 for s in signals if s.signal != "neutral")
-        return min(1.0, confirming / len(signals))
+        return confidence_from_cross_asset_signals(
+            quadrant, signals, curve_match=curve_match
+        )
 
     async def get_cross_asset_signals(self) -> list[CrossAssetSignal]:
         """Cross-asset signals from spec Part 8.3."""
@@ -439,101 +509,175 @@ class NavigatorEngine:
         return signals
 
     async def get_recession_check(self) -> RecessionCheck:
-        """8-point recession checklist from spec Part 13.3."""
-        items = []
+        """Eight-slot recession checklist: rows always returned; use N/A when data is missing."""
+        from app.models.indicator import Indicator, IndicatorValue
 
-        # 1. 2Y10Y Curve inverted for 3+ months
+        items: list[RecessionCheckItem] = []
+
+        # 1. 2Y10Y curve
+        snap = await self.yield_analyzer.get_current_snapshot()
+        y_as_of = snap.date.isoformat() if snap.points else None
         is_inv = await self.yield_analyzer.is_inverted()
-        items.append(RecessionCheckItem(
-            name="2Y10Y Curve Inversion",
-            triggered=is_inv,
-            current_value="Inverted" if is_inv else "Normal",
-            threshold="<0bp for 3+ months",
-            description="Yield curve inversion is historically 100% accurate recession predictor",
-        ))
+        items.append(
+            RecessionCheckItem(
+                name="2Y10Y Curve Inversion",
+                triggered=is_inv,
+                current_value="Inverted" if is_inv else "Normal",
+                threshold="<0bp for 3+ months",
+                description="Yield curve inversion is historically 100% accurate recession predictor",
+                data_as_of=y_as_of,
+            )
+        )
 
-        # 2-8: Simplified checks based on available data
-        checks = [
-            ("ISM Manufacturing PMI", "< 50 for 3 consecutive months", 50, True),
-            ("Unemployment Rate", "rises 0.5%+ from cycle low", None, None),
-            ("Initial Jobless Claims", "4-week MA rises 30%+ from cycle low", None, None),
-            ("Housing Starts", "down 20%+ from cycle high", None, None),
-        ]
+        # 2. ISM Manufacturing PMI (3 consecutive < 50)
+        ism_triggered = False
+        ism_str = "N/A"
+        ism_as_of: str | None = None
+        ind_q = select(Indicator).where(Indicator.name == "ISM Manufacturing PMI")
+        ind = (await self.db.execute(ind_q)).scalar_one_or_none()
+        if ind:
+            val_q = (
+                select(IndicatorValue)
+                .where(IndicatorValue.indicator_id == ind.id)
+                .order_by(desc(IndicatorValue.date))
+                .limit(3)
+            )
+            vals = (await self.db.execute(val_q)).scalars().all()
+            if vals:
+                ism_str = f"{vals[0].value:.1f}"
+                ism_as_of = vals[0].date.isoformat()
+                ism_triggered = all(v.value < 50 for v in vals)
+        else:
+            ism_row_q = (
+                select(MarketData.value, MarketData.date)
+                .where(MarketData.symbol == "ISM_PMI")
+                .order_by(desc(MarketData.date))
+                .limit(3)
+            )
+            ism_rows = (await self.db.execute(ism_row_q)).all()
+            if len(ism_rows) >= 3:
+                ism_str = f"{float(ism_rows[0][0]):.1f}"
+                ism_as_of = ism_rows[0][1].isoformat()
+                ism_triggered = all(float(r[0]) < 50 for r in ism_rows)
+            elif ism_rows:
+                ism_str = f"{float(ism_rows[0][0]):.1f}"
+                ism_as_of = ism_rows[0][1].isoformat()
+        items.append(
+            RecessionCheckItem(
+                name="ISM Manufacturing PMI",
+                triggered=ism_triggered,
+                current_value=ism_str,
+                threshold="< 50 for 3 consecutive months",
+                description="Recession signal from ISM Manufacturing PMI",
+                data_as_of=ism_as_of,
+            )
+        )
 
-        for name, threshold, level, invert in checks:
-            from app.models.indicator import Indicator, IndicatorValue
-            ind_q = select(Indicator).where(Indicator.name == name)
-            ind_result = await self.db.execute(ind_q)
-            ind = ind_result.scalar_one_or_none()
-
-            triggered = False
-            current_str = "N/A"
-
-            if ind:
-                val_q = (
-                    select(IndicatorValue)
-                    .where(IndicatorValue.indicator_id == ind.id)
-                    .order_by(desc(IndicatorValue.date))
-                    .limit(3)
-                )
-                val_result = await self.db.execute(val_q)
-                vals = val_result.scalars().all()
-
-                if vals:
-                    current_str = f"{vals[0].value:.1f}"
-                    if level is not None and invert:
-                        triggered = all(v.value < level for v in vals)
-                    elif level is not None:
-                        triggered = vals[0].value > level
-            elif name == "ISM Manufacturing PMI":
-                # Fallback: ISM stored in market_data as ISM_PMI (not in indicators table)
-                ism_vals = await self._get_market_last_n_values("ISM_PMI", 3)
-                if ism_vals:
-                    current_str = f"{ism_vals[0]:.1f}"
-                    triggered = all(v < 50 for v in ism_vals)
-
-            items.append(RecessionCheckItem(
-                name=name,
-                triggered=triggered,
-                current_value=current_str,
-                threshold=threshold,
-                description=f"Recession signal from {name}",
-            ))
-
-        # LEI: use market_data when not in indicators (current vs 6 months ago)
-        lei_current = await self._get_latest_market("LEI")
-        lei_6m_ago = await self._get_market_n_days_ago("LEI", 180)
-        if lei_current is not None and lei_6m_ago is not None:
-            lei_declining = lei_current < lei_6m_ago
-            items.append(RecessionCheckItem(
+        # 3. LEI (level vs ~6 months ago)
+        lei_cur, lei_d = await self._latest_market_row("LEI")
+        lei_prev = await self._get_market_n_days_ago("LEI", 180)
+        if lei_cur is not None and lei_prev is not None:
+            lei_declining = lei_cur < lei_prev
+            lei_note = f"{lei_cur:.2f} (vs 6m ago: {lei_prev:.2f})"
+            lei_as_of = lei_d.isoformat() if lei_d else None
+        else:
+            lei_declining = False
+            lei_note = "N/A"
+            lei_as_of = lei_d.isoformat() if lei_d else None
+        items.append(
+            RecessionCheckItem(
                 name="Leading Economic Index",
                 triggered=lei_declining,
-                current_value=f"{lei_current:.2f} (6m ago: {lei_6m_ago:.2f})",
-                threshold="declining for 6+ months",
+                current_value=lei_note,
+                threshold="declining vs 6 months ago",
                 description="Sustained decline in LEI precedes economic downturns",
-            ))
-        else:
-            items.append(RecessionCheckItem(
-                name="Leading Economic Index",
-                triggered=False,
-                current_value="N/A",
-                threshold="declining for 6+ months",
-                description="Requires additional data source for Leading Economic Index",
-            ))
+                data_as_of=lei_as_of,
+            )
+        )
 
-        # Placeholder items for data not tracked via FRED indicators
-        for placeholder_name, threshold in [
-            ("Corporate Profits", "declining 2 consecutive quarters"),
-            ("Credit Spreads (HY)", ">500bp and rising"),
-        ]:
-            items.append(RecessionCheckItem(
-                name=placeholder_name,
-                triggered=False,
-                current_value="N/A",
-                threshold=threshold,
-                description=f"Requires additional data source for {placeholder_name}",
-            ))
+        # 4. HY spread / OAS
+        hy, hy_key, hy_d = await self._latest_hy_market()
+        hy_triggered = hy >= 500.0 if hy is not None else False
+        items.append(
+            RecessionCheckItem(
+                name=f"High Yield ({hy_key})",
+                triggered=hy_triggered,
+                current_value=f"{hy:.1f}" if hy is not None else "N/A",
+                threshold=">= 500 (proxy for stress)",
+                description="Elevated HY OAS / spread indicates credit stress",
+                data_as_of=hy_d.isoformat() if hy_d else None,
+            )
+        )
 
+        # 5. Sahm Rule
+        sahm, sahm_d = await self._latest_market_row("SAHM_RULE")
+        sahm_trig = sahm >= 0.5 if sahm is not None else False
+        items.append(
+            RecessionCheckItem(
+                name="Sahm Rule Indicator",
+                triggered=sahm_trig,
+                current_value=f"{sahm:.2f}" if sahm is not None else "N/A",
+                threshold=">= 0.50 (3m avg U3 vs 12m low, pp)",
+                description="Rapid unemployment rise from cycle low",
+                data_as_of=sahm_d.isoformat() if sahm_d else None,
+            )
+        )
+
+        # 6. Initial jobless claims (latest week, thousands)
+        claims, claims_d = await self._indicator_latest_row("Initial Jobless Claims")
+        claims_trig = claims > 300 if claims is not None else False
+        items.append(
+            RecessionCheckItem(
+                name="Initial Jobless Claims",
+                triggered=claims_trig,
+                current_value=f"{claims:.0f}K" if claims is not None else "N/A",
+                threshold="> 300K = deterioration",
+                description="Rising claims indicate labor market weakening",
+                data_as_of=claims_d.isoformat() if claims_d else None,
+            )
+        )
+
+        # 7. Retail sales YoY
+        retail, retail_d = await self._indicator_latest_row("Retail Sales")
+        retail_prev = await self._indicator_value_at("Retail Sales", date.today() - timedelta(days=365))
+        retail_trig = False
+        retail_str = "N/A"
+        if retail is not None and retail_prev is not None and retail_prev != 0:
+            yoy = ((retail - retail_prev) / abs(retail_prev)) * 100
+            retail_str = f"{yoy:+.1f}%"
+            retail_trig = yoy < 0
+        items.append(
+            RecessionCheckItem(
+                name="Retail Sales (YoY)",
+                triggered=retail_trig,
+                current_value=retail_str,
+                threshold="< 0% = consumer contraction",
+                description="Negative real retail sales growth signals consumer weakness",
+                data_as_of=retail_d.isoformat() if retail_d else None,
+            )
+        )
+
+        # 8. Building permits MoM
+        permits, permits_d = await self._indicator_latest_row("Building Permits")
+        permits_prev = await self._indicator_value_at("Building Permits", date.today() - timedelta(days=35))
+        permits_trig = False
+        permits_str = "N/A"
+        if permits is not None and permits_prev is not None and permits_prev != 0:
+            mom = ((permits - permits_prev) / abs(permits_prev)) * 100
+            permits_str = f"{mom:+.1f}%"
+            permits_trig = mom < -10
+        items.append(
+            RecessionCheckItem(
+                name="Building Permits (MoM)",
+                triggered=permits_trig,
+                current_value=permits_str,
+                threshold="< -10% = housing weakness",
+                description="Sharp decline in permits signals housing downturn",
+                data_as_of=permits_d.isoformat() if permits_d else None,
+            )
+        )
+
+        assert len(items) == RECESSION_CHECKLIST_TOTAL
         score = sum(1 for item in items if item.triggered)
         if score >= 5:
             confidence = "high"
@@ -542,11 +686,59 @@ class NavigatorEngine:
         else:
             confidence = "low"
 
-        return RecessionCheck(score=score, total=len(items), confidence=confidence, items=items)
+        return RecessionCheck(
+            score=score, total=RECESSION_CHECKLIST_TOTAL, confidence=confidence, items=items
+        )
 
     # ------------------------------------------------------------------
     # Market data helpers
     # ------------------------------------------------------------------
+
+    async def _latest_market_row(self, symbol: str) -> tuple[float | None, date | None]:
+        q = (
+            select(MarketData.value, MarketData.date)
+            .where(MarketData.symbol == symbol)
+            .order_by(desc(MarketData.date))
+            .limit(1)
+        )
+        row = (await self.db.execute(q)).one_or_none()
+        if row is None:
+            return None, None
+        return float(row[0]), row[1]
+
+    async def _latest_hy_market(self) -> tuple[float | None, str, date | None]:
+        v, d = await self._latest_market_row("HY_OAS")
+        if v is not None:
+            return v, "HY_OAS", d
+        v2, d2 = await self._latest_market_row("HY_SPREAD")
+        return v2, "HY_SPREAD", d2
+
+    async def _indicator_latest_row(self, name: str) -> tuple[float | None, date | None]:
+        from app.models.indicator import Indicator, IndicatorValue
+
+        q = (
+            select(IndicatorValue.value, IndicatorValue.date)
+            .join(Indicator)
+            .where(Indicator.name == name)
+            .order_by(desc(IndicatorValue.date))
+            .limit(1)
+        )
+        row = (await self.db.execute(q)).one_or_none()
+        if row is None:
+            return None, None
+        return float(row[0]), row[1]
+
+    async def _indicator_value_at(self, name: str, target: date) -> float | None:
+        from app.models.indicator import Indicator, IndicatorValue
+
+        q = (
+            select(IndicatorValue.value)
+            .join(Indicator)
+            .where(Indicator.name == name, IndicatorValue.date <= target)
+            .order_by(desc(IndicatorValue.date))
+            .limit(1)
+        )
+        return (await self.db.execute(q)).scalar_one_or_none()
 
     async def _get_latest_market(self, symbol: str) -> float | None:
         query = (

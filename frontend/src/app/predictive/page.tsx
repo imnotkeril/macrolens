@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import {
   getMLRegimePredict,
   getMLRegimeBacktest,
@@ -9,6 +10,12 @@ import {
   getMLDatasetInfo,
   postMLRegimeTrain,
   getMLTrainProgress,
+  getML2Predict,
+  getML2Metrics,
+  postML2Train,
+  postRunAgents,
+  getMasterRecommendation,
+  getAgentSignals,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { TaskProgress } from "@/types";
@@ -63,11 +70,25 @@ export default function PredictivePage() {
       }
     },
   });
+  const ml2TrainMutation = useMutation({ mutationFn: postML2Train, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ml2-predict"] }) });
+  const runAgentsMutation = useMutation({
+    mutationFn: postRunAgents,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["master-recommendation"] });
+      queryClient.invalidateQueries({ queryKey: ["agent-signals"] });
+      queryClient.invalidateQueries({ queryKey: ["agent-context-pack"] });
+      queryClient.invalidateQueries({ queryKey: ["fed-rhetoric-history"] });
+    },
+  });
 
   const [trainProgress, setTrainProgress] = useState<TaskProgress | null>(null);
   const [trainingInProgress, setTrainingInProgress] = useState(false);
   const [lastTrainError, setLastTrainError] = useState<string | null>(null);
   const trainDoneRef = useRef(false);
+  const { data: ml2Predict } = useQuery({ queryKey: ["ml2-predict"], queryFn: getML2Predict });
+  const { data: ml2Metrics } = useQuery({ queryKey: ["ml2-metrics"], queryFn: getML2Metrics });
+  const { data: masterRec } = useQuery({ queryKey: ["master-recommendation"], queryFn: getMasterRecommendation });
+  const { data: agentSignals } = useQuery({ queryKey: ["agent-signals"], queryFn: getAgentSignals });
 
   // Poll progress while waiting for POST response or while background training is running
   useEffect(() => {
@@ -238,7 +259,10 @@ export default function PredictivePage() {
       </div>
 
       {/* Confusion matrix */}
-      {metrics?.confusion_matrix && metrics.confusion_matrix.length > 0 && (
+      {(() => {
+        const confusionMatrix = metrics?.confusion_matrix ?? [];
+        if (confusionMatrix.length === 0) return null;
+        return (
         <div className="card">
           <div className="card-header">Confusion Matrix (Test) — Rows: actual, Cols: predicted</div>
           <div className="overflow-x-auto">
@@ -257,7 +281,7 @@ export default function PredictivePage() {
                 {quadrantOrder.map((q, i) => (
                   <tr key={q}>
                     <td className="text-text-muted text-xs p-1 pr-2">{QUADRANT_LABELS[q]}</td>
-                    {metrics.confusion_matrix[i]?.map((cell: number, j: number) => (
+                    {confusionMatrix[i]?.map((cell: number, j: number) => (
                       <td key={j} className="text-center tabular-nums p-1 border border-border rounded">
                         {cell}
                       </td>
@@ -268,7 +292,8 @@ export default function PredictivePage() {
             </table>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Backtest history */}
       <div className="card">
@@ -410,6 +435,122 @@ export default function PredictivePage() {
           {!lastTrainError && !trainingInProgress && trainProgress?.done && !trainProgress?.error && (
             <p className="text-sm text-accent-green">Training completed.</p>
           )}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">ML2 Factors & Anomaly</div>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => ml2TrainMutation.mutate()}
+              disabled={ml2TrainMutation.isPending}
+              className="rounded-lg border px-4 py-2 text-sm font-light border-accent/30 text-accent hover:bg-accent/10 disabled:opacity-60"
+            >
+              {ml2TrainMutation.isPending ? "Training ML2…" : "Train ML2"}
+            </button>
+            <button
+              type="button"
+              onClick={() => runAgentsMutation.mutate()}
+              disabled={runAgentsMutation.isPending}
+              className="rounded-lg border px-4 py-2 text-sm font-light border-border text-text-secondary hover:bg-bg-hover disabled:opacity-60"
+            >
+              {runAgentsMutation.isPending ? "Running agents…" : "Run Agents + Master"}
+            </button>
+          </div>
+          <p className="text-xs text-text-muted">
+            ML2 as-of: {ml2Predict?.as_of_date ?? "—"} · anomaly: {(ml2Predict?.anomaly_score ?? 0).toFixed(3)}
+            {ml2Predict?.is_anomaly ? " (anomaly)" : " (normal)"}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {(ml2Predict?.factors ?? []).slice(0, 6).map((f, i) => (
+              <div key={`${f.factor}-${f.horizon_months}-${i}`} className="rounded border border-border p-2 text-xs">
+                <div className="text-text-primary">{f.factor} · {f.horizon_months}m</div>
+                <div className="text-text-muted">score {f.score.toFixed(3)} · conf {(f.confidence ?? 0).toFixed(2)}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-text-muted">
+            ML2 rows: {ml2Metrics?.rows ?? "—"} · IC(1m): {(ml2Metrics?.metrics?.ic_abs_1m ?? 0).toFixed(3)}
+          </p>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">Master & specialist agents</div>
+        <p className="text-xs text-text-muted -mt-2 mb-4 leading-relaxed">
+          Day-to-day AI overlays live on the{" "}
+          <Link href="/" className="text-accent underline-offset-2 hover:underline">
+            Dashboard
+          </Link>
+          ,{" "}
+          <Link href="/analysis" className="text-accent underline-offset-2 hover:underline">
+            Analysis
+          </Link>
+          , and{" "}
+          <Link href="/fed-policy" className="text-accent underline-offset-2 hover:underline">
+            Fed Policy
+          </Link>
+          . Use this card to run the pipeline and inspect raw signals.
+        </p>
+        <div className="space-y-5">
+          <div className="rounded-lg border border-border/80 bg-bg-card/40 p-3 space-y-2">
+            <div className="text-[10px] uppercase tracking-wider text-text-muted">Master Agent · synthesis</div>
+            {masterRec?.regime && (
+              <p className="text-xs text-accent/90 font-medium">Regime label: {masterRec.regime}</p>
+            )}
+            <p className="text-sm text-text-secondary">{masterRec?.macro_thesis ?? "No recommendation yet."}</p>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+              <div className="rounded border border-border p-2">Confidence: {(masterRec?.risk?.confidence ?? 0).toFixed(2)}</div>
+              <div className="rounded border border-border p-2">Uncertainty: {(masterRec?.risk?.uncertainty ?? 1).toFixed(2)}</div>
+              <div className="rounded border border-border p-2">Stability: {(masterRec?.risk?.regime_stability_score ?? 0).toFixed(2)}</div>
+              <div className="rounded border border-border p-2">Data quality: {(masterRec?.risk?.data_quality_score ?? 0).toFixed(2)}</div>
+              <div className="rounded border border-border p-2">{masterRec?.risk?.no_trade ? "NO TRADE" : "TRADE OK"}</div>
+            </div>
+            <div className="text-xs text-text-muted">
+              Reason codes: {(masterRec?.risk?.reason_codes ?? []).join(", ") || "—"}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-text-muted mb-2">
+              Specialist agents · signals today ({(agentSignals ?? []).length})
+            </div>
+            <p className="text-[11px] text-text-muted font-light mb-2">
+              One row per specialist per run; full narrative is on Dashboard / Analysis / Fed Policy via context-pack.
+            </p>
+            {(agentSignals ?? []).length === 0 ? (
+              <p className="text-xs text-text-muted">No signals yet. Use «Run Agents + Master» or wait for the daily job.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-border bg-bg-hover/50 text-text-muted">
+                    <tr>
+                      <th className="p-2 font-normal">Agent</th>
+                      <th className="p-2 font-normal">Signal type</th>
+                      <th className="p-2 font-normal w-20">Score</th>
+                      <th className="p-2 font-normal">Summary</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...(agentSignals ?? [])]
+                      .sort((a, b) => a.agent_name.localeCompare(b.agent_name))
+                      .map((s) => (
+                        <tr key={`${s.agent_name}-${s.signal_type}`} className="border-b border-border/60 last:border-0">
+                          <td className="p-2 text-text-primary align-top whitespace-nowrap">{s.agent_name}</td>
+                          <td className="p-2 text-text-muted align-top font-mono text-[10px]">{s.signal_type}</td>
+                          <td className="p-2 text-text-secondary align-top tabular-nums">
+                            {s.score === null || s.score === undefined ? "—" : s.score.toFixed(3)}
+                          </td>
+                          <td className="p-2 text-text-secondary align-top leading-snug">{s.summary}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

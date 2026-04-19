@@ -25,6 +25,31 @@ async def run_alert_checks():
     logger.info("Alert checks complete")
 
 
+async def run_intelligence_jobs():
+    """Run ML2 refresh + agent synthesis on schedule."""
+    from app.database import async_session
+    from app.services.intelligence_pipeline import run_intelligence_pipeline
+
+    async with async_session() as db:
+        await run_intelligence_pipeline(db)
+        await db.commit()
+    logger.info("Intelligence jobs complete")
+
+
+async def run_memory_jobs():
+    """Build memory snapshots and domain ingestions."""
+    from app.database import async_session
+    from app.services.memory_ingestion_service import MemoryIngestionService
+
+    svc = MemoryIngestionService()
+    async with async_session() as db:
+        await svc.snapshot_dashboard_radar(db, source_version="scheduler-v1")
+        await svc.snapshot_analysis_indicators(db, source_version="scheduler-v1")
+        await svc.ingest_domain_records(db, source_version="scheduler-v1")
+        await db.commit()
+    logger.info("Memory jobs complete")
+
+
 def start_scheduler():
     collector = DataCollector()
 
@@ -51,6 +76,12 @@ def start_scheduler():
 
     # Daily: alert checks after all data collection (18:30 UTC)
     scheduler.add_job(run_alert_checks, "cron", hour=18, minute=30, id="daily_alerts")
+
+    # Daily: ML2 + agents + master recommendation synthesis
+    scheduler.add_job(run_intelligence_jobs, "cron", hour=18, minute=40, id="daily_intelligence")
+
+    # Daily: memory snapshots and domain ingestion
+    scheduler.add_job(run_memory_jobs, "cron", hour=18, minute=50, id="daily_memory")
 
     scheduler.start()
     logger.info("Scheduler started with %d jobs", len(scheduler.get_jobs()))

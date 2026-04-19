@@ -19,6 +19,7 @@ import {
   getYieldCurveHistory,
   getInflationLatest,
 } from "@/lib/api";
+import { getForecastLabSummary } from "@/lib/forecastLabApi";
 import { NavigatorKpiBar } from "@/components/NavigatorKpiBar";
 import { RadarKpiBar } from "@/components/RadarKpiBar";
 import { RiskOnOffPanel } from "@/components/RiskOnOffPanel";
@@ -30,6 +31,7 @@ import { TacticalAllocation } from "@/components/TacticalAllocation";
 import { LightFCICard } from "@/components/LightFCI";
 import { NavigatorMatrix } from "@/components/NavigatorMatrix";
 import { FactorTilts } from "@/components/FactorTilts";
+import { DashboardAiPanel, MasterAiTiltsNote } from "@/components/DashboardAiPanel";
 import { IndicatorGrid } from "@/components/IndicatorGrid";
 import { YieldCurveChart } from "@/components/YieldCurveChart";
 import { FedPolicyCard } from "@/components/FedPolicyCard";
@@ -59,7 +61,7 @@ const QUADRANT_DISPLAY_LABEL: Record<string, string> = {
 export default function DashboardPage() {
   const [tab, setTab] = useState<"navigator" | "radar">("navigator");
 
-  const { data: regime, isLoading: regimeLoading } = useQuery({
+  const { data: regime, isLoading: regimeLoading, isFetching: regimeFetching } = useQuery({
     queryKey: ["regime-current"],
     queryFn: getRegimeCurrent,
   });
@@ -114,6 +116,11 @@ export default function DashboardPage() {
   const { data: inflationLatest } = useQuery({
     queryKey: ["inflation-latest"],
     queryFn: getInflationLatest,
+  });
+  const { data: flSummary } = useQuery({
+    queryKey: ["forecast-lab-summary", "dashboard", true],
+    queryFn: () => getForecastLabSummary({ alignMonthEnd: true }),
+    staleTime: 120_000,
   });
 
   const [factors, setFactors] = useState<FactorRatio[]>([]);
@@ -216,6 +223,7 @@ export default function DashboardPage() {
 
       {tab === "navigator" && (
         <>
+          <DashboardAiPanel variant="navigator" />
           {nav && (
             <NavigatorKpiBar
               regimeLabel={QUADRANT_DISPLAY_LABEL[nav.position.quadrant] ?? nav.position.quadrant}
@@ -228,7 +236,38 @@ export default function DashboardPage() {
           )}
           {nav && (
             <div className="min-h-[420px]">
-              <NavigatorMatrix position={nav.position} history={navHistory} forward={navForward} large />
+              <NavigatorMatrix
+                position={nav.position}
+                history={navHistory}
+                forward={navForward}
+                large
+                ensembleCaption={
+                  nav.ensemble
+                    ? `Forecast Lab · ${QUADRANT_DISPLAY_LABEL[nav.ensemble.phase_class] ?? nav.ensemble.phase_class} · conf ${(nav.ensemble.confidence * 100).toFixed(0)}% · as of ${nav.ensemble.as_of_date}${nav.ensemble.trained ? "" : " · bundle untrained"}`
+                    : null
+                }
+                ensembleMix={
+                  nav.ensemble?.mix_growth_score != null && nav.ensemble?.mix_fed_policy_score != null
+                    ? { growth: nav.ensemble.mix_growth_score, fed: nav.ensemble.mix_fed_policy_score }
+                    : null
+                }
+              />
+            </div>
+          )}
+          {nav?.phase_context && (
+            <div className="card text-sm font-light text-text-secondary">
+              <div className="card-header">Yield curve (PIT)</div>
+              <p>
+                <span className="text-text-muted">Pattern:</span>{" "}
+                <span className="text-text-primary font-mono">{nav.phase_context.curve_pattern}</span>
+                {nav.phase_context.curve_matches_methodology != null && (
+                  <span className="ml-2 text-text-muted">
+                    · methodology match:{" "}
+                    {nav.phase_context.curve_matches_methodology ? "yes" : "no"}
+                  </span>
+                )}
+              </p>
+              <p className="text-xs text-text-muted mt-1">{nav.phase_context.curve_description}</p>
             </div>
           )}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
@@ -258,11 +297,14 @@ export default function DashboardPage() {
           {nav && (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <div className="lg:col-span-1">
-                <FactorTilts
-                  factors={nav.factor_tilts}
-                  allocation={nav.asset_allocation}
-                  tradingRecommendations={nav.trading_recommendations}
-                />
+                <div>
+                  <FactorTilts
+                    factors={nav.factor_tilts}
+                    allocation={nav.asset_allocation}
+                    tradingRecommendations={nav.trading_recommendations}
+                  />
+                  <MasterAiTiltsNote />
+                </div>
               </div>
               <div className="card lg:col-span-2">
                 <div className="card-header">Sector Allocations</div>
@@ -295,8 +337,11 @@ export default function DashboardPage() {
         </>
       )}
 
-      {tab === "radar" && regime && (
+      {tab === "radar" && (
         <>
+          <DashboardAiPanel variant="radar" />
+          {regime ? (
+            <>
           <RadarKpiBar
             currentPhase={regime.phase_label}
             phaseColor={PHASE_COLORS[regime.phase] ?? "#6b7280"}
@@ -305,6 +350,54 @@ export default function DashboardPage() {
             fciScore={regime.fci_score}
             dataCoveragePct={regime.data_completeness * 100}
           />
+          {flSummary ? (
+            <div className="rounded-lg border border-violet-500/20 bg-violet-500/[0.05] px-4 py-3 text-sm font-light">
+              <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-violet-200/90">
+                  Forecast Lab reference
+                </span>
+                <span className="text-[10px] text-text-muted font-mono">
+                  {flSummary.as_of_date} · {flSummary.bundle_id.slice(0, 8)}…
+                </span>
+              </div>
+              <p className="text-[11px] text-text-muted mb-3 leading-snug">
+                Month-end quadrant ensemble (macro features). This is not the cycle phase below — different model and
+                as-of date. Recession % here uses the FL GBDT or NBER snapshot; the gauge uses the cycle stack.
+              </p>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-text-secondary">
+                <span>
+                  <span className="text-text-muted">Phase </span>
+                  <span className="text-text-primary">
+                    {QUADRANT_DISPLAY_LABEL[flSummary.phase_class] ?? flSummary.phase_class}
+                  </span>
+                  <span className="text-text-muted text-[11px] ml-1">
+                    ({(flSummary.confidence * 100).toFixed(0)}% conf)
+                  </span>
+                </span>
+                <span
+                  className="tabular-nums text-[12px]"
+                  title="Те же четыре квадранта, что в Forecast Lab: Q1=Risk ON, Q2=GROWTH, Q3=VALUE, Q4=Risk OFF"
+                >
+                  {QUADRANT_DISPLAY_LABEL["Q1_GOLDILOCKS"]}{" "}
+                  {(flSummary.phase_probabilities.Q1_GOLDILOCKS * 100).toFixed(0)}% ·{" "}
+                  {QUADRANT_DISPLAY_LABEL["Q2_REFLATION"]} {(flSummary.phase_probabilities.Q2_REFLATION * 100).toFixed(0)}% ·{" "}
+                  {QUADRANT_DISPLAY_LABEL["Q3_OVERHEATING"]} {(flSummary.phase_probabilities.Q3_OVERHEATING * 100).toFixed(0)}% ·{" "}
+                  {QUADRANT_DISPLAY_LABEL["Q4_STAGFLATION"]}{" "}
+                  {(flSummary.phase_probabilities.Q4_STAGFLATION * 100).toFixed(0)}%
+                </span>
+                <span>
+                  <span className="text-text-muted">Stress </span>
+                  <span className="capitalize">{flSummary.stress.stress_band}</span>
+                </span>
+                <span>
+                  <span className="text-text-muted">FL rec. 12m </span>
+                  {flSummary.recession_prob_12m != null
+                    ? `${(flSummary.recession_prob_12m * 100).toFixed(0)}%`
+                    : "N/A"}
+                </span>
+              </div>
+            </div>
+          ) : null}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[9fr_11fr]">
             <CycleGauge score={regime.cycle_score} phase={regime.phase} phaseLabel={regime.phase_label} size="large" />
             <RecessionPanel
@@ -372,23 +465,28 @@ export default function DashboardPage() {
                       {recession.score}/{recession.total} — {recession.confidence}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {recession.items.map((item) => (
                       <div
                         key={item.name}
                         className={cn(
-                          "flex items-center justify-between rounded-lg border px-4 py-3",
+                          "flex flex-col gap-1 rounded-lg border px-4 py-3",
                           item.triggered ? "border-accent-red/20 bg-accent-red/5" : "border-border bg-bg-card"
                         )}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={cn("h-2 w-2 rounded-full", item.triggered ? "bg-accent-red" : "bg-accent-green")} />
-                          <div>
-                            <div className="text-sm font-light text-text-primary">{item.name}</div>
-                            <div className="text-[10px] text-text-muted">{item.threshold}</div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={cn("h-2 w-2 shrink-0 rounded-full mt-1.5", item.triggered ? "bg-accent-red" : "bg-accent-green")} />
+                            <div className="min-w-0">
+                              <div className="text-sm font-light text-text-primary">{item.name}</div>
+                              <div className="text-[10px] text-text-muted">{item.threshold}</div>
+                              {item.data_as_of ? (
+                                <div className="text-[10px] text-text-muted/80 mt-0.5">Data as of {item.data_as_of}</div>
+                              ) : null}
+                            </div>
                           </div>
+                          <span className="text-sm font-light tabular-nums text-text-secondary shrink-0">{item.current_value}</span>
                         </div>
-                        <span className="text-sm font-light tabular-nums text-text-secondary">{item.current_value}</span>
                       </div>
                     ))}
                   </div>
@@ -451,6 +549,16 @@ export default function DashboardPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+            </>
+          ) : regimeLoading || regimeFetching ? (
+            <div className="rounded-lg border border-border bg-bg-card px-4 py-6 text-sm font-light text-text-muted text-center">
+              Loading cycle radar…
+            </div>
+          ) : (
+            <div className="rounded-lg border border-border bg-bg-card px-4 py-6 text-sm font-light text-text-muted text-center">
+              Cycle radar data unavailable.
             </div>
           )}
         </>

@@ -65,6 +65,12 @@ YAHOO_MACRO_ETFS = {
     "TIP": "TIP",          # iShares TIPS Bond ETF
     "IEF": "IEF",          # iShares 7-10 Year Treasury Bond ETF
     "IVV": "IVV",          # iShares Core S&P 500 ETF
+    "SPY": "SPY",          # Forecast Lab asset_implied pairs + sector proxy
+    "IWM": "IWM",          # Russell 2000 ETF (pairs vs SPY)
+    "VTV": "VTV",          # Value factor ETF
+    "VUG": "VUG",          # Growth factor ETF
+    "XLP": "XLP",          # Consumer Staples (also in sector table; needed in market_data for FL)
+    "XLY": "XLY",          # Consumer Discretionary
     "IJR": "IJR",          # iShares Core S&P SmallCap 600 ETF
     "VEA": "VEA",          # Vanguard FTSE Developed Markets ETF
     "IPO_ETF": "IPO",      # Renaissance IPO ETF

@@ -44,6 +44,13 @@ import type {
   MLDatasetInfo,
   MLTrainResponse,
   TaskProgress,
+  ML2Predict,
+  ML2Metrics,
+  MasterRecommendation,
+  AgentSignalItem,
+  MemoryContextResponse,
+  AgentContextPack,
+  FedRhetoricPoint,
 } from "@/types";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -91,6 +98,9 @@ export const getYieldSpreads = () =>
 
 export const getCurveDynamics = () =>
   fetchJSON<CurveDynamics>("/api/yield-curve/dynamics");
+
+export const getCurveDynamicsAt = (asOf: string) =>
+  fetchJSON<CurveDynamics>(`/api/yield-curve/dynamics-at?as_of=${asOf}`);
 
 // Navigator
 export const getNavigatorRecommendation = () =>
@@ -308,6 +318,73 @@ export function getRefreshProgress(): Promise<TaskProgress> {
 export function getMLTrainProgress(): Promise<TaskProgress> {
   return fetchJSON<TaskProgress>(`/api/ml/train-progress`);
 }
+
+// ML2
+export const postML2Train = async () => {
+  const res = await fetch(`${API_BASE}/api/ml2/train`, { method: "POST" });
+  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+  return res.json() as Promise<ML2Metrics>;
+};
+
+export const getML2Predict = () =>
+  fetchJSON<ML2Predict>("/api/ml2/predict");
+
+export const getML2Metrics = () =>
+  fetchJSON<ML2Metrics>("/api/ml2/metrics");
+
+export const getML2LatestStored = () =>
+  fetchJSON<ML2Predict>("/api/ml2/latest-stored");
+
+// Agents / Master
+export const postRunAgents = async () => {
+  const res = await fetch(`${API_BASE}/api/agents/run`, { method: "POST" });
+  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+  return res.json() as Promise<{ status: string; runs: Record<string, string> }>;
+};
+
+export const getAgentSignals = () =>
+  fetchJSON<AgentSignalItem[]>("/api/agents/signals");
+
+export const getMasterRecommendation = () =>
+  fetchJSON<MasterRecommendation>("/api/agents/recommendation");
+
+export const getContextPack = (asOf?: string) =>
+  fetchJSON<AgentContextPack>(`/api/agents/context-pack${asOf ? `?as_of=${encodeURIComponent(asOf)}` : ""}`);
+
+export const getFedRhetoricHistory = (dateFrom?: string, dateTo?: string) => {
+  const p = new URLSearchParams();
+  if (dateFrom) p.set("date_from", dateFrom);
+  if (dateTo) p.set("date_to", dateTo);
+  const q = p.toString();
+  return fetchJSON<FedRhetoricPoint[]>(`/api/agents/fed-rhetoric/history${q ? `?${q}` : ""}`);
+};
+
+export const getMacroTabSummary = (tab: string, asOf?: string) =>
+  fetchJSON<{ tab: string; summary: string | null; available: boolean; as_of_date?: string; hint?: string; error?: string }>(
+    `/api/agents/macro/tab-summary?tab=${encodeURIComponent(tab)}${asOf ? `&as_of=${encodeURIComponent(asOf)}` : ""}`
+  );
+
+export const getMemoryContext = (query: string, domain?: string, topK = 5) =>
+  fetchJSON<MemoryContextResponse>(
+    `/api/memory/context?query=${encodeURIComponent(query)}&top_k=${topK}${domain ? `&domain=${encodeURIComponent(domain)}` : ""}`
+  );
+
+export const getMemoryProvenance = (query: string, domain?: string, topK = 5) =>
+  fetchJSON<{ query: string; domain: string | null; top_k: number; trace: Array<Record<string, unknown>> }>(
+    `/api/memory/provenance?query=${encodeURIComponent(query)}&top_k=${topK}${domain ? `&domain=${encodeURIComponent(domain)}` : ""}`
+  );
+
+export const postSnapshotDashboardRadar = async () => {
+  const res = await fetch(`${API_BASE}/api/memory/snapshot/dashboard-radar`, { method: "POST" });
+  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+  return res.json();
+};
+
+export const postSnapshotAnalysisIndicators = async () => {
+  const res = await fetch(`${API_BASE}/api/memory/snapshot/analysis-indicators`, { method: "POST" });
+  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+  return res.json();
+};
 
 export async function refreshAllData(): Promise<{ status: string; errors: string[] }> {
   const controller = new AbortController();

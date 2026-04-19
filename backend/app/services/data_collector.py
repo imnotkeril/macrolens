@@ -10,6 +10,7 @@ from app.models.indicator import Indicator, IndicatorValue
 from app.models.fed_policy import FedRate, BalanceSheet
 from app.models.market_data import YieldData, MarketData
 from app.models.factor import FactorReturn, SectorPerformance
+from app.config import get_settings
 from app.services.fred_client import (
     FredClient, INDICATOR_SERIES, YIELD_SERIES, TIPS_SERIES, BREAKEVEN_SERIES,
 )
@@ -21,9 +22,14 @@ logger = logging.getLogger(__name__)
 class DataCollector:
     """Collects data from FRED and Yahoo Finance, persists to database."""
 
-    def __init__(self):
-        self.fred = FredClient()
-        self.yahoo = YahooClient()
+    def __init__(self, historical_years: int | None = None):
+        years = (
+            int(historical_years)
+            if historical_years is not None
+            else get_settings().historical_years
+        )
+        self.fred = FredClient(historical_years=years)
+        self.yahoo = YahooClient(historical_years=years)
 
     # ------------------------------------------------------------------
     # Indicator data
@@ -66,7 +72,8 @@ class DataCollector:
 
     async def _collect_indicator(self, db, indicator: Indicator):
         try:
-            recent_start = (date.today() - timedelta(days=120)).isoformat()
+            # Request ~14 months so we never miss a month between Refresh runs
+            recent_start = (date.today() - timedelta(days=430)).isoformat()
             series = self.fred.get_series(indicator.fred_series_id, start=recent_start)
             if series.empty:
                 return
@@ -117,6 +124,41 @@ class DataCollector:
                 return True
         return False
 
+    async def need_indicators_historical(self) -> bool:
+        """True if indicator_values have too little history (< ~1 year across all indicators)."""
+        async with async_session() as db:
+            total = (
+                await db.execute(select(func.count(IndicatorValue.id)))
+            ).scalar() or 0
+            # ~12 months * 30 indicators = 360; if less, backfill
+            if total < 360:
+                logger.info(
+                    "Indicators historical load needed: value count=%s",
+                    total,
+                )
+                return True
+        return False
+
+    async def load_historical_indicators_only(self):
+        """Backfill full history for all indicators (no fed/yield/market)."""
+        if not self.fred.is_configured:
+            logger.error("FRED API key not configured — cannot load indicator history")
+            return
+        async with async_session() as db:
+            result = await db.execute(select(Indicator))
+            indicators = result.scalars().all()
+            for ind in indicators:
+                logger.info("Loading history for %s (%s)", ind.name, ind.fred_series_id)
+                try:
+                    series = self.fred.get_series(ind.fred_series_id)
+                    if series.empty:
+                        continue
+                    await self._bulk_insert_values(db, ind.id, series)
+                except Exception:
+                    logger.exception("Failed to load history for %s", ind.name)
+            await db.commit()
+        logger.info("Indicator historical backfill complete")
+
     async def load_historical_data(self):
         """One-time bulk load of historical data for all indicators."""
         if not self.fred.is_configured:
@@ -140,6 +182,7 @@ class DataCollector:
             await db.commit()
 
         await self._load_historical_fed_data()
+        await self._load_historical_balance_sheet()
         await self._load_historical_yield_data()
         await self._load_historical_market_data()
         await self._load_historical_fx_data()
@@ -224,6 +267,28 @@ class DataCollector:
                 await db.execute(stmt)
             await db.commit()
         logger.info("Historical Fed rate data loaded")
+
+    async def _load_historical_balance_sheet(self):
+        if not self.fred.is_configured:
+            return
+        async with async_session() as db:
+            bs_data = self.fred.get_balance_sheet()
+            total = bs_data.get("balance_total", pd.Series(dtype=float))
+            treasuries = bs_data.get("balance_treasuries", pd.Series(dtype=float))
+            mbs = bs_data.get("balance_mbs", pd.Series(dtype=float))
+            reserves = bs_data.get("balance_reserves", pd.Series(dtype=float))
+            for ts, val in total.items():
+                d = ts.date() if hasattr(ts, "date") else ts
+                stmt = pg_insert(BalanceSheet).values(
+                    date=d,
+                    total_assets=float(val),
+                    treasuries=float(treasuries.get(ts)) if ts in treasuries.index else None,
+                    mbs=float(mbs.get(ts)) if ts in mbs.index else None,
+                    reserves=float(reserves.get(ts)) if ts in reserves.index else None,
+                ).on_conflict_do_nothing(constraint="balance_sheet_date_key")
+                await db.execute(stmt)
+            await db.commit()
+        logger.info("Historical balance sheet data loaded")
 
     async def collect_balance_sheet(self):
         if not self.fred.is_configured:

@@ -81,7 +81,14 @@ export default function IndicatorsPage() {
                 </tr>
               </thead>
               <tbody>
-                {indicators?.map((ind) => (
+                {!indicators?.length ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 px-5 text-center text-text-muted text-sm">
+                      No indicators loaded. Click <strong>Refresh</strong> in the top bar to load data from FRED (first run seeds 30 indicators and may take 5–15 min). Ensure <code className="text-accent">FRED_API_KEY</code> is set in the backend.
+                    </td>
+                  </tr>
+                ) : (
+                indicators?.map((ind) => (
                   <tr
                     key={ind.id}
                     onClick={() => setSelectedIndicator(ind)}
@@ -119,7 +126,8 @@ export default function IndicatorsPage() {
                       {trendArrow(ind.trend)}
                     </td>
                   </tr>
-                ))}
+                ))
+                )}
               </tbody>
             </table>
           </div>

@@ -2,8 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --prefer-online
+# Copy lockfile so install is reproducible and matches Next.js expectations (SWC deps)
+COPY package.json package-lock.json* ./
+RUN npm ci --prefer-online || npm install --prefer-online
 
 COPY . .
 

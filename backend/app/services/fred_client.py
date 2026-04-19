@@ -395,12 +395,14 @@ FX_SERIES = {
 class FredClient:
     """Wrapper around the FRED API with error handling and rate-limit awareness."""
 
-    def __init__(self):
+    def __init__(self, historical_years: int | None = None):
         settings = get_settings()
         if not settings.fred_api_key:
             logger.warning("FRED_API_KEY not set — data collection will fail")
         self._fred = Fred(api_key=settings.fred_api_key) if settings.fred_api_key else None
-        self._historical_years = settings.historical_years
+        self._historical_years = (
+            int(historical_years) if historical_years is not None else settings.historical_years
+        )
 
     @property
     def is_configured(self) -> bool:
@@ -409,12 +411,22 @@ class FredClient:
     def _start_date(self) -> str:
         return (date.today() - timedelta(days=365 * self._historical_years)).isoformat()
 
-    def get_series(self, series_id: str, start: str | None = None) -> pd.Series:
+    def get_series(
+        self,
+        series_id: str,
+        start: str | None = None,
+        end: str | None = None,
+    ) -> pd.Series:
         if not self.is_configured:
             raise RuntimeError("FRED API key not configured")
         start = start or self._start_date()
+        end = end or date.today().isoformat()
         try:
-            data = self._fred.get_series(series_id, observation_start=start)
+            data = self._fred.get_series(
+                series_id,
+                observation_start=start,
+                observation_end=end,
+            )
             return data.dropna()
         except Exception:
             logger.exception("Failed to fetch FRED series %s", series_id)

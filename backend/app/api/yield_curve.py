@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +32,16 @@ async def get_spreads(db: AsyncSession = Depends(get_db)):
 async def get_dynamics(db: AsyncSession = Depends(get_db)):
     analyzer = YieldAnalyzer(db)
     return await analyzer.get_dynamics()
+
+
+@router.get("/dynamics-at", response_model=CurveDynamics)
+async def get_dynamics_at(
+    as_of: date = Query(..., description="Point-in-time date (no future leak)."),
+    db: AsyncSession = Depends(get_db),
+):
+    """PIT curve dynamics vs ~30d / ~90d earlier (same classifier as /dynamics)."""
+    analyzer = YieldAnalyzer(db)
+    return await analyzer.get_dynamics_at_date(as_of)
 
 
 @router.get("/spread-history/{name}")
