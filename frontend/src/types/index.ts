@@ -212,6 +212,15 @@ export interface AssetAllocation {
   gold_pct: number;
 }
 
+export interface TradingState {
+  state: "risk_on" | "neutral" | "defensive";
+  vol_regime: "low" | "normal" | "high";
+  target_exposure: number;
+  transition_mode: "fast_risk_off" | "slow_risk_on" | "hold_neutral";
+  score: number;
+  reason_codes: string[];
+}
+
 export interface NavigatorRecommendation {
   position: NavigatorPosition;
   factor_tilts: FactorAllocation[];
@@ -221,6 +230,7 @@ export interface NavigatorRecommendation {
   trading_recommendations?: TradingRecommendation[];
   phase_context?: NavigatorPhaseContext | null;
   ensemble?: NavigatorEnsembleOverlay | null;
+  trading_state?: TradingState | null;
 }
 
 export interface CrossAssetSignal {

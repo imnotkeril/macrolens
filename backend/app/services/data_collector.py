@@ -9,12 +9,14 @@ from app.database import async_session
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.fed_policy import FedRate, BalanceSheet
 from app.models.market_data import YieldData, MarketData
+from app.models.economic_calendar import SourceHealthMetric
 from app.models.factor import FactorReturn, SectorPerformance
 from app.config import get_settings
 from app.services.fred_client import (
     FredClient, INDICATOR_SERIES, YIELD_SERIES, TIPS_SERIES, BREAKEVEN_SERIES,
 )
 from app.services.yahoo_client import YahooClient
+from app.services.data_sources import FredAdapter, YahooAdapter, SourceRouter
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,10 @@ class DataCollector:
         )
         self.fred = FredClient(historical_years=years)
         self.yahoo = YahooClient(historical_years=years)
+        self.market_router = SourceRouter(
+            primary=FredAdapter(self.fred),
+            fallback=YahooAdapter(self.yahoo),
+        )
 
     # ------------------------------------------------------------------
     # Indicator data
@@ -409,8 +415,8 @@ class DataCollector:
 
         async with async_session() as db:
             start = (date.today() - timedelta(days=14)).isoformat()
-            market = self.fred.get_market_data(start=start)
-            fx = self.fred.get_fx_data(start=start)
+            market, market_source = self.market_router.fetch_market_data(start=start)
+            fx, fx_source = self.market_router.fetch_fx_data(start=start)
             market.update(fx)
 
             for symbol, series in market.items():
@@ -422,10 +428,22 @@ class DataCollector:
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
 
                     stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
+                        date=d,
+                        symbol=symbol,
+                        value=float(val),
+                        change_pct=change,
+                        source=fx_source if symbol in fx else market_source,
+                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                        quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
                     ).on_conflict_do_update(
                         constraint="uq_market_date_symbol",
-                        set_={"value": float(val), "change_pct": change},
+                        set_={
+                            "value": float(val),
+                            "change_pct": change,
+                            "source": fx_source if symbol in fx else market_source,
+                            "as_of": ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                            "quality_status": self._quality_status_for_point(value=float(val), change_pct=change),
+                        },
                     )
                     await db.execute(stmt)
 
@@ -499,7 +517,7 @@ class DataCollector:
 
             # FRED macro overview series (CNLEI, ECBBS)
             if self.fred.is_configured:
-                macro_fred = self.fred.get_macro_overview_data(
+                macro_fred, macro_source = self.market_router.fetch_macro_overview_data(
                     start=(date.today() - timedelta(days=120)).isoformat()
                 )
                 for symbol, series in macro_fred.items():
@@ -512,20 +530,36 @@ class DataCollector:
                                 change = ((float(val) - prev) / prev) * 100
                         stmt = pg_insert(MarketData).values(
                             date=d, symbol=symbol,
-                            value=float(val), change_pct=change,
+                            value=float(val),
+                            change_pct=change,
+                            source=macro_source,
+                            as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                            quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
                         ).on_conflict_do_update(
                             constraint="uq_market_date_symbol",
-                            set_={"value": float(val), "change_pct": change},
+                            set_={
+                                "value": float(val),
+                                "change_pct": change,
+                                "source": macro_source,
+                                "as_of": ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                                "quality_status": self._quality_status_for_point(value=float(val), change_pct=change),
+                            },
                         )
                         await db.execute(stmt)
 
+            await self._write_source_health_metrics(
+                db=db,
+                source_name=market_source,
+                market=market,
+            )
             await db.commit()
         logger.info("Daily market data collection complete")
 
     async def _load_historical_market_data(self):
         async with async_session() as db:
-            market = self.fred.get_market_data()
+            market, market_source = self.market_router.fetch_market_data(start=None)
             yahoo_market = self.yahoo.get_market_data()
+            yahoo_symbols = set(yahoo_market.keys())
             market.update(yahoo_market)
 
             for symbol, series in market.items():
@@ -536,7 +570,13 @@ class DataCollector:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
                     stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
+                        date=d,
+                        symbol=symbol,
+                        value=float(val),
+                        change_pct=change,
+                        source="yahoo" if symbol in yahoo_symbols else market_source,
+                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                        quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
                     ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
                     await db.execute(stmt)
             await db.commit()
@@ -544,7 +584,7 @@ class DataCollector:
 
     async def _load_historical_fx_data(self):
         async with async_session() as db:
-            fx = self.fred.get_fx_data()
+            fx, fx_source = self.market_router.fetch_fx_data(start=None)
             for symbol, series in fx.items():
                 for i, (ts, val) in enumerate(series.items()):
                     d = ts.date() if hasattr(ts, "date") else ts
@@ -553,7 +593,13 @@ class DataCollector:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
                     stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
+                        date=d,
+                        symbol=symbol,
+                        value=float(val),
+                        change_pct=change,
+                        source=fx_source,
+                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                        quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
                     ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
                     await db.execute(stmt)
             await db.commit()
@@ -665,7 +711,7 @@ class DataCollector:
         if not self.fred.is_configured:
             return
         async with async_session() as db:
-            macro = self.fred.get_macro_overview_data()
+            macro, macro_source = self.market_router.fetch_macro_overview_data(start=None)
             for symbol, series in macro.items():
                 for i, (ts, val) in enumerate(series.items()):
                     d = ts.date() if hasattr(ts, "date") else ts
@@ -674,7 +720,13 @@ class DataCollector:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
                     stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
+                        date=d,
+                        symbol=symbol,
+                        value=float(val),
+                        change_pct=change,
+                        source=macro_source,
+                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                        quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
                     ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
                     await db.execute(stmt)
             await db.commit()
@@ -682,7 +734,7 @@ class DataCollector:
 
     async def _load_historical_regime_data(self):
         async with async_session() as db:
-            regime = self.fred.get_regime_data()
+            regime, regime_source = self.market_router.fetch_regime_data(start=None)
             for symbol, series in regime.items():
                 for i, (ts, val) in enumerate(series.items()):
                     d = ts.date() if hasattr(ts, "date") else ts
@@ -691,8 +743,49 @@ class DataCollector:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
                     stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
+                        date=d,
+                        symbol=symbol,
+                        value=float(val),
+                        change_pct=change,
+                        source=regime_source,
+                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                        quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
                     ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical regime data loaded")
+
+    @staticmethod
+    def _quality_status_for_point(value: float, change_pct: float | None) -> str:
+        if value <= 0:
+            return "invalid"
+        if change_pct is not None and abs(change_pct) > 40:
+            return "outlier"
+        return "ok"
+
+    async def _write_source_health_metrics(
+        self,
+        db,
+        source_name: str,
+        market: dict[str, pd.Series],
+    ) -> None:
+        total = len(market)
+        stale = 0
+        for series in market.values():
+            if series.empty:
+                stale += 1
+                continue
+            last_ts = series.index.max()
+            last_d = last_ts.date() if hasattr(last_ts, "date") else last_ts
+            if (date.today() - last_d).days > 5:
+                stale += 1
+        ratio = (stale / total) if total else 1.0
+        status = "ok" if ratio < 0.2 else "degraded"
+        metric = SourceHealthMetric(
+            source=source_name,
+            metric_name="stale_series_ratio",
+            metric_value=float(ratio),
+            status=status,
+            note=f"stale={stale}, total={total}",
+        )
+        db.add(metric)

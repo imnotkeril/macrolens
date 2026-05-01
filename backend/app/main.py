@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base, async_session
 import app.models  # noqa: F401 — register all ORM tables for create_all
-from app.api import indicators, fed, yield_curve, navigator, alerts, calendar, market, regime, data
+from app.api import indicators, fed, yield_curve, navigator, alerts, calendar, market, regime, data, calendar_canary
 from app.tasks.scheduler import start_scheduler, shutdown_scheduler
 from app.services.indicator_analyzer import IndicatorAnalyzer
 from app.services.memory_bootstrap import bootstrap_memory_schemas
@@ -26,7 +26,7 @@ try:
     from app.api import ml
     _ml_available = True
 except Exception as e:
-    logger.warning("ML API not loaded: %s. Predictive page will be unavailable.", e)
+    logger.warning("ML API (/api/ml) not loaded: %s.", e)
     ml = None
     _ml_available = False
 
@@ -103,6 +103,7 @@ app.include_router(yield_curve.router, prefix="/api/yield-curve", tags=["Yield C
 app.include_router(navigator.router, prefix="/api/navigator", tags=["Navigator"])
 app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
 app.include_router(calendar.router, prefix="/api/calendar", tags=["Calendar"])
+app.include_router(calendar_canary.router, prefix="/api/calendar-canary", tags=["Calendar Canary"])
 app.include_router(market.router, prefix="/api/market", tags=["Market"])
 app.include_router(regime.router, prefix="/api/regime", tags=["Regime"])
 app.include_router(data.router, prefix="/api/data", tags=["Data"])

@@ -80,6 +80,15 @@ class NavigatorEnsembleOverlay(BaseModel):
     experts: ExpertPhaseBreakdown | None = None
 
 
+class TradingState(BaseModel):
+    state: str  # "risk_on" | "neutral" | "defensive"
+    vol_regime: str  # "low" | "normal" | "high"
+    target_exposure: float  # 0..1
+    transition_mode: str  # "fast_risk_off" | "slow_risk_on" | "hold_neutral"
+    score: float  # -1..+1 composite
+    reason_codes: list[str] = []
+
+
 class NavigatorRecommendation(BaseModel):
     position: NavigatorPosition
     factor_tilts: list[FactorAllocation]
@@ -89,6 +98,7 @@ class NavigatorRecommendation(BaseModel):
     trading_recommendations: list[TradingRecommendation] = []
     phase_context: NavigatorPhaseContext | None = None
     ensemble: NavigatorEnsembleOverlay | None = None
+    trading_state: TradingState | None = None
 
 
 class CrossAssetSignal(BaseModel):

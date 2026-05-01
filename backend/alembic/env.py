@@ -7,6 +7,7 @@ from alembic import context
 
 from app.database import Base
 from app.models import *  # noqa: F401,F403 - import all models so metadata is populated
+from app.config import get_settings
 
 config = context.config
 if config.config_file_name is not None:
@@ -16,7 +17,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_settings().database_url
     context.configure(url=url, target_metadata=target_metadata, literal_binds=True, dialect_opts={"paramstyle": "named"})
     with context.begin_transaction():
         context.run_migrations()
@@ -29,8 +30,11 @@ def do_run_migrations(connection):
 
 
 async def run_async_migrations() -> None:
+    # Use app settings (env DATABASE_URL) so Docker resolves host `db`, not alembic.ini localhost.
+    section = dict(config.get_section(config.config_ini_section) or {})
+    section["sqlalchemy.url"] = get_settings().database_url
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

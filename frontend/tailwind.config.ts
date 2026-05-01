@@ -6,6 +6,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        /** Dark Fintech — UI spec (MacroLens dashboard) */
+        tn: {
+          canvas: "#0B0E12",
+          panel: "#111417",
+          card: "#151A1F",
+          border: "#23282F",
+          sidebar: "#0F1317",
+          sidebarActive: "#1A2026",
+          sidebarHover: "#171C22",
+          cream: "#E6E8EA",
+          secondary: "#9AA1A9",
+          muted: "#6F7782",
+          accent: "#FFFFFF",
+          positive: "#49D17D",
+          negative: "#FF5C5C",
+          macro: "#4F8DF7",
+          value: "#F2C94C",
+          purple: "#A78BFA",
+          orange: "#F2994A",
+          scale: "#2A3037",
+          chartGreen: "#63E39A",
+          chartRed: "#FF6B6B",
+          chartBlue: "#5DA9FF",
+          chartNeutral: "#7F8C8D",
+        },
+        "surface-lighter": "rgba(255,255,255,0.06)",
         bg: {
           DEFAULT: "#07070a",
           card: "rgba(255,255,255,0.025)",
@@ -31,7 +57,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["var(--font-plex-sans)", "var(--font-inter)", "system-ui", "sans-serif"],
+        mono: ["var(--font-plex-mono)", "ui-monospace", "monospace"],
+        display: ["var(--font-plex-mono)", "ui-monospace", "monospace"],
       },
       animation: {
         "fade-in": "fadeIn 0.6s ease-out both",

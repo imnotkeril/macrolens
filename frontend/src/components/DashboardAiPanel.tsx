@@ -51,7 +51,7 @@ export function DashboardAiPanel({ variant }: Props) {
             AI overlay · {variant === "navigator" ? "Navigator" : "Radar"}
           </div>
           <p className="text-xs text-text-muted font-light mt-0.5">
-            Master synthesis + specialist signals (run from Predictive or here).
+            Master synthesis + specialist signals (run from this panel).
           </p>
         </div>
         <button

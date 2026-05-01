@@ -1,13 +1,25 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Inter } from "next/font/google";
 import "./globals.css";
-import { TopNav } from "@/components/TopNav";
+import { AppFrame } from "@/components/AppFrame";
 import { QueryProvider } from "@/components/QueryProvider";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   weight: ["300", "400", "500", "600"],
+});
+
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  variable: "--font-plex-sans",
+  weight: ["300", "400", "500", "600"],
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  variable: "--font-plex-mono",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -18,14 +30,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.variable} font-sans`}>
+      <body className={`${inter.variable} ${plexSans.variable} ${plexMono.variable} font-sans`}>
         <QueryProvider>
-          <div className="min-h-screen stars">
-            <TopNav />
-            <main className="mx-auto max-w-7xl px-6 pb-16 pt-6">
-              {children}
-            </main>
-          </div>
+          <AppFrame>{children}</AppFrame>
         </QueryProvider>
       </body>
     </html>

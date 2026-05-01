@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getRegimeCurrent,
@@ -10,46 +10,30 @@ import {
   getNavigatorHistory,
   getNavigatorForward,
   getCrossAssetSignals,
-  getCrossAssetRadar,
   getRecessionCheck,
-  getFactorRatios,
   getCategoryScores,
   getFedStatus,
-  getYieldCurve,
-  getYieldCurveHistory,
-  getInflationLatest,
 } from "@/lib/api";
 import { getForecastLabSummary } from "@/lib/forecastLabApi";
-import { NavigatorKpiBar } from "@/components/NavigatorKpiBar";
+import { useRelativeTime } from "@/lib/useRelativeTime";
+import { NavigatorTerminalChrome, NavigatorTerminalHeader } from "@/components/trading-navigator/NavigatorTerminalChrome";
+import { NavigatorMainGrid } from "@/components/trading-navigator/NavigatorMainGrid";
 import { RadarKpiBar } from "@/components/RadarKpiBar";
-import { RiskOnOffPanel } from "@/components/RiskOnOffPanel";
-import { CrossAssetRadarGrid } from "@/components/CrossAssetRadarGrid";
 import { CycleGauge } from "@/components/CycleGauge";
 import { RecessionPanel } from "@/components/RecessionPanel";
 import { PhaseSignals } from "@/components/PhaseSignals";
 import { TacticalAllocation } from "@/components/TacticalAllocation";
 import { LightFCICard } from "@/components/LightFCI";
-import { NavigatorMatrix } from "@/components/NavigatorMatrix";
-import { FactorTilts } from "@/components/FactorTilts";
-import { DashboardAiPanel, MasterAiTiltsNote } from "@/components/DashboardAiPanel";
-import { IndicatorGrid } from "@/components/IndicatorGrid";
-import { YieldCurveChart } from "@/components/YieldCurveChart";
-import { FedPolicyCard } from "@/components/FedPolicyCard";
+import { DashboardAiPanel } from "@/components/DashboardAiPanel";
 import LWChart from "@/components/LWChart";
-import { cn, weightBadgeColor } from "@/lib/utils";
-import type { RegimeHistoryPoint, FactorRatio } from "@/types";
+import { cn } from "@/lib/utils";
+import type { RegimeHistoryPoint } from "@/types";
 
 const PHASE_COLORS: Record<string, string> = {
   expansion: "#10b981",
   recovery: "#3b82f6",
   slowdown: "#f59e0b",
   contraction: "#ef4444",
-};
-const REGIME_QUADRANT_COLOR: Record<string, "teal" | "blue" | "orange" | "red"> = {
-  Q1_GOLDILOCKS: "teal",
-  Q2_REFLATION: "blue",
-  Q3_OVERHEATING: "orange",
-  Q4_STAGFLATION: "red",
 };
 const QUADRANT_DISPLAY_LABEL: Record<string, string> = {
   Q1_GOLDILOCKS: "Risk ON",
@@ -89,10 +73,6 @@ export default function DashboardPage() {
     queryKey: ["cross-asset-signals"],
     queryFn: getCrossAssetSignals,
   });
-  const { data: radarCells } = useQuery({
-    queryKey: ["cross-asset-radar"],
-    queryFn: getCrossAssetRadar,
-  });
   const { data: recession } = useQuery({
     queryKey: ["recession-check"],
     queryFn: getRecessionCheck,
@@ -105,33 +85,11 @@ export default function DashboardPage() {
     queryKey: ["fed-status"],
     queryFn: getFedStatus,
   });
-  const { data: yieldCurve } = useQuery({
-    queryKey: ["yield-curve"],
-    queryFn: getYieldCurve,
-  });
-  const { data: yieldHistory } = useQuery({
-    queryKey: ["yield-curve-history"],
-    queryFn: getYieldCurveHistory,
-  });
-  const { data: inflationLatest } = useQuery({
-    queryKey: ["inflation-latest"],
-    queryFn: getInflationLatest,
-  });
   const { data: flSummary } = useQuery({
     queryKey: ["forecast-lab-summary", "dashboard", true],
     queryFn: () => getForecastLabSummary({ alignMonthEnd: true }),
     staleTime: 120_000,
   });
-
-  const [factors, setFactors] = useState<FactorRatio[]>([]);
-  useEffect(() => {
-    getFactorRatios(365).then(setFactors).catch(() => {});
-  }, []);
-
-  const cpiYoy = useMemo(() => {
-    const cpi = inflationLatest?.find((i) => i.name === "CPI");
-    return cpi?.yoy ?? null;
-  }, [inflationLatest]);
 
   const timelineData = useMemo(() => {
     if (!history?.length) return [];
@@ -176,166 +134,49 @@ export default function DashboardPage() {
     return { compositeScore, label, components: components.slice(0, 4) };
   }, [signals]);
 
+  const lastUpdatedLabel = useRelativeTime(regime?.timestamp);
+
   const isLoading = regimeLoading && !regime && !nav;
 
   if (isLoading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="text-center animate-fade-in">
-          <div className="text-3xl font-extralight tracking-[0.2em] text-text-primary mb-3">Macro Dashboard</div>
-          <div className="text-sm font-light text-text-muted">Loading macro data...</div>
+      <NavigatorTerminalChrome dataAsOf={null}>
+        <NavigatorTerminalHeader tab={tab} onTabChange={setTab} lastUpdatedLabel="—" />
+        <div className="flex min-h-[50vh] flex-1 items-center justify-center font-mono text-sm text-tn-muted">
+          Loading macro data…
         </div>
-      </div>
+      </NavigatorTerminalChrome>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between border-b border-border pb-4">
-        <h1 className="text-2xl font-extralight tracking-tight text-text-primary">Macro Dashboard</h1>
-        <div className="flex rounded-lg border border-border overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setTab("navigator")}
-            className={cn(
-              "px-5 py-2.5 text-sm font-light transition-colors",
-              tab === "navigator"
-                ? "bg-accent/20 text-accent border-r border-border"
-                : "bg-bg-card text-text-muted hover:text-text-secondary"
-            )}
-          >
-            Navigator
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("radar")}
-            className={cn(
-              "px-5 py-2.5 text-sm font-light transition-colors",
-              tab === "radar"
-                ? "bg-accent/20 text-accent"
-                : "bg-bg-card text-text-muted hover:text-text-secondary"
-            )}
-          >
-            Radar
-          </button>
-        </div>
-      </div>
-
-      {tab === "navigator" && (
-        <>
-          <DashboardAiPanel variant="navigator" />
-          {nav && (
-            <NavigatorKpiBar
-              regimeLabel={QUADRANT_DISPLAY_LABEL[nav.position.quadrant] ?? nav.position.quadrant}
-              regimeColor={REGIME_QUADRANT_COLOR[nav.position.quadrant] ?? "teal"}
-              growthScore={nav.position.growth_score}
-              fedPolicyScore={fedStatus?.policy_score ?? nav.position.fed_policy_score}
-              confidencePct={nav.position.confidence * 100}
-              cpiYoy={cpiYoy}
-            />
-          )}
-          {nav && (
-            <div className="min-h-[420px]">
-              <NavigatorMatrix
-                position={nav.position}
-                history={navHistory}
-                forward={navForward}
-                large
-                ensembleCaption={
-                  nav.ensemble
-                    ? `Forecast Lab · ${QUADRANT_DISPLAY_LABEL[nav.ensemble.phase_class] ?? nav.ensemble.phase_class} · conf ${(nav.ensemble.confidence * 100).toFixed(0)}% · as of ${nav.ensemble.as_of_date}${nav.ensemble.trained ? "" : " · bundle untrained"}`
-                    : null
-                }
-                ensembleMix={
-                  nav.ensemble?.mix_growth_score != null && nav.ensemble?.mix_fed_policy_score != null
-                    ? { growth: nav.ensemble.mix_growth_score, fed: nav.ensemble.mix_fed_policy_score }
-                    : null
-                }
-              />
-            </div>
-          )}
-          {nav?.phase_context && (
-            <div className="card text-sm font-light text-text-secondary">
-              <div className="card-header">Yield curve (PIT)</div>
-              <p>
-                <span className="text-text-muted">Pattern:</span>{" "}
-                <span className="text-text-primary font-mono">{nav.phase_context.curve_pattern}</span>
-                {nav.phase_context.curve_matches_methodology != null && (
-                  <span className="ml-2 text-text-muted">
-                    · methodology match:{" "}
-                    {nav.phase_context.curve_matches_methodology ? "yes" : "no"}
-                  </span>
-                )}
-              </p>
-              <p className="text-xs text-text-muted mt-1">{nav.phase_context.curve_description}</p>
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-2">{fedStatus && <FedPolicyCard status={fedStatus} />}</div>
-            <div className="lg:col-span-3">
-              <RiskOnOffPanel
-                compositeScore={riskOnOffData.compositeScore}
-                label={riskOnOffData.label}
-                components={riskOnOffData.components.length ? riskOnOffData.components : [
-                  { name: "Credit Spreads", direction: "—", arrow: "flat", signal: "neutral" },
-                  { name: "VIX", direction: "—", arrow: "flat", signal: "neutral" },
-                  { name: "Equity Momentum", direction: "—", arrow: "flat", signal: "neutral" },
-                  { name: "FCI", direction: "—", arrow: "flat", signal: "neutral" },
-                ]}
-              />
-            </div>
+    <NavigatorTerminalChrome dataAsOf={regime?.timestamp ?? null}>
+      <NavigatorTerminalHeader tab={tab} onTabChange={setTab} lastUpdatedLabel={lastUpdatedLabel} />
+      <div className="flex-1 overflow-y-auto">
+        {tab === "navigator" && nav && (
+          <NavigatorMainGrid
+            nav={nav}
+            navHistory={navHistory}
+            navForward={navForward}
+            regime={regime}
+            signals={signals ?? []}
+            fedStatus={fedStatus}
+            categories={categories}
+            cycleTimeline={history ?? []}
+            riskComposite={riskOnOffData.compositeScore}
+            riskLabel={riskOnOffData.label}
+            riskComponents={riskOnOffData.components.map((c) => ({
+              name: c.name,
+              direction: c.direction,
+              signal: c.signal,
+            }))}
+          />
+        )}
+        {tab === "navigator" && !nav && (
+          <div className="p-10 text-center font-mono text-sm text-tn-muted">
+            Navigator recommendation unavailable.
           </div>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-2">{categories && <IndicatorGrid scores={categories} />}</div>
-            <div className="lg:col-span-3">
-              {yieldCurve && (
-                <YieldCurveChart snapshot={yieldCurve} history={yieldHistory} chartHeight={280} />
-              )}
-            </div>
-          </div>
-          <CrossAssetRadarGrid cells={radarCells ?? undefined} signals={signals ?? []} />
-          {nav && (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-1">
-                <div>
-                  <FactorTilts
-                    factors={nav.factor_tilts}
-                    allocation={nav.asset_allocation}
-                    tradingRecommendations={nav.trading_recommendations}
-                  />
-                  <MasterAiTiltsNote />
-                </div>
-              </div>
-              <div className="card lg:col-span-2">
-                <div className="card-header">Sector Allocations</div>
-                <div className="space-y-2">
-                  {nav.sector_allocations.map((s) => (
-                    <div
-                      key={s.sector}
-                      className="flex items-center justify-between rounded-lg border border-border bg-bg-card px-4 py-2.5"
-                    >
-                      <div>
-                        <div className="text-sm font-light text-text-primary">{s.sector}</div>
-                        <div className="text-[10px] text-text-muted">{s.rationale}</div>
-                      </div>
-                      <span className={cn("badge text-[10px]", weightBadgeColor(s.weight))}>{s.weight}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="card-header mt-4">Geographic</div>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(nav.geographic).map(([region, weight]) => (
-                    <div key={region} className="flex items-center gap-2 rounded-lg border border-border bg-bg-card px-3 py-2">
-                      <span className="text-sm font-light text-text-primary">{region}</span>
-                      <span className={cn("badge text-[10px]", weightBadgeColor(weight))}>{weight}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+        )}
 
       {tab === "radar" && (
         <>
@@ -563,6 +404,7 @@ export default function DashboardPage() {
           )}
         </>
       )}
-    </div>
+      </div>
+    </NavigatorTerminalChrome>
   );
 }

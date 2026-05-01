@@ -109,7 +109,7 @@ export default function ForecastLabPage() {
       <div>
         <h1 className="text-2xl font-extralight tracking-tight text-text-primary">Forecast Lab</h1>
         <p className="mt-1 text-sm font-light text-text-muted">
-          Isolated prediction pipeline (rule + HMM + GBDT ensemble). Does not use the Predictive page or legacy{" "}
+          Isolated prediction pipeline (rule + HMM + GBDT ensemble). Does not use legacy{" "}
           <code className="text-xs bg-bg-card px-1 rounded">/api/ml</code> routes.
         </p>
       </div>

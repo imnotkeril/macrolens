@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   status: FedPolicyStatus;
+  className?: string;
 }
 
 const STANCE_COLORS: Record<string, string> = {
@@ -23,11 +24,11 @@ const STANCE_LABELS: Record<string, string> = {
   very_tight: "Very Tight",
 };
 
-export function FedPolicyCard({ status }: Props) {
+export function FedPolicyCard({ status, className }: Props) {
   const pct = ((status.policy_score + 2) / 4) * 100;
 
   return (
-    <div className="card animate-fade-in">
+    <div className={cn("card animate-fade-in", className)}>
       <div className="card-header">Fed Policy</div>
 
       <div className="space-y-4">

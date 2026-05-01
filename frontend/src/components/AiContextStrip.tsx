@@ -29,7 +29,7 @@ export function AiContextStrip({ tabId }: Props) {
   if (!text) {
     return (
       <div className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-text-muted">
-        No AI summary for this tab yet. Run agents (Dashboard or Predictive) with Claude + macro pipeline to fill tab summaries.
+        No AI summary for this tab yet. Run agents from the Macro Dashboard AI panel with Claude + macro pipeline to fill tab summaries.
       </div>
     );
   }

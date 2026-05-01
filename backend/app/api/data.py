@@ -7,6 +7,7 @@ from sqlalchemy import select, func
 from app.config import get_settings
 from app.database import async_session
 from app.models.indicator import Indicator
+from app.models.economic_calendar import SourceHealthMetric
 from app.services.data_collector import DataCollector
 from app.services.progress_store import (
     init_refresh_progress,
@@ -233,3 +234,26 @@ async def refresh_all_data():
         "status": "completed" if not errors else "completed_with_errors",
         "errors": errors,
     }
+
+
+@router.get("/source-health")
+async def source_health(limit: int = Query(default=50, ge=1, le=500)):
+    """Recent source health snapshots for ingestion quality monitoring."""
+    async with async_session() as db:
+        q = (
+            select(SourceHealthMetric)
+            .order_by(SourceHealthMetric.measured_at.desc())
+            .limit(limit)
+        )
+        rows = (await db.execute(q)).scalars().all()
+    return [
+        {
+            "source": r.source,
+            "metric_name": r.metric_name,
+            "metric_value": r.metric_value,
+            "status": r.status,
+            "note": r.note,
+            "measured_at": r.measured_at.isoformat(),
+        }
+        for r in rows
+    ]

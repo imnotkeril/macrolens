@@ -1449,7 +1449,7 @@ export default function AnalysisPage() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-text-muted">No Master recommendation yet. Open Predictive and run «Run Agents + Master».</p>
+                    <p className="text-xs text-text-muted">No Master recommendation yet. On Macro Dashboard → Navigator/Radar open the AI overlay and run «Run AI agents».</p>
                   )}
                   <div>
                     <div className="text-xs uppercase tracking-wider text-text-muted mb-2">

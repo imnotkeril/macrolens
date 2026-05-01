@@ -1,6 +1,8 @@
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from app.database import async_session
+from app.services.calendar_canary_service import CalendarCanaryService
 from app.services.data_collector import DataCollector
 
 logger = logging.getLogger(__name__)
@@ -50,6 +52,14 @@ async def run_memory_jobs():
     logger.info("Memory jobs complete")
 
 
+async def run_calendar_canary():
+    """Collect external economic calendar canary feed."""
+    svc = CalendarCanaryService()
+    async with async_session() as db:
+        stats = await svc.collect(db=db)
+    logger.info("Calendar canary refresh complete: %s", stats)
+
+
 def start_scheduler():
     collector = DataCollector()
 
@@ -82,6 +92,9 @@ def start_scheduler():
 
     # Daily: memory snapshots and domain ingestion
     scheduler.add_job(run_memory_jobs, "cron", hour=18, minute=50, id="daily_memory")
+
+    # Daily: external calendar canary ingestion
+    scheduler.add_job(run_calendar_canary, "cron", hour=19, minute=0, id="daily_calendar_canary")
 
     scheduler.start()
     logger.info("Scheduler started with %d jobs", len(scheduler.get_jobs()))

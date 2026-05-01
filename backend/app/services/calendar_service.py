@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.market_data import MarketData
+from app.models.economic_calendar import EconomicCalendarEvent
 from app.schemas.calendar import CalendarEvent, CalendarSummary, EventImpact
 
 logger = logging.getLogger(__name__)
@@ -121,6 +122,30 @@ class CalendarService:
                     importance=3,
                     is_upcoming=False,
                 ))
+
+        canary_events_q = (
+            select(EconomicCalendarEvent)
+            .where(
+                EconomicCalendarEvent.event_date >= today,
+                EconomicCalendarEvent.event_date <= today + timedelta(days=upcoming_days),
+            )
+            .order_by(EconomicCalendarEvent.event_date.asc())
+            .limit(200)
+        )
+        canary_events = (await self.db.execute(canary_events_q)).scalars().all()
+        for ev in canary_events:
+            upcoming.append(CalendarEvent(
+                date=ev.event_date,
+                name=ev.event_name,
+                event_type="external_calendar",
+                importance=ev.importance or 2,
+                category=ev.country,
+                frequency=ev.frequency,
+                actual=ev.actual,
+                previous=ev.previous,
+                forecast=ev.forecast,
+                is_upcoming=True,
+            ))
 
         upcoming.sort(key=lambda e: e.date)
         recent.sort(key=lambda e: e.date, reverse=True)

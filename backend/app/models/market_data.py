@@ -37,4 +37,7 @@ class MarketData(Base):
     symbol: Mapped[str] = mapped_column(String(30), nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     change_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source: Mapped[str] = mapped_column(String(50), default="unknown", nullable=False)
+    as_of: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    quality_status: Mapped[str] = mapped_column(String(20), default="ok", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

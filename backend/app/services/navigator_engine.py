@@ -28,6 +28,7 @@ from app.schemas.navigator import (
     NavigatorRecommendation,
     NavigatorPhaseContext,
     NavigatorEnsembleOverlay,
+    TradingState,
     FactorAllocation,
     SectorAllocation,
     AssetAllocation,
@@ -41,6 +42,7 @@ from app.services.navigator_yield_expectations import (
     expected_curve_patterns_for_quadrant,
 )
 from app.services.navigator_cross_asset_expectations import confidence_from_cross_asset_signals
+from app.services.trading_state_engine import build_trading_state
 
 logger = logging.getLogger(__name__)
 
@@ -375,7 +377,9 @@ class NavigatorEngine:
             logger.debug("navigator ensemble overlay skipped", exc_info=True)
 
         curve_match = curve_pattern_matches_quadrant(quadrant, dyn.pattern)
-        confidence = await self._compute_confidence(quadrant, curve_match)
+        signals = await self.get_cross_asset_signals()
+        confidence = await self._compute_confidence(quadrant, curve_match, signals=signals)
+        trading_state: TradingState = build_trading_state(signals)
 
         config = QUADRANT_CONFIG[quadrant]
 
@@ -427,11 +431,18 @@ class NavigatorEngine:
             trading_recommendations=trading_recs,
             phase_context=phase_ctx,
             ensemble=ensemble_overlay,
+            trading_state=trading_state,
         )
 
-    async def _compute_confidence(self, quadrant: str, curve_match: bool | None) -> float:
+    async def _compute_confidence(
+        self,
+        quadrant: str,
+        curve_match: bool | None,
+        signals: list[CrossAssetSignal] | None = None,
+    ) -> float:
         """Cross-asset alignment vs quadrant expectations + optional yield-curve methodology blend (TZ)."""
-        signals = await self.get_cross_asset_signals()
+        if signals is None:
+            signals = await self.get_cross_asset_signals()
         return confidence_from_cross_asset_signals(
             quadrant, signals, curve_match=curve_match
         )

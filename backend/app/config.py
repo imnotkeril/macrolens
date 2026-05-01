@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://macrolens:macrolens_secret@localhost:5432/macrolens"
     redis_url: str = "redis://localhost:6379/0"
     fred_api_key: str = ""
+    calendar_canary_enabled: bool = True
+    calendar_canary_days_ahead: int = 45
 
     # FRED API limits: 120 requests/min
     fred_rate_limit: int = 120

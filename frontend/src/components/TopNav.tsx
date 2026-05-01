@@ -1,72 +1,22 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { refreshAllData, getRefreshProgress } from "@/lib/api";
-import type { TaskProgress } from "@/types";
+import { useDataRefresh } from "@/lib/useDataRefresh";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
   { href: "/forecast-lab", label: "Forecast Lab" },
-  { href: "/predictive", label: "Predictive" },
-  { href: "/ml-regime", label: "ML Regime" },
   { href: "/analysis", label: "Analysis" },
   { href: "/indicators", label: "Indicators" },
   { href: "/calendar", label: "Calendar" },
   { href: "/reports", label: "Reports" },
 ];
 
-const REFRESH_POLL_MS = 1500;
-
 export function TopNav() {
   const pathname = usePathname();
-  const queryClient = useQueryClient();
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshResult, setRefreshResult] = useState<"ok" | "error" | null>(null);
-  const [progress, setProgress] = useState<TaskProgress | null>(null);
-  const refreshDoneRef = useRef(false);
-
-  const handleRefresh = useCallback(async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    setRefreshResult(null);
-    setProgress(null);
-    refreshDoneRef.current = false;
-    try {
-      const result = await refreshAllData();
-      refreshDoneRef.current = true;
-      const success = result.errors.length === 0;
-      setRefreshResult(success ? "ok" : "error");
-      // Invalidate all data queries so dashboard and other pages refetch and show new dates/data
-      if (success) {
-        void queryClient.invalidateQueries();
-      }
-    } catch {
-      refreshDoneRef.current = true;
-      setRefreshResult("error");
-    } finally {
-      setRefreshing(false);
-      setTimeout(() => setRefreshResult(null), 4000);
-    }
-  }, [refreshing, queryClient]);
-
-  useEffect(() => {
-    if (!refreshing) return;
-    const t = setInterval(async () => {
-      if (refreshDoneRef.current) return;
-      try {
-        const p = await getRefreshProgress();
-        setProgress(p);
-        if (p.done) refreshDoneRef.current = true;
-      } catch {
-        /* ignore poll errors */
-      }
-    }, REFRESH_POLL_MS);
-    return () => clearInterval(t);
-  }, [refreshing]);
+  const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border backdrop-blur-xl bg-bg/80">
