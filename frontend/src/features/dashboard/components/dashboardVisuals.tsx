@@ -474,7 +474,25 @@ function Sparkline({
   );
 }
 
-export function RiskSegmentDonut({ value }: { value: number }) {
+export function RiskSegmentDonut({ value }: { value: number | null | undefined }) {
+  if (value == null || Number.isNaN(value)) {
+    return (
+      <div
+        className="shrink-0 rounded-full border"
+        style={{
+          width: "clamp(64px, 10vw, 98px)",
+          height: "clamp(64px, 10vw, 98px)",
+          borderColor: C.border,
+          background: C.panelSoft,
+          padding: "clamp(10px, 1.9vw, 17px)",
+        }}
+      >
+        <div className="flex h-full w-full items-center justify-center rounded-full text-[11px]" style={{ color: C.muted }}>
+          N/A
+        </div>
+      </div>
+    );
+  }
   const safe = clamp(value, 0, 100);
   const litSegments = Math.floor(safe / 10);
   const segmentPalette = ["#6fb97b", "#72bd7f", "#79c286", "#b8b25c", "#c3b75f", "#d0be64", "#be6f7c", "#c36777", "#cb5f71", "#bc4856"];
@@ -524,13 +542,28 @@ export function RiskSegmentDonut({ value }: { value: number }) {
 }
 
 export function MacroSentimentSparkBlock({ values }: { values: number[] }) {
-  const rawPts = useMemo(() => {
-    const clean = values.filter((v) => Number.isFinite(v));
-    return clean.length ? clean : [0];
-  }, [values]);
-  const minValue = useMemo(() => Math.min(...rawPts), [rawPts]);
-  const maxValue = useMemo(() => Math.max(...rawPts), [rawPts]);
+  const rawPts = useMemo(() => values.filter((v) => Number.isFinite(v)), [values]);
+  // Hooks must run unconditionally — branch only in JSX (see Rules of Hooks).
+  const minValue = useMemo(
+    () => (rawPts.length >= 2 ? Math.min(...rawPts) : 0),
+    [rawPts],
+  );
+  const maxValue = useMemo(
+    () => (rawPts.length >= 2 ? Math.max(...rawPts) : 1),
+    [rawPts],
+  );
   const safeRange = useMemo(() => Math.max(0.4, maxValue - minValue), [maxValue, minValue]);
+
+  if (rawPts.length < 2) {
+    return (
+      <div
+        className="flex h-[72px] min-h-[72px] items-center justify-center rounded-[2px] text-[11px]"
+        style={{ color: C.muted, background: "rgba(255,255,255,0.02)" }}
+      >
+        {rawPts.length === 0 ? "No macro sentiment history yet." : "Need at least two points for sparkline."}
+      </div>
+    );
+  }
   const padding = safeRange * 0.1;
   const yMin = minValue - padding;
   const yMax = maxValue + padding;

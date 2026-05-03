@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ComponentType, CSSProperties } from "react";
 import type { CategoryScore } from "@/types";
 
@@ -16,9 +17,9 @@ type RecessionModelRow = { name: string; pct: number; dot: string };
 type SharedDeps = {
   colors: Palette;
   panelStyle: CSSProperties;
-  formatPercent: (value: number, digits?: number) => string;
-  formatNumber: (value: number) => string;
-  RiskSegmentDonutComponent: ComponentType<{ value: number }>;
+  formatPercent: (value: number | null | undefined, digits?: number) => string;
+  formatNumber: (value: number | null | undefined, digits?: number) => string;
+  RiskSegmentDonutComponent: ComponentType<{ value: number | null | undefined }>;
   MacroSentimentSparkBlockComponent: ComponentType<{ values: number[] }>;
   MacroCategoryRowComponent: ComponentType<{ row: CategoryScore }>;
   FedPolicyScaleBarComponent: ComponentType<{ value: number }>;
@@ -34,7 +35,7 @@ export function RecessionMonitorSinglePanel({
   formatPercent,
   RiskSegmentDonutComponent,
 }: SharedDeps & {
-  recessionProbPct: number;
+  recessionProbPct: number | null;
   recessionRisk: { label: string; color: string };
   recessionModelRows: RecessionModelRow[];
 }) {
@@ -81,7 +82,7 @@ export function MacroSentimentSinglePanel({
   MacroSentimentSparkBlockComponent,
   MacroCategoryRowComponent,
 }: SharedDeps & {
-  cycleScore: number;
+  cycleScore: number | null;
   macroSentimentSeries: number[];
   categories: CategoryScore[];
 }) {
@@ -129,8 +130,15 @@ export function FedPolicySinglePanel({
   balanceSheetDirection: string;
 }) {
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" style={panelStyle}>
-      <div className="mb-1 text-[18px] uppercase leading-none tracking-[0.08em]">Fed Policy Score</div>
+    <Link
+      href="/next/fed-policy"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden no-underline outline-none focus-visible:ring-2 focus-visible:ring-[var(--nd-border)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nd-panel)]"
+      style={panelStyle}
+      aria-label="Open full Fed Policy page"
+    >
+      <div className="mb-1 text-[18px] uppercase leading-none tracking-[0.08em]" style={{ color: colors.text }}>
+        Fed Policy Score
+      </div>
       <div className="mt-2 grid min-w-0 shrink-0 items-start gap-y-0 overflow-hidden" style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}>
         <div className="min-w-0">
           <div className="text-[24px] leading-none tabular-nums">{formatNumber(fedPolicy)}</div>
@@ -162,7 +170,10 @@ export function FedPolicySinglePanel({
           <span>Balance sheet</span>
           <span style={{ color: colors.text }}>{balanceSheetDirection}</span>
         </div>
+        <span className="mt-auto shrink-0 pt-2 text-[11px] normal-case tracking-[0.03em]" style={{ color: colors.soft }}>
+          Open Fed Policy {"->"}
+        </span>
       </div>
-    </div>
+    </Link>
   );
 }

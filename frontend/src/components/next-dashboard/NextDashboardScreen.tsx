@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { useDataRefresh } from "@/lib/useDataRefresh";
 import { NextDashboardShell } from "@/components/next-dashboard/NextDashboardShell";
+import { QueryErrorBanner } from "@/components/next-dashboard/QueryErrorBanner";
 import { NEXT_DASHBOARD_NAV_ITEMS } from "@/components/next-dashboard/nextDashboardConfig";
 import { useNextShellTheme } from "@/components/next-dashboard/nextShellTheme";
 import { useDashboardData } from "@/features/dashboard/hooks/useDashboardData";
@@ -49,6 +51,7 @@ import {
   DASHBOARD_FALLBACK_SECTORS,
   DASHBOARD_SECTOR_TICKER_MAP,
 } from "@/features/dashboard/constants/fallbackDashboard";
+import { NEXT_DASHBOARD_QUERY_ROOT } from "@/features/dashboard/queryKeys";
 
 /** Panel layout: viewport-relative grid; parity with Trading Navigator proportions. */
 
@@ -78,7 +81,9 @@ export function NextDashboardScreen({
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
   const [snapshotDetail, setSnapshotDetail] = useState<SnapshotDetailState>(null);
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
+  const queryClient = useQueryClient();
   const {
+    queryErrors,
     navigatorQ,
     regimeQ,
     fedQ,
@@ -153,6 +158,11 @@ export function NextDashboardScreen({
       >
         {mode === "dashboard" ? (
           <section style={{ display: "grid", gap: 12 }}>
+            <QueryErrorBanner
+              colors={C}
+              errors={queryErrors}
+              onRetry={() => void queryClient.invalidateQueries({ queryKey: [NEXT_DASHBOARD_QUERY_ROOT] })}
+            />
             <DashboardTopRowSection
               basePanelStyle={nextPanelSurfaceStyle(C)}
               colors={C}

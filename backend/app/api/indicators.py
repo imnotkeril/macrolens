@@ -18,6 +18,14 @@ async def list_indicators(
     category: IndicatorCategory | None = None,
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    List indicators with latest values.
+
+    Uses one batched query for latest `IndicatorValue` per indicator (PostgreSQL
+    DISTINCT ON) instead of N+1 round-trips. The macro-sentiment page fires four
+    parallel category requests; the old pattern could overwhelm the DB/pool and
+    surface in the browser as 'Failed to fetch'.
+    """
     query = select(Indicator)
     if category:
         query = query.where(Indicator.category == category)
@@ -25,35 +33,42 @@ async def list_indicators(
     result = await db.execute(query)
     indicators = result.scalars().all()
 
+    ids = [ind.id for ind in indicators]
+    latest_by_id: dict[int, IndicatorValue] = {}
+    if ids:
+        latest_rows = (
+            await db.execute(
+                select(IndicatorValue)
+                .where(IndicatorValue.indicator_id.in_(ids))
+                .distinct(IndicatorValue.indicator_id)
+                .order_by(IndicatorValue.indicator_id, desc(IndicatorValue.date))
+            )
+        ).scalars().all()
+        latest_by_id = {row.indicator_id: row for row in latest_rows}
+
     enriched = []
     for ind in indicators:
-        latest_q = (
-            select(IndicatorValue)
-            .where(IndicatorValue.indicator_id == ind.id)
-            .order_by(desc(IndicatorValue.date))
-            .limit(1)
+        latest = latest_by_id.get(ind.id)
+        enriched.append(
+            IndicatorWithLatest(
+                id=ind.id,
+                name=ind.name,
+                fred_series_id=ind.fred_series_id,
+                category=ind.category,
+                importance=ind.importance,
+                indicator_type=ind.indicator_type,
+                frequency=ind.frequency,
+                source=ind.source,
+                description=ind.description,
+                unit=ind.unit,
+                latest_value=latest.value if latest else None,
+                latest_date=latest.date if latest else None,
+                previous_value=latest.previous if latest else None,
+                trend=latest.trend if latest else None,
+                z_score=latest.z_score if latest else None,
+                surprise=latest.surprise if latest else None,
+            )
         )
-        latest_result = await db.execute(latest_q)
-        latest = latest_result.scalar_one_or_none()
-
-        enriched.append(IndicatorWithLatest(
-            id=ind.id,
-            name=ind.name,
-            fred_series_id=ind.fred_series_id,
-            category=ind.category,
-            importance=ind.importance,
-            indicator_type=ind.indicator_type,
-            frequency=ind.frequency,
-            source=ind.source,
-            description=ind.description,
-            unit=ind.unit,
-            latest_value=latest.value if latest else None,
-            latest_date=latest.date if latest else None,
-            previous_value=latest.previous if latest else None,
-            trend=latest.trend if latest else None,
-            z_score=latest.z_score if latest else None,
-            surprise=latest.surprise if latest else None,
-        ))
     return enriched
 
 

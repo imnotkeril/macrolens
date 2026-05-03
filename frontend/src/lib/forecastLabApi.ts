@@ -10,19 +10,10 @@ import type {
   TrainStatus,
 } from "@/types/forecastLab";
 
-/**
- * Browser: same-origin `/api` (rewritten by Next to the backend — see next.config.js).
- * Server (unlikely here): absolute URL for any SSR/tooling.
- */
-function apiBase(): string {
-  if (typeof window !== "undefined") {
-    return "";
-  }
-  return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-}
+import { apiFetchOrigin } from "@/lib/apiFetchOrigin";
 
 async function flFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${apiBase()}${path}`, {
+  const res = await fetch(`${apiFetchOrigin()}${path}`, {
     ...init,
     headers: { ...init?.headers, Accept: "application/json" },
   });

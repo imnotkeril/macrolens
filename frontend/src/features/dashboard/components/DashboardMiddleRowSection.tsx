@@ -20,10 +20,10 @@ type RecessionModelRow = { name: string; pct: number; dot: string };
 type Props = {
   quadPanelStyle: CSSProperties;
   colors: Palette;
-  recessionProbPct: number;
+  recessionProbPct: number | null;
   recessionRisk: { label: string; color: string };
   recessionModelRows: RecessionModelRow[];
-  cycleScore: number;
+  cycleScore: number | null;
   macroSentimentSeries: number[];
   categories: CategoryScore[];
   fedPolicy: number;
@@ -37,9 +37,9 @@ type Props = {
   yieldHistory: YieldCurveSnapshot[] | null | undefined;
   spread2y10yText: string;
   realYield10yText: string;
-  formatPercent: (value: number, digits?: number) => string;
-  formatNumber: (value: number) => string;
-  RiskSegmentDonutComponent: ComponentType<{ value: number }>;
+  formatPercent: (value: number | null | undefined, digits?: number) => string;
+  formatNumber: (value: number | null | undefined, digits?: number) => string;
+  RiskSegmentDonutComponent: ComponentType<{ value: number | null | undefined }>;
   MacroSentimentSparkBlockComponent: ComponentType<{ values: number[] }>;
   MacroCategoryRowComponent: ComponentType<{ row: CategoryScore }>;
   FedPolicyScaleBarComponent: ComponentType<{ value: number }>;
@@ -160,58 +160,60 @@ export function DashboardMiddleRowSection({
         </div>
       </div>
 
-      <div
-        className="flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden"
-        style={quadChrome}
+      <Link
+        href="/next/fed-policy"
+        className="contents no-underline outline-none focus-visible:ring-2 focus-visible:ring-[var(--nd-border)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nd-panel)]"
+        aria-label="Open full Fed Policy page"
       >
-        <div className="mb-1 text-[18px] uppercase leading-none tracking-[0.08em]">Fed Policy Score</div>
         <div
-          className="mt-2 grid min-w-0 shrink-0 items-start gap-y-0 overflow-hidden"
-          style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}
+          className="flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden"
+          style={quadChrome}
         >
-          <div className="min-w-0">
-            <div className="text-[24px] leading-none tabular-nums">{formatNumber(fedPolicy)}</div>
-            <div className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: colors.green }}>{fedStance}</div>
-          </div>
-          <div className="min-w-0 px-1 py-0.5">
-            <FedPolicyScaleBarComponent value={fedPolicy ?? 0} />
-          </div>
-          <div className="col-span-2 mt-2 border-t pt-3" style={{ borderColor: colors.borderSoft }}>
-            <div className="grid min-w-0 items-start" style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}>
-              <div className="min-w-0">
-                <div className="leading-tight text-[10px] uppercase tracking-[0.06em]" style={{ color: colors.soft }}>
-                  <div>Fed Funds</div>
-                  <div>Rate</div>
+          <div className="mb-1 text-[18px] uppercase leading-none tracking-[0.08em]">Fed Policy Score</div>
+          <div
+            className="mt-2 grid min-w-0 shrink-0 items-start gap-y-0 overflow-hidden"
+            style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}
+          >
+            <div className="min-w-0">
+              <div className="text-[24px] leading-none tabular-nums">{formatNumber(fedPolicy)}</div>
+              <div className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: colors.green }}>{fedStance}</div>
+            </div>
+            <div className="min-w-0 px-1 py-0.5">
+              <FedPolicyScaleBarComponent value={fedPolicy ?? 0} />
+            </div>
+            <div className="col-span-2 mt-2 border-t pt-3" style={{ borderColor: colors.borderSoft }}>
+              <div className="grid min-w-0 items-start" style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}>
+                <div className="min-w-0">
+                  <div className="leading-tight text-[10px] uppercase tracking-[0.06em]" style={{ color: colors.soft }}>
+                    <div>Fed Funds</div>
+                    <div>Rate</div>
+                  </div>
                 </div>
-              </div>
-              <div className="min-w-0 pl-1 pt-0.5">
-                <FedRateHistorySparkComponent values={fedRateSeries} />
+                <div className="min-w-0 pl-1 pt-0.5">
+                  <FedRateHistorySparkComponent values={fedRateSeries} />
+                </div>
               </div>
             </div>
           </div>
+          <div className="mt-auto flex shrink-0 flex-col border-t pt-3 text-[11px] uppercase tracking-[0.06em]" style={{ color: colors.soft, borderColor: colors.borderSoft }}>
+            <div className="flex items-center justify-between py-2">
+              <span>Rate direction</span>
+              <span style={{ color: colors.text }}>{rateDirection}</span>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <span>Balance sheet</span>
+              <span style={{ color: colors.text }}>{balanceSheetDirection}</span>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <span>Vs neutral (r*)</span>
+              <span style={{ color: colors.text }}>+0.42%</span>
+            </div>
+            <span className="mt-auto shrink-0 pt-2 text-[11px] normal-case tracking-[0.03em]" style={{ color: colors.soft }}>
+              Open Fed Policy {"->"}
+            </span>
+          </div>
         </div>
-        <div className="mt-auto flex shrink-0 flex-col border-t pt-3 text-[11px] uppercase tracking-[0.06em]" style={{ color: colors.soft, borderColor: colors.borderSoft }}>
-          <div className="flex items-center justify-between py-2">
-            <span>Rate direction</span>
-            <span style={{ color: colors.text }}>{rateDirection}</span>
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <span>Balance sheet</span>
-            <span style={{ color: colors.text }}>{balanceSheetDirection}</span>
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <span>Vs neutral (r*)</span>
-            <span style={{ color: colors.text }}>+0.42%</span>
-          </div>
-          <Link
-            href="/next/fed-policy"
-            className="mt-auto shrink-0 pt-2 text-[11px] normal-case tracking-[0.03em] transition-opacity hover:opacity-90"
-            style={{ color: colors.soft }}
-          >
-            View Fed Policy {"->"}
-          </Link>
-        </div>
-      </div>
+      </Link>
 
       <div
         className="relative flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden"

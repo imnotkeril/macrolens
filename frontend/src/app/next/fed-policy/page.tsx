@@ -1,5 +1,5 @@
-import { NextDashboardScreen } from "@/components/next-dashboard/NextDashboardScreen";
+import { NextFedPolicyScreen } from "@/components/next-dashboard/fed-policy/NextFedPolicyScreen";
 
 export default function NextFedPolicyPage() {
-  return <NextDashboardScreen mode="fed-policy" />;
+  return <NextFedPolicyScreen />;
 }

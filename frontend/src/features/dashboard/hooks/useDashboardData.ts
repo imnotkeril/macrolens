@@ -40,22 +40,6 @@ type CrossAssetDisplaySignal = {
   unit?: string;
 };
 
-const FALLBACK_SIGNALS: CrossAssetDisplaySignal[] = [
-  { name: "Gold vs Copper", description: "Defensive metal vs growth metal", signal: "bearish", value: -2.4, unit: "%" },
-  { name: "Gold vs Oil", description: "Real-rate hedge vs inflation beta", signal: "bullish", value: 1.7, unit: "%" },
-  { name: "DXY", description: "Dollar pressure / funding", signal: "bearish", value: -1.8, unit: "%" },
-  { name: "VIX", description: "Volatility regime", signal: "bearish", value: 18.7, unit: "" },
-  { name: "High Beta vs Low Beta", description: "Risk appetite factor spread", signal: "bullish", value: 3.4, unit: "%" },
-  { name: "Cyclicals vs Non-Cyclicals", description: "Cycle exposure spread", signal: "bullish", value: 2.2, unit: "%" },
-];
-
-const FALLBACK_CATEGORIES: CategoryScore[] = [
-  { category: "housing", score: 0.41, trend: "improving", indicator_count: 4, color: "green" },
-  { category: "orders", score: 0.26, trend: "improving", indicator_count: 5, color: "green" },
-  { category: "income_sales", score: 0.12, trend: "neutral", indicator_count: 6, color: "yellow" },
-  { category: "employment", score: -0.28, trend: "deteriorating", indicator_count: 5, color: "red" },
-];
-
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
@@ -66,14 +50,15 @@ function normalizeProbabilityPercent(x: number | null | undefined): number {
   return clamp(v, 0, 100);
 }
 
-function recessionRiskStyle(pct: number): { label: string; color: string } {
+function recessionRiskStyle(pct: number | null): { label: string; color: string } {
+  if (pct == null || Number.isNaN(pct)) return { label: "N/A", color: "var(--nd-muted)" };
   if (pct < 22) return { label: "LOW RISK", color: "var(--nd-green)" };
   if (pct < 45) return { label: "MODERATE", color: "var(--nd-yellow)" };
   return { label: "ELEVATED", color: "var(--nd-red)" };
 }
 
 function buildCrossAssetSignals(radar?: CrossAssetRadarCell[] | null): CrossAssetDisplaySignal[] {
-  if (!radar?.length) return FALLBACK_SIGNALS;
+  if (!radar?.length) return [];
 
   const byName = new Map(radar.map((cell) => [cell.name.toLowerCase(), cell]));
   const get = (name: string) => byName.get(name.toLowerCase());
@@ -131,8 +116,15 @@ export function useDashboardData() {
   const curveDynamicsQ = useQuery({ queryKey: dashboardQueryKeys.curveDynamics, queryFn: getCurveDynamics, staleTime: 120_000 });
 
   const fedPolicy = fedQ.data?.policy_score ?? navigatorQ.data?.position?.fed_policy_score ?? 0.46;
-  const cycleScore = regimeQ.data?.cycle_score ?? 0.32;
-  const recessionProbPct = normalizeProbabilityPercent(regimeQ.data?.recession_prob_12m ?? 0.18);
+  const cycleScore =
+    regimeQ.data?.cycle_score != null && Number.isFinite(regimeQ.data.cycle_score)
+      ? regimeQ.data.cycle_score
+      : null;
+  const rawRecessionProb = regimeQ.data?.recession_prob_12m;
+  const recessionProbPct =
+    rawRecessionProb == null || Number.isNaN(Number(rawRecessionProb))
+      ? null
+      : normalizeProbabilityPercent(rawRecessionProb);
   const recessionRisk = recessionRiskStyle(recessionProbPct);
   const growthScore = navigatorQ.data?.position?.growth_score ?? 0.21;
   const confidence = clamp((navigatorQ.data?.position?.confidence ?? 0.72) * 100, 0, 100);
@@ -149,14 +141,13 @@ export function useDashboardData() {
   const inflationLatest =
     inflationQ.data?.find((row) => row.name.toUpperCase().includes("CPI"))?.yoy ??
     inflationQ.data?.[0]?.yoy ??
-    3.2;
-  const coreInflationLatest =
-    inflationQ.data?.find((row) => row.name.toUpperCase().includes("CORE"))?.yoy ??
     null;
+  const coreInflationLatest =
+    inflationQ.data?.find((row) => row.name.toUpperCase().includes("CORE"))?.yoy ?? null;
   const spread2y10y =
     yieldSpreadsQ.data?.find((row) => row.name.toUpperCase().includes("2Y10Y"))?.value ??
     yieldSpreadsQ.data?.find((row) => row.name.toUpperCase().includes("10Y2Y"))?.value ??
-    -18;
+    null;
   const inflationDelta = useMemo(() => {
     const points = inflationSeriesQ.data;
     if (!points || points.length < 2) return null;
@@ -193,13 +184,13 @@ export function useDashboardData() {
   }, [spreadHistoryQ.data]);
   const macroSentimentSeries = useMemo(() => {
     const points = regimeHistoryQ.data;
-    if (!points?.length) return [cycleScore];
+    if (!points?.length) return [];
     return [...points]
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((p) => p.cycle_score)
       .filter((v) => Number.isFinite(v))
       .slice(-36);
-  }, [regimeHistoryQ.data, cycleScore]);
+  }, [regimeHistoryQ.data]);
   const fedRateSeries = useMemo(() => {
     const rates = fedRateHistoryQ.data;
     if (!rates?.length) return [fedQ.data?.current_rate_upper ?? 0];
@@ -257,7 +248,7 @@ export function useDashboardData() {
   );
 
   const signals = buildCrossAssetSignals(signalsQ.data);
-  const categories = (categoriesQ.data?.length ? categoriesQ.data : FALLBACK_CATEGORIES).slice(0, 4);
+  const categories = (categoriesQ.data ?? []).slice(0, 4);
   const recessionModelRows = useMemo(() => {
     const models = regimeQ.data?.recession_models;
     if (models?.length) {
@@ -270,10 +261,11 @@ export function useDashboardData() {
     const cycleBlend = normalizeProbabilityPercent(
       ((recessionQ.data?.score ?? 1) / Math.max(1, recessionQ.data?.total ?? 7)) * 100,
     );
+    const base = recessionProbPct ?? 0;
     return [
       { name: "Cycle Score Model", pct: cycleBlend, dot: RECESSION_MODEL_DOT_COLORS[0] },
-      { name: "NY Fed 10Y–3M Model", pct: clamp(recessionProbPct * 0.92, 0, 100), dot: RECESSION_MODEL_DOT_COLORS[1] },
-      { name: "3-Factor Model", pct: clamp(recessionProbPct * 1.05, 0, 100), dot: RECESSION_MODEL_DOT_COLORS[2] },
+      { name: "NY Fed 10Y–3M Model", pct: clamp(base * 0.92, 0, 100), dot: RECESSION_MODEL_DOT_COLORS[1] },
+      { name: "3-Factor Model", pct: clamp(base * 1.05, 0, 100), dot: RECESSION_MODEL_DOT_COLORS[2] },
     ];
   }, [regimeQ.data?.recession_models, recessionProbPct, recessionQ.data?.score, recessionQ.data?.total]);
   const fullIdeas = navigatorQ.data?.trading_recommendations ?? [];
@@ -292,7 +284,36 @@ export function useDashboardData() {
   ];
   const geographySource = navigatorQ.data?.geographic ?? {};
 
+  const queryErrors = useMemo(() => {
+    const rows: { label: string; message: string }[] = [];
+    const add = (label: string, q: { isError: boolean; error: unknown }) => {
+      if (!q.isError || q.error == null) return;
+      rows.push({
+        label,
+        message: q.error instanceof Error ? q.error.message : String(q.error),
+      });
+    };
+    add("Navigator", navigatorQ);
+    add("Regime / cycle", regimeQ);
+    add("Cross-asset radar", signalsQ);
+    add("Category scores", categoriesQ);
+    add("Inflation (latest)", inflationQ);
+    return rows;
+  }, [
+    navigatorQ.isError,
+    navigatorQ.error,
+    regimeQ.isError,
+    regimeQ.error,
+    signalsQ.isError,
+    signalsQ.error,
+    categoriesQ.isError,
+    categoriesQ.error,
+    inflationQ.isError,
+    inflationQ.error,
+  ]);
+
   return {
+    queryErrors,
     navigatorQ,
     regimeQ,
     fedQ,

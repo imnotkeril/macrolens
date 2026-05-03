@@ -1,6 +1,8 @@
 /** React Query keys for `/next/dashboard` — single source for invalidation prefixes. */
 
-const PREFIX = "next-dashboard" as const;
+export const NEXT_DASHBOARD_QUERY_ROOT = "next-dashboard" as const;
+
+const PREFIX = NEXT_DASHBOARD_QUERY_ROOT;
 
 export const dashboardQueryKeys = {
   navigator: [PREFIX, "navigator"] as const,

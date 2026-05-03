@@ -53,10 +53,16 @@ import type {
   FedRhetoricPoint,
 } from "@/types";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiFetchOrigin } from "@/lib/apiFetchOrigin";
+
+/** @deprecated Prefer `apiFetchOrigin()` — in the browser it is "" for same-origin `/api` rewrites. */
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 async function fetchJSON<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { next: { revalidate: 300 } });
+  const origin = apiFetchOrigin();
+  const res = await fetch(`${origin}${path}`, {
+    ...(typeof window === "undefined" ? { next: { revalidate: 300 } } : {}),
+  });
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   return res.json();
 }
@@ -185,10 +191,10 @@ export const getAlertCount = () =>
   fetchJSON<AlertCount>("/api/alerts/count");
 
 export const markAlertRead = (id: number) =>
-  fetch(`${API_BASE}/api/alerts/${id}/read`, { method: "POST" });
+  fetch(`${apiFetchOrigin()}/api/alerts/${id}/read`, { method: "POST" });
 
 export const markAllAlertsRead = () =>
-  fetch(`${API_BASE}/api/alerts/read-all`, { method: "POST" });
+  fetch(`${apiFetchOrigin()}/api/alerts/read-all`, { method: "POST" });
 
 // S&P 500 Sectors Dashboard
 export const getSectorsDashboard = (days = 365) =>
@@ -258,7 +264,7 @@ export async function postMLBuildDataset(
   if (maxMonths != null) params.set("max_months", String(maxMonths));
   if (minimal) params.set("minimal", "1");
   const url =
-    `${API_BASE}/api/ml/build-dataset` +
+    `${apiFetchOrigin()}/api/ml/build-dataset` +
     (params.toString() ? `?${params.toString()}` : "");
   try {
     const res = await fetch(url, {
@@ -290,7 +296,7 @@ export async function postMLRegimeTrain(): Promise<MLTrainResponse> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TRAIN_START_TIMEOUT_MS);
   try {
-    const res = await fetch(`${API_BASE}/api/ml/regime-train`, {
+    const res = await fetch(`${apiFetchOrigin()}/api/ml/regime-train`, {
       method: "POST",
       signal: controller.signal,
     });
@@ -321,7 +327,7 @@ export function getMLTrainProgress(): Promise<TaskProgress> {
 
 // ML2
 export const postML2Train = async () => {
-  const res = await fetch(`${API_BASE}/api/ml2/train`, { method: "POST" });
+  const res = await fetch(`${apiFetchOrigin()}/api/ml2/train`, { method: "POST" });
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   return res.json() as Promise<ML2Metrics>;
 };
@@ -337,7 +343,7 @@ export const getML2LatestStored = () =>
 
 // Agents / Master
 export const postRunAgents = async () => {
-  const res = await fetch(`${API_BASE}/api/agents/run`, { method: "POST" });
+  const res = await fetch(`${apiFetchOrigin()}/api/agents/run`, { method: "POST" });
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   return res.json() as Promise<{ status: string; runs: Record<string, string> }>;
 };
@@ -375,13 +381,13 @@ export const getMemoryProvenance = (query: string, domain?: string, topK = 5) =>
   );
 
 export const postSnapshotDashboardRadar = async () => {
-  const res = await fetch(`${API_BASE}/api/memory/snapshot/dashboard-radar`, { method: "POST" });
+  const res = await fetch(`${apiFetchOrigin()}/api/memory/snapshot/dashboard-radar`, { method: "POST" });
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   return res.json();
 };
 
 export const postSnapshotAnalysisIndicators = async () => {
-  const res = await fetch(`${API_BASE}/api/memory/snapshot/analysis-indicators`, { method: "POST" });
+  const res = await fetch(`${apiFetchOrigin()}/api/memory/snapshot/analysis-indicators`, { method: "POST" });
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   return res.json();
 };
@@ -390,7 +396,7 @@ export async function refreshAllData(): Promise<{ status: string; errors: string
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${API_BASE}/api/data/refresh`, {
+    const res = await fetch(`${apiFetchOrigin()}/api/data/refresh`, {
       method: "POST",
       signal: controller.signal,
     });

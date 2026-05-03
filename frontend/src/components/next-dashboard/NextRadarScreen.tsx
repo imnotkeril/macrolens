@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getRegimeCurrent,
   getRegimeHistory,
@@ -12,6 +12,7 @@ import { dashboardQueryKeys } from "@/features/dashboard/queryKeys";
 import { deriveDashboardUpdatedAtLabel } from "@/features/dashboard/utils/dashboardAsOf";
 import { useDataRefresh } from "@/lib/useDataRefresh";
 import { NextDashboardShell } from "@/components/next-dashboard/NextDashboardShell";
+import { QueryErrorBanner } from "@/components/next-dashboard/QueryErrorBanner";
 import { NEXT_DASHBOARD_NAV_ITEMS } from "@/components/next-dashboard/nextDashboardConfig";
 import { useNextShellTheme } from "@/components/next-dashboard/nextShellTheme";
 import { nextPanelSurfaceStyle } from "@/components/next-dashboard/nextPanelSurface";
@@ -24,8 +25,10 @@ import {
   RadarTablesSection,
 } from "@/components/next-dashboard/nextRadarBlocks";
 import type { RegimeHistoryPoint } from "@/types";
+import { NEXT_DASHBOARD_QUERY_ROOT } from "@/features/dashboard/queryKeys";
 
 export function NextRadarScreen() {
+  const queryClient = useQueryClient();
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
   const surface = useMemo(() => nextPanelSurfaceStyle(C), [C]);
@@ -79,6 +82,28 @@ export function NextRadarScreen() {
 
   const loadingShell = regimeQ.isPending && !regime;
 
+  const secondaryErrors = useMemo(() => {
+    const rows: { label: string; message: string }[] = [];
+    const add = (label: string, q: { isError: boolean; error: unknown }) => {
+      if (!q.isError || q.error == null) return;
+      rows.push({
+        label,
+        message: q.error instanceof Error ? q.error.message : String(q.error),
+      });
+    };
+    add("Regime history", historyQ);
+    add("Recession bands", recessionBandsQ);
+    add("Recession checklist", recessionQ);
+    return rows;
+  }, [
+    historyQ.isError,
+    historyQ.error,
+    recessionBandsQ.isError,
+    recessionBandsQ.error,
+    recessionQ.isError,
+    recessionQ.error,
+  ]);
+
   return (
     <>
       <NextDashboardShell
@@ -101,6 +126,12 @@ export function NextRadarScreen() {
           </div>
         ) : regime ? (
           <section className="flex flex-col gap-3">
+            <QueryErrorBanner
+              title="Secondary radar data failed to load"
+              colors={C}
+              errors={secondaryErrors}
+              onRetry={() => void queryClient.invalidateQueries({ queryKey: [NEXT_DASHBOARD_QUERY_ROOT] })}
+            />
             <div className="hidden min-h-0 flex-col gap-3 xl:flex">
               <div
                 className="grid min-h-0 gap-3"
