@@ -30,18 +30,15 @@ class RecessionLabel(Base):
 
 class RegimeHistoryMonthly(Base):
     """
-    One row per calendar month-end: Navigator chart logic vs Forecast Lab PIT rule vs asset-implied label.
+    One row per calendar month-end: rule plane vs asset-implied label vs forward validation.
 
-    * Navigator columns = same PIT features_pit row as Forecast Lab rule (phase_rule.yaml).
-    * FL columns use features_pit + phase_rule.yaml (isolated Forecast Lab contract).
-    * Asset columns (lookback): implied quadrant from realized returns over the month ending at obs_date
-      (same window as train labels); asset_confirmation_score is the hit rate for that implied quadrant.
-    * Forward confirmation: forward_confirmation_score validates fl_rule_quadrant using realized pair returns
-      from obs_date to obs_date + H (diagnostics / phase_alignment semantics). When forward_regime_confirmed,
-      confirmed_regime_quadrant == fl_rule_quadrant; otherwise NULL (regime not confirmed by assets yet).
-    * Yield curve: PIT pattern at obs_date vs methodology YAML
-      (config/navigator/quadrant_yield_curve_expectations.yaml); *_curve_matches_expectation flags are
-      independent of changing the quadrant (still growth × fed for Navigator dot).
+    * navigator_quadrant and fl_rule_quadrant are materialized to the same value (PIT growth×fed rule plane);
+      UI shows a single "rule plane" column. Ensemble phase history is not stored here yet.
+    * Asset columns (lookback): implied quadrant from realized returns ending at obs_date (train-label window);
+      asset_confirmation_score is the hit rate for that implied quadrant — independent of forward OK.
+    * Forward confirmation: validates fl_rule_quadrant only — mean hit rate of YAML asset pairs over
+      obs_date→obs_date+H (same semantics as phase_alignment). Not "rule vs asset_implied" comparison.
+    * Yield curve: PIT pattern at obs_date (YieldAnalyzer) vs quadrant YAML expectations.
     """
 
     __tablename__ = "regime_history_monthly"

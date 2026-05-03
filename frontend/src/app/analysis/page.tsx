@@ -149,6 +149,38 @@ function mergeWithSpx(
     .map(([date, v]) => ({ date, spx: v.spx as number, value: v.value as number }));
 }
 
+/* Module-level: stable references for useMemo / exhaustive-deps. */
+
+const ANALYSIS_SENTIMENT_CONFIG = [
+  { key: "non_cyclical", label: "Non-Cyclical", color: "#60a5fa" },
+  { key: "cyclical", label: "Cyclical", color: "#f87171" },
+  { key: "sensitive", label: "Sensitive", color: "#fbbf24" },
+  { key: "high_beta", label: "High Beta", color: "#a78bfa" },
+  { key: "gld", label: "GLD (Gold)", color: "#facc15" },
+  { key: "tlt", label: "TLT (Long Bonds)", color: "#f472b6" },
+] as const;
+
+const ANALYSIS_SECTOR_COLORS = [
+  "#f87171", "#fb923c", "#fbbf24", "#34d399", "#22d3ee",
+  "#60a5fa", "#a78bfa", "#e879f9", "#f472b6", "#a3e635", "#94a3b8",
+];
+
+const ANALYSIS_CURRENCY_COLORS: Record<string, string> = {
+  "DXY": "#ef4444",
+  "EXY (EUR)": "#60a5fa",
+  "BXY (GBP)": "#a78bfa",
+  "AXY (AUD)": "#22c55e",
+  "CXY (CAD)": "#fbbf24",
+  "JXY (JPY)": "#f472b6",
+  "CNY": "#38bdf8",
+  "CEW (EM FX)": "#fb923c",
+};
+
+/** Repeated Fed 2% guide line for inflation dual charts */
+const FED_INFLATION_TARGET_LINE: { value: number; color: string; label: string }[] = [
+  { value: 2, color: "#f87171", label: "Fed Target 2%" },
+];
+
 function dualPanel(
   title: string,
   spx: RatioPoint[],
@@ -398,36 +430,10 @@ export default function AnalysisPage() {
     "High Beta": "#a78bfa",
   };
 
-  const SENTIMENT_CONFIG = [
-    { key: "non_cyclical", label: "Non-Cyclical", color: "#60a5fa" },
-    { key: "cyclical", label: "Cyclical", color: "#f87171" },
-    { key: "sensitive", label: "Sensitive", color: "#fbbf24" },
-    { key: "high_beta", label: "High Beta", color: "#a78bfa" },
-    { key: "gld", label: "GLD (Gold)", color: "#facc15" },
-    { key: "tlt", label: "TLT (Long Bonds)", color: "#f472b6" },
-  ];
-
-  const SECTOR_COLORS = [
-    "#f87171", "#fb923c", "#fbbf24", "#34d399", "#22d3ee",
-    "#60a5fa", "#a78bfa", "#e879f9", "#f472b6", "#a3e635", "#94a3b8",
-  ];
-
-  const CURRENCY_COLORS: Record<string, string> = {
-    "DXY": "#ef4444",
-    "EXY (EUR)": "#60a5fa",
-    "BXY (GBP)": "#a78bfa",
-    "AXY (AUD)": "#22c55e",
-    "CXY (CAD)": "#fbbf24",
-    "JXY (JPY)": "#f472b6",
-    "CNY": "#38bdf8",
-    "CEW (EM FX)": "#fb923c",
-  };
-
   const sentimentPanel: PanelConfig | null = useMemo(() => {
     if (!sentiment) return null;
-    const keys = SENTIMENT_CONFIG.map((c) => c.key);
     const dateMap = new Map<string, Record<string, number>>();
-    for (const cfg of SENTIMENT_CONFIG) {
+    for (const cfg of ANALYSIS_SENTIMENT_CONFIG) {
       const arr = (sentiment as unknown as Record<string, RatioPoint[]>)[cfg.key];
       if (!arr?.length) continue;
       for (const pt of arr) {
@@ -439,7 +445,7 @@ export default function AnalysisPage() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([d, vals]) => ({ date: d, ...vals }));
     if (merged.length === 0) return null;
-    const series = SENTIMENT_CONFIG
+    const series = ANALYSIS_SENTIMENT_CONFIG
       .filter((c) => merged.some((row) => c.key in row))
       .map((c) => ({ key: c.key, color: c.color, label: c.label, type: "line" as const }));
     return {
@@ -450,7 +456,7 @@ export default function AnalysisPage() {
 
   const sentimentLegend = useMemo(() => {
     if (!sentiment) return [];
-    return SENTIMENT_CONFIG.map((cfg) => {
+    return ANALYSIS_SENTIMENT_CONFIG.map((cfg) => {
       const arr = (sentiment as unknown as Record<string, RatioPoint[]>)[cfg.key];
       const last = arr?.length ? arr[arr.length - 1].value : null;
       return { label: cfg.label, color: cfg.color, value: last };
@@ -476,7 +482,7 @@ export default function AnalysisPage() {
       chart: {
         data,
         series: sectorPerfs.map((s, i) => ({
-          key: s.symbol, color: SECTOR_COLORS[i % SECTOR_COLORS.length], label: s.label,
+          key: s.symbol, color: ANALYSIS_SECTOR_COLORS[i % ANALYSIS_SECTOR_COLORS.length], label: s.label,
         })),
         thresholds: [{ value: 0, color: "#52525b", label: "Zero" }],
       },
@@ -485,7 +491,7 @@ export default function AnalysisPage() {
 
   const sectorLegend = useMemo(() => {
     return sectorPerfs.map((s, i) => ({
-      label: s.symbol, color: SECTOR_COLORS[i % SECTOR_COLORS.length], value: s.total_return,
+      label: s.symbol, color: ANALYSIS_SECTOR_COLORS[i % ANALYSIS_SECTOR_COLORS.length], value: s.total_return,
     }));
   }, [sectorPerfs]);
 
@@ -506,7 +512,7 @@ export default function AnalysisPage() {
       .map(([d, vals]) => ({ date: d, ...vals }));
     if (merged.length === 0) return null;
     const series = currency.lines.map((line, i) => ({
-      key: keys[i], color: CURRENCY_COLORS[line.symbol] ?? "#94a3b8", label: line.symbol, type: "line" as const,
+      key: keys[i], color: ANALYSIS_CURRENCY_COLORS[line.symbol] ?? "#94a3b8", label: line.symbol, type: "line" as const,
     }));
     return {
       title: "Currency Indices (rebased % performance)",
@@ -518,7 +524,7 @@ export default function AnalysisPage() {
     if (!currency?.lines?.length) return [];
     return currency.lines.map((line) => {
       const last = line.series.length ? line.series[line.series.length - 1].value : null;
-      return { label: line.symbol, color: CURRENCY_COLORS[line.symbol] ?? "#94a3b8", value: last };
+      return { label: line.symbol, color: ANALYSIS_CURRENCY_COLORS[line.symbol] ?? "#94a3b8", value: last };
     }).filter((l) => l.value !== null);
   }, [currency]);
 
@@ -780,7 +786,7 @@ export default function AnalysisPage() {
 
   /* ── Macro panels ────────────────────────────────────── */
 
-  const spx = macro?.spx ?? [];
+  const spx = useMemo(() => macro?.spx ?? [], [macro?.spx]);
 
   const withMacroTooltip = (p: PanelConfig | null): PanelConfig | null =>
     p ? { ...p, tooltip: MACRO_TOOLTIPS[p.title] } : null;
@@ -868,23 +874,22 @@ export default function AnalysisPage() {
 
   /* ── Inflation panels (per sub-tab) ─────────────────── */
 
-  const fedTarget = [{ value: 2, color: "#f87171", label: "Fed Target 2%" }];
-  const inflSpx = infl?.spx ?? [];
+  const inflSpx = useMemo(() => infl?.spx ?? [], [infl?.spx]);
 
   const cpiPanels = useMemo(() => {
     if (!infl) return { main: [] as PanelConfig[], row2: [] as PanelConfig[], row3: [] as PanelConfig[] };
     const main = [
-      dualPanel("CPI YoY", inflSpx, infl.cpi_yoy, "#34d399", "CPI YoY", fedTarget),
-      dualPanel("CPI Core YoY", inflSpx, infl.cpi_core_yoy, "#a78bfa", "Core CPI", fedTarget),
+      dualPanel("CPI YoY", inflSpx, infl.cpi_yoy, "#34d399", "CPI YoY", FED_INFLATION_TARGET_LINE),
+      dualPanel("CPI Core YoY", inflSpx, infl.cpi_core_yoy, "#a78bfa", "Core CPI", FED_INFLATION_TARGET_LINE),
       dualPanel("CPI MoM", inflSpx, infl.cpi_mom, "#60a5fa", "CPI MoM"),
     ].filter(Boolean) as PanelConfig[];
     const row2 = [
-      dualPanel("Sticky CPI ex F&E (Atlanta Fed)", inflSpx, infl.sticky_cpi, "#f87171", "Sticky CPI", fedTarget),
-      dualPanel("Michigan 5Y Inflation Expectations", inflSpx, infl.mich, "#fbbf24", "MICH", fedTarget),
+      dualPanel("Sticky CPI ex F&E (Atlanta Fed)", inflSpx, infl.sticky_cpi, "#f87171", "Sticky CPI", FED_INFLATION_TARGET_LINE),
+      dualPanel("Michigan 5Y Inflation Expectations", inflSpx, infl.mich, "#fbbf24", "MICH", FED_INFLATION_TARGET_LINE),
     ].filter(Boolean) as PanelConfig[];
     const row3 = [
-      dualPanel("5Y Breakeven Inflation (T5YIE)", inflSpx, infl.t5yie, "#fb923c", "T5YIE", fedTarget),
-      dualPanel("10Y Breakeven Inflation (T10YIE)", inflSpx, infl.t10yie, "#e879f9", "T10YIE", fedTarget),
+      dualPanel("5Y Breakeven Inflation (T5YIE)", inflSpx, infl.t5yie, "#fb923c", "T5YIE", FED_INFLATION_TARGET_LINE),
+      dualPanel("10Y Breakeven Inflation (T10YIE)", inflSpx, infl.t10yie, "#e879f9", "T10YIE", FED_INFLATION_TARGET_LINE),
     ].filter(Boolean) as PanelConfig[];
     return { main, row2, row3 };
   }, [infl, inflSpx]);
@@ -892,8 +897,8 @@ export default function AnalysisPage() {
   const pcePanels = useMemo(() => {
     if (!infl) return [] as PanelConfig[];
     return [
-      dualPanel("PCE YoY", inflSpx, infl.pce_yoy, "#34d399", "PCE YoY", fedTarget),
-      dualPanel("PCE Core YoY", inflSpx, infl.pce_core_yoy, "#a78bfa", "Core PCE", fedTarget),
+      dualPanel("PCE YoY", inflSpx, infl.pce_yoy, "#34d399", "PCE YoY", FED_INFLATION_TARGET_LINE),
+      dualPanel("PCE Core YoY", inflSpx, infl.pce_core_yoy, "#a78bfa", "Core PCE", FED_INFLATION_TARGET_LINE),
       dualPanel("PCE MoM", inflSpx, infl.pce_mom, "#60a5fa", "PCE MoM"),
     ].filter(Boolean) as PanelConfig[];
   }, [infl, inflSpx]);
@@ -901,8 +906,8 @@ export default function AnalysisPage() {
   const ppiPanels = useMemo(() => {
     if (!infl) return [] as PanelConfig[];
     return [
-      dualPanel("PPI YoY", inflSpx, infl.ppi_yoy, "#34d399", "PPI YoY", fedTarget),
-      dualPanel("PPI Core YoY", inflSpx, infl.ppi_core_yoy, "#a78bfa", "Core PPI", fedTarget),
+      dualPanel("PPI YoY", inflSpx, infl.ppi_yoy, "#34d399", "PPI YoY", FED_INFLATION_TARGET_LINE),
+      dualPanel("PPI Core YoY", inflSpx, infl.ppi_core_yoy, "#a78bfa", "Core PPI", FED_INFLATION_TARGET_LINE),
       dualPanel("PPI MoM", inflSpx, infl.ppi_mom, "#60a5fa", "PPI MoM"),
     ].filter(Boolean) as PanelConfig[];
   }, [infl, inflSpx]);

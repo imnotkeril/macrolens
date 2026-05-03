@@ -84,6 +84,7 @@ services:
       BACKEND_INTERNAL_URL: http://backend:8000
     depends_on:
       - backend
+    # Bind mount swaps source; anonymous volume keeps node_modules. Entrypoint syncs when package-lock.json changes.
     volumes:
       - ${PROJECT_ROOT:-.}/frontend:/app
       - /app/node_modules

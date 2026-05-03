@@ -33,10 +33,27 @@ class MacroForecastRow(BaseModel):
     trained: bool = False
 
 
+class StressZContributor(BaseModel):
+    symbol: str
+    z_abs: float = Field(description="|z| of latest monthly return vs trailing months for this ETF.")
+
+
 class StressBlock(BaseModel):
     stress_score: float = Field(ge=0.0, le=1.0)
     stress_band: str  # low, medium, high
     drivers: list[str] = Field(default_factory=list)
+    universe_symbols: list[str] = Field(
+        default_factory=list,
+        description="Monthly return features used for anomaly score (same order as model columns).",
+    )
+    insufficient_history: bool = Field(
+        default=False,
+        description="True when <8 months of aligned history; score is fallback 0.25.",
+    )
+    top_z_contributors: list[StressZContributor] = Field(
+        default_factory=list,
+        description="Largest |z| ETFs for the current month vs prior window (up to 3).",
+    )
 
 
 class DashboardContextBlock(BaseModel):
@@ -101,7 +118,7 @@ class PhaseAssetAlignmentResponse(BaseModel):
     bundle_id: str
     horizon_months: int
     overall_hit_rate: float | None = None
-    by_quadrant: dict[str, float] = Field(default_factory=dict)
+    by_quadrant: dict[str, float | None] = Field(default_factory=dict)
     sample_size: int | None = None
     note: str | None = None
 
@@ -123,6 +140,10 @@ class RegimeHistoryRow(BaseModel):
     fl_yield_10y_minus_2y: float
     fl_hy_spread_proxy: float
     fl_rule_quadrant: str
+    fl_ensemble_quadrant: str | None = Field(
+        default=None,
+        description="Ensemble headline (phase_class) from latest /log-snapshot row for this as_of_date, if any.",
+    )
     asset_implied_quadrant: str
     asset_confirmation_score: float
     asset_confirmed: bool

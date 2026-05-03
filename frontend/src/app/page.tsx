@@ -227,7 +227,7 @@ export default function DashboardPage() {
                   {(flSummary.phase_probabilities.Q4_STAGFLATION * 100).toFixed(0)}%
                 </span>
                 <span>
-                  <span className="text-text-muted">Stress </span>
+                  <span className="text-text-muted">Anomaly </span>
                   <span className="capitalize">{flSummary.stress.stress_band}</span>
                 </span>
                 <span>

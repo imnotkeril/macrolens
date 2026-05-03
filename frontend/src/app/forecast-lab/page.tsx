@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getForecastLabSummary,
@@ -72,6 +72,17 @@ export default function ForecastLabPage() {
     staleTime: 30_000,
   });
 
+  const prevTrainDoneRef = useRef<boolean | undefined>(undefined);
+  useEffect(() => {
+    const done = trainStatus?.done;
+    if (prevTrainDoneRef.current === false && done === true && trainStatus?.message !== "error") {
+      void qc.invalidateQueries({ queryKey: ["forecast-lab-oos"] });
+      void qc.invalidateQueries({ queryKey: ["forecast-lab-summary"] });
+      void qc.invalidateQueries({ queryKey: ["forecast-lab-regime-history"] });
+    }
+    prevTrainDoneRef.current = done;
+  }, [trainStatus, qc]);
+
   const materializeMut = useMutation({
     mutationFn: () => postForecastLabRegimeHistoryMaterialize(),
     onSuccess: async () => {
@@ -99,6 +110,7 @@ export default function ForecastLabPage() {
     mutationFn: () => postForecastLabLogSnapshot({ alignMonthEnd }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["forecast-lab-summary"] });
+      void qc.invalidateQueries({ queryKey: ["forecast-lab-regime-history"] });
     },
   });
 
@@ -192,15 +204,12 @@ export default function ForecastLabPage() {
       {logMut.isError && (
         <p className="text-xs text-accent-red">Log snapshot failed (DB table forecast_lab_prediction_log missing?).</p>
       )}
-      {logMut.isSuccess && logMut.data?.id != null && (
-        <p className="text-[10px] text-text-muted">Logged prediction id #{logMut.data.id}</p>
-      )}
 
       {isLoading && <p className="text-sm text-text-muted">Loading…</p>}
 
       {summaryIsError && (
         <div className="rounded-lg border border-accent-red/30 bg-accent-red/5 px-3 py-2 text-xs text-accent-red space-y-1">
-          <p className="font-medium">Summary API failed — Phase / Stress / Macro blocks are hidden.</p>
+          <p className="font-medium">Summary API failed — Phase / Anomaly / Macro blocks are hidden.</p>
           <p className="text-text-muted font-mono break-all">
             {summaryError instanceof Error ? summaryError.message : String(summaryError)}
           </p>
@@ -290,13 +299,54 @@ export default function ForecastLabPage() {
           )}
 
           <div className="card space-y-2">
-            <div className="card-header">Stress</div>
-            <div className="text-sm text-text-secondary">
-              Score {(summary.stress.stress_score * 100).toFixed(0)} / 100 · band{" "}
-              <span className={cn(summary.stress.stress_band === "high" && "text-accent-red")}>
+            <div className="card-header flex items-center gap-1.5">
+              <span>Anomaly</span>
+              <span
+                className="cursor-help select-none text-[13px] font-semibold leading-none text-text-muted"
+                title="Anomaly score for this month vs the trailing window: Isolation Forest on the return row plus normalized |z| peaks across the ETF basket. Higher = more atypical regime."
+                aria-label="Anomaly score for this month vs the trailing window: Isolation Forest on the return row plus normalized |z| peaks across the ETF basket. Higher = more atypical regime."
+              >
+                ?
+              </span>
+            </div>
+            {(summary.stress.insufficient_history === true ||
+              summary.stress.drivers.includes("insufficient_market_history")) && (
+              <span className="inline-flex max-w-full rounded border border-amber-400/45 bg-amber-400/10 px-2 py-1 text-[10px] font-medium leading-snug text-amber-100/95">
+                Limited history — fallback score
+              </span>
+            )}
+            <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
+              <span className="text-3xl font-semibold tabular-nums text-text-primary">
+                {(summary.stress.stress_score * 100).toFixed(0)}
+              </span>
+              <span className="pb-0.5 text-sm font-medium tabular-nums text-text-muted">/ 100</span>
+              <span
+                className={cn(
+                  "mb-0.5 rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                  summary.stress.stress_band === "high" && "border-accent-red text-accent-red",
+                  summary.stress.stress_band === "medium" && "border-amber-300/60 text-amber-100",
+                  summary.stress.stress_band === "low" && "border-border text-text-secondary",
+                )}
+              >
                 {summary.stress.stress_band}
               </span>
             </div>
+            <p className="text-[10px] text-text-muted">
+              <span className="font-semibold uppercase tracking-wide text-text-secondary">ETF basket</span>
+              <span className="mx-1 opacity-50">·</span>
+              <span className="font-mono">
+                {(summary.stress.universe_symbols?.length ? summary.stress.universe_symbols : ["SPY", "IWM", "GLD", "TLT", "HYG", "EEM"]).join(", ")}
+              </span>
+            </p>
+            {summary.stress.top_z_contributors && summary.stress.top_z_contributors.length > 0 && (
+              <ul className="list-inside list-disc text-[10px] text-text-muted">
+                {summary.stress.top_z_contributors.map((c) => (
+                  <li key={c.symbol} className="font-mono">
+                    {c.symbol} <span className="tabular-nums">|z| = {Number(c.z_abs).toFixed(2)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             {summary.recession_reason && (
               <p className="text-[10px] text-text-muted">
                 Recession signal:{" "}
@@ -306,8 +356,16 @@ export default function ForecastLabPage() {
                 {summary.recession_reason}
               </p>
             )}
-            {summary.stress.drivers.length > 0 && (
-              <p className="text-xs text-text-muted">{summary.stress.drivers.join(", ")}</p>
+            {summary.stress.drivers.filter((d) => d !== "insufficient_market_history").length > 0 && (
+              <p className="text-[10px] text-text-muted">
+                Signals:{" "}
+                {summary.stress.drivers
+                  .filter((d) => d !== "insufficient_market_history")
+                  .map((d) =>
+                    d === "isolation_forest" ? "Isolation Forest" : d === "return_z_spike" ? "Return z-spike" : d,
+                  )
+                  .join(" · ")}
+              </p>
             )}
           </div>
 
@@ -407,22 +465,8 @@ export default function ForecastLabPage() {
           </div>
         </div>
         <p className="text-[10px] text-text-muted">
-          Persists to <code className="font-mono">regime_history_monthly</code>. Empty until you materialize once. Columns: Navigator vs
-          Forecast Lab PIT rule vs asset-implied phase.
+          Persists to <code className="font-mono">regime_history_monthly</code>. Empty until you materialize once. Hover ASSET IMPL. / FWD OK headers for H (evaluation_horizon_months in asset_phase_expectations.yaml).
         </p>
-        {materializeMut.isSuccess && (
-          <div className="text-[10px] space-y-0.5">
-            <p className="text-text-muted">
-              Last run: {materializeMut.data.rows} rows, batch {materializeMut.data.batch_id}
-              {materializeMut.data.errors != null && materializeMut.data.errors > 0
-                ? ` · skipped months: ${materializeMut.data.errors}`
-                : ""}
-            </p>
-            {materializeMut.data.message ? (
-              <p className="text-amber-200/90">{materializeMut.data.message}</p>
-            ) : null}
-          </div>
-        )}
         {materializeMut.isError && (
           <p className="text-[10px] text-accent-red">
             {materializeMut.error instanceof Error ? materializeMut.error.message : String(materializeMut.error)}
@@ -433,10 +477,35 @@ export default function ForecastLabPage() {
             <thead className="sticky top-0 bg-bg-card z-10">
               <tr className="text-left text-text-muted border-b border-border/40">
                 <th className="py-1.5 pr-2 font-normal whitespace-nowrap">obs_date</th>
-                <th className="py-1.5 pr-2 font-normal whitespace-nowrap">Nav Q</th>
-                <th className="py-1.5 pr-2 font-normal whitespace-nowrap">FL rule Q</th>
-                <th className="py-1.5 pr-2 font-normal whitespace-nowrap">Asset impl.</th>
-                <th className="py-1.5 pr-2 font-normal whitespace-nowrap">Fwd OK</th>
+                <th className="py-1.5 pr-2 font-normal whitespace-nowrap" title="Navigator / FL PIT rule (single plane)">
+                  rule plane
+                </th>
+                <th
+                  className="py-1.5 pr-2 font-normal whitespace-nowrap"
+                  title="FL ensemble quadrant from the latest prediction log row for this obs_date (after Log snapshot)."
+                >
+                  ENS (FL)
+                </th>
+                <th
+                  className="py-1.5 pr-2 font-normal whitespace-nowrap"
+                  title={`Implied quadrant from realized YAML pair returns over the ${
+                    materializeMut.isSuccess && materializeMut.data?.horizon_months != null
+                      ? materializeMut.data.horizon_months
+                      : 1
+                  }-month lookback ending at obs_date (H from evaluation_horizon_months in asset_phase_expectations.yaml).`}
+                >
+                  Asset impl.
+                </th>
+                <th
+                  className="py-1.5 pr-2 font-normal whitespace-nowrap"
+                  title={`Rule label at obs_date vs realized pairs from obs_date through obs_date + ${
+                    materializeMut.isSuccess && materializeMut.data?.horizon_months != null
+                      ? materializeMut.data.horizon_months
+                      : 1
+                  } month(s) (same H; not vs Asset impl.).`}
+                >
+                  Fwd OK
+                </th>
                 <th className="py-1.5 pr-2 font-normal whitespace-nowrap">Curve</th>
               </tr>
             </thead>
@@ -448,10 +517,19 @@ export default function ForecastLabPage() {
                   <tr key={row.obs_date} className="border-b border-border/30 hover:bg-bg-hover/50">
                     <td className="py-1 pr-2 font-mono text-text-secondary whitespace-nowrap">{row.obs_date}</td>
                     <td className="py-1 pr-2 text-text-primary whitespace-nowrap">
-                      {QUADRANT_LABELS[row.navigator_quadrant] ?? row.navigator_quadrant}
-                    </td>
-                    <td className="py-1 pr-2 text-text-primary whitespace-nowrap">
                       {QUADRANT_LABELS[row.fl_rule_quadrant] ?? row.fl_rule_quadrant}
+                    </td>
+                    <td
+                      className="py-1 pr-2 text-text-secondary whitespace-nowrap"
+                      title={
+                        row.fl_ensemble_quadrant
+                          ? undefined
+                          : "No prediction log for this month — run Log snapshot to backfill ENS (FL)."
+                      }
+                    >
+                      {row.fl_ensemble_quadrant
+                        ? QUADRANT_LABELS[row.fl_ensemble_quadrant] ?? row.fl_ensemble_quadrant
+                        : "—"}
                     </td>
                     <td className="py-1 pr-2 text-text-secondary whitespace-nowrap">
                       {QUADRANT_LABELS[row.asset_implied_quadrant] ?? row.asset_implied_quadrant}
@@ -504,7 +582,8 @@ export default function ForecastLabPage() {
               <ul className="text-[10px] text-text-muted list-disc list-inside">
                 {Object.entries(align.by_quadrant).map(([q, v]) => (
                   <li key={q}>
-                    {QUADRANT_LABELS[q] ?? q}: {(v * 100).toFixed(1)}%
+                    {QUADRANT_LABELS[q] ?? q}:{" "}
+                    {typeof v === "number" && Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : "—"}
                   </li>
                 ))}
               </ul>

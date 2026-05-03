@@ -1,5 +1,5 @@
-import { NextDashboardScreen } from "@/components/next-dashboard/NextDashboardScreen";
+import { NextMacroSentimentScreen } from "@/components/next-dashboard/NextMacroSentimentScreen";
 
 export default function NextMacroSentimentPage() {
-  return <NextDashboardScreen mode="placeholder" placeholderTitle="Macro sentiment" />;
+  return <NextMacroSentimentScreen />;
 }

@@ -85,6 +85,9 @@ EXPECTED_RETURNS = {
         ("HY Bonds",      4.8, 0.48,  0.62),
         ("Commodities",  18.2, 0.61,  0.85),
         ("Gold",           6.1, 0.44, -0.23),
+        ("Bitcoin (BTC)", 22.0, 0.62,  1.05),
+        ("US TIPS",        5.2, 0.51, -0.38),
+        ("US REITs",       9.6, 0.57,  0.66),
         ("IG Bonds",       4.1, 0.55, -0.31),
     ],
     "recovery": [
@@ -92,6 +95,9 @@ EXPECTED_RETURNS = {
         ("HY Bonds",      9.2, 0.72,  0.74),
         ("Commodities",  11.4, 0.55,  0.68),
         ("Gold",          10.2, 0.52, -0.15),
+        ("Bitcoin (BTC)", 28.5, 0.74,  1.18),
+        ("US TIPS",        7.0, 0.60, -0.30),
+        ("US REITs",      14.0, 0.69,  0.74),
         ("IG Bonds",       6.3, 0.68, -0.22),
     ],
     "slowdown": [
@@ -99,6 +105,9 @@ EXPECTED_RETURNS = {
         ("HY Bonds",      1.2, 0.15,  0.38),
         ("Commodities",  -2.4, 0.12, -0.55),
         ("Gold",          12.8, 0.62, -0.41),
+        ("Bitcoin (BTC)",  4.2, 0.24,  0.88),
+        ("US TIPS",        4.0, 0.34, -0.44),
+        ("US REITs",       2.4, 0.21,  0.46),
         ("IG Bonds",       7.2, 0.71, -0.52),
     ],
     "contraction": [
@@ -106,6 +115,9 @@ EXPECTED_RETURNS = {
         ("HY Bonds",     -8.1, -0.38, 0.71),
         ("Commodities", -18.5, -0.42, 0.78),
         ("Gold",          15.3, 0.68, -0.55),
+        ("Bitcoin (BTC)", -20.0, -0.32, 1.15),
+        ("US TIPS",        6.5, 0.53, -0.56),
+        ("US REITs",      -9.8, -0.29, 0.86),
         ("IG Bonds",       8.4, 0.72, -0.61),
     ],
 }
@@ -844,13 +856,14 @@ class CycleEngine:
         else:
             signals.append(self._na_signal("ISM Manufacturing PMI", "< 50 = contraction"))
 
-        # 3. Initial Jobless Claims (4W avg)
+        # 3. Initial Jobless Claims (4W avg); stored value is weekly count (persons)
         claims = await self._get_indicator_latest("Initial Jobless Claims")
         if claims is not None:
-            status = "red" if claims > 300 else ("yellow" if claims > 250 else "green")
+            ck = claims / 1000.0
+            status = "red" if ck > 300 else ("yellow" if ck > 250 else "green")
             signals.append(PhaseTransitionSignal(
                 name="Initial Jobless Claims (4W Avg)",
-                current_value=f"{claims:.0f}K",
+                current_value=f"{ck:.0f}k",
                 threshold="> 300K = deterioration",
                 status=status,
                 description="Rising claims indicate labor market weakening",

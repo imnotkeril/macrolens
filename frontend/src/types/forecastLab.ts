@@ -20,10 +20,18 @@ export interface MacroForecastRow {
   trained: boolean;
 }
 
+export interface StressZContributor {
+  symbol: string;
+  z_abs: number;
+}
+
 export interface StressBlock {
   stress_score: number;
   stress_band: string;
   drivers: string[];
+  universe_symbols?: string[];
+  insufficient_history?: boolean;
+  top_z_contributors?: StressZContributor[];
 }
 
 export interface DashboardContext {
@@ -73,7 +81,8 @@ export interface PhaseAssetAlignment {
   bundle_id: string;
   horizon_months: number;
   overall_hit_rate: number | null;
-  by_quadrant: Record<string, number>;
+  /** Per-quadrant mean forward hit rate; null if that regime never occurred in the evaluation window. */
+  by_quadrant: Record<string, number | null>;
   sample_size?: number | null;
   note?: string | null;
 }
@@ -89,6 +98,8 @@ export interface RegimeHistoryRow {
   fl_yield_10y_minus_2y: number;
   fl_hy_spread_proxy: number;
   fl_rule_quadrant: string;
+  /** Ensemble headline from latest prediction log for this as_of_date (API-enriched). */
+  fl_ensemble_quadrant?: string | null;
   asset_implied_quadrant: string;
   asset_confirmation_score: number;
   asset_confirmed: boolean;

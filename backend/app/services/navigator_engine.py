@@ -589,7 +589,7 @@ class NavigatorEngine:
         lei_prev = await self._get_market_n_days_ago("LEI", 180)
         if lei_cur is not None and lei_prev is not None:
             lei_declining = lei_cur < lei_prev
-            lei_note = f"{lei_cur:.2f} (vs 6m ago: {lei_prev:.2f})"
+            lei_note = f"{lei_cur:.2f}"
             lei_as_of = lei_d.isoformat() if lei_d else None
         else:
             lei_declining = False
@@ -628,20 +628,26 @@ class NavigatorEngine:
                 name="Sahm Rule Indicator",
                 triggered=sahm_trig,
                 current_value=f"{sahm:.2f}" if sahm is not None else "N/A",
-                threshold=">= 0.50 (3m avg U3 vs 12m low, pp)",
+                threshold=">= 0.50",
                 description="Rapid unemployment rise from cycle low",
                 data_as_of=sahm_d.isoformat() if sahm_d else None,
             )
         )
 
-        # 6. Initial jobless claims (latest week, thousands)
+        # 6. Initial jobless claims (latest week; DB stores weekly count in persons)
         claims, claims_d = await self._indicator_latest_row("Initial Jobless Claims")
-        claims_trig = claims > 300 if claims is not None else False
+        if claims is not None:
+            claims_k = claims / 1000.0
+            claims_str = f"{claims_k:.0f}k"
+            claims_trig = claims_k > 300
+        else:
+            claims_str = "N/A"
+            claims_trig = False
         items.append(
             RecessionCheckItem(
                 name="Initial Jobless Claims",
                 triggered=claims_trig,
-                current_value=f"{claims:.0f}K" if claims is not None else "N/A",
+                current_value=claims_str,
                 threshold="> 300K = deterioration",
                 description="Rising claims indicate labor market weakening",
                 data_as_of=claims_d.isoformat() if claims_d else None,

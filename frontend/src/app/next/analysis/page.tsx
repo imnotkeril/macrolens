@@ -1,5 +1,5 @@
-import { NextDashboardScreen } from "@/components/next-dashboard/NextDashboardScreen";
+import { NextPlaceholderPage } from "@/components/next-dashboard/NextPlaceholderPage";
 
 export default function NextAnalysisPage() {
-  return <NextDashboardScreen mode="placeholder" placeholderTitle="Analysis" />;
+  return <NextPlaceholderPage title="Analysis" legacyHref="/analysis" />;
 }

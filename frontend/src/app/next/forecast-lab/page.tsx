@@ -1,5 +1,5 @@
-import { NextDashboardScreen } from "@/components/next-dashboard/NextDashboardScreen";
+import { NextForecastLabScreen } from "@/components/next-dashboard/NextForecastLabScreen";
 
 export default function NextForecastLabPage() {
-  return <NextDashboardScreen mode="placeholder" placeholderTitle="Forecast lab" />;
+  return <NextForecastLabScreen />;
 }

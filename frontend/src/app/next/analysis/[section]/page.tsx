@@ -1,4 +1,4 @@
-import { NextDashboardScreen } from "@/components/next-dashboard/NextDashboardScreen";
+import { NextPlaceholderPage } from "@/components/next-dashboard/NextPlaceholderPage";
 
 type PageProps = {
   params: { section: string };
@@ -12,5 +12,5 @@ function prettifySection(section: string): string {
 }
 
 export default function NextAnalysisSectionPage({ params }: PageProps) {
-  return <NextDashboardScreen mode="placeholder" placeholderTitle={`Analysis — ${prettifySection(params.section)}`} />;
+  return <NextPlaceholderPage title={`Analysis — ${prettifySection(params.section)}`} legacyHref="/analysis" />;
 }

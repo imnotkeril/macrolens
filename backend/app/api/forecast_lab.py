@@ -30,6 +30,7 @@ from app.services.forecast_lab.inference import build_summary
 from app.services.forecast_lab.progress import get_progress, set_progress
 from app.services.forecast_lab.regime_history_materialize import (
     fetch_regime_history,
+    latest_ensemble_phase_by_obs_dates,
     materialize_regime_history_monthly,
 )
 from app.services.forecast_lab.train_pipeline import run_training
@@ -39,7 +40,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _regime_orm_to_schema(row: RegimeHistoryMonthly) -> RegimeHistoryRow:
+def _regime_orm_to_schema(row: RegimeHistoryMonthly, *, fl_ensemble_quadrant: str | None = None) -> RegimeHistoryRow:
     """ORM → Pydantic; coerce non-finite floats so response JSON never carries NaN (breaks clients / validation)."""
 
     def sf(v: object, default: float = 0.0) -> float:
@@ -72,6 +73,7 @@ def _regime_orm_to_schema(row: RegimeHistoryMonthly) -> RegimeHistoryRow:
         fl_yield_10y_minus_2y=sf(row.fl_yield_10y_minus_2y),
         fl_hy_spread_proxy=sf(row.fl_hy_spread_proxy),
         fl_rule_quadrant=str(row.fl_rule_quadrant),
+        fl_ensemble_quadrant=fl_ensemble_quadrant,
         asset_implied_quadrant=str(row.asset_implied_quadrant),
         asset_confirmation_score=sf(row.asset_confirmation_score, -1.0),
         asset_confirmed=bool(row.asset_confirmed),
@@ -207,7 +209,9 @@ async def get_regime_history(
     df = date_from or date.fromisoformat(settings.forecast_lab_date_from)
     dt = date_to or date.today()
     rows = await fetch_regime_history(db, df, dt)
-    items = [_regime_orm_to_schema(r) for r in rows]
+    dates = [r.obs_date for r in rows]
+    ens_map = await latest_ensemble_phase_by_obs_dates(db, dates)
+    items = [_regime_orm_to_schema(r, fl_ensemble_quadrant=ens_map.get(r.obs_date)) for r in rows]
     return RegimeHistoryListResponse(items=items, count=len(items))
 
 

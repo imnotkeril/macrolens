@@ -7,6 +7,10 @@ interface Props {
   allocation: TacticalAllocationRow[];
   expectedReturns: ExpectedReturn[];
   currentPhase: string;
+  /** `split` = only allocation table, or only expected returns (for two-column layout) */
+  section?: "full" | "allocation" | "expected";
+  /** Omit outer card wrapper */
+  embed?: boolean;
 }
 
 const WEIGHT_STYLE: Record<string, string> = {
@@ -22,6 +26,10 @@ const PHASE_HIGHLIGHT: Record<string, string> = {
   contraction: "Contraction",
 };
 
+function phaseLabelForTitle(phase: string): string {
+  return PHASE_HIGHLIGHT[phase] ?? phase;
+}
+
 function WeightCell({ weight, highlight }: { weight: string; highlight?: boolean }) {
   return (
     <td className={cn(
@@ -34,12 +42,16 @@ function WeightCell({ weight, highlight }: { weight: string; highlight?: boolean
   );
 }
 
-export function TacticalAllocation({ allocation, expectedReturns, currentPhase }: Props) {
-  return (
-    <div className="card">
-      <div className="card-header">Tactical Asset Allocation by Cycle Phase</div>
-
-      <div className="mt-3 overflow-x-auto">
+export function TacticalAllocation({
+  allocation,
+  expectedReturns,
+  currentPhase,
+  section = "full",
+  embed = false,
+}: Props) {
+  const allocationTable = (
+    <div className={cn(!embed && "mt-3", embed && "mt-0")}>
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-text-muted text-xs uppercase tracking-wider border-b border-border">
@@ -86,53 +98,110 @@ export function TacticalAllocation({ allocation, expectedReturns, currentPhase }
           </tbody>
         </table>
       </div>
+    </div>
+  );
 
-      {/* Expected Returns */}
-      {expectedReturns.length > 0 && (
-        <div className="mt-5 border-t border-border pt-3">
-          <div className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
-            Expected Returns (Current Phase)
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-text-muted text-xs uppercase tracking-wider border-b border-border">
-                  <th className="pb-2 text-left font-medium">Asset</th>
-                  <th className="pb-2 text-right font-medium">Avg Return</th>
-                  <th className="pb-2 text-right font-medium">Sharpe</th>
-                  <th className="pb-2 text-right font-medium">Beta to Cycle</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expectedReturns.map((r) => (
-                  <tr key={r.asset_class} className="border-b border-border/30">
-                    <td className="py-1.5 text-text-primary font-light">{r.asset_class}</td>
-                    <td className={cn(
-                      "py-1.5 text-right tabular-nums font-medium",
-                      r.avg_return >= 0 ? "text-accent-green" : "text-accent-red",
-                    )}>
-                      {r.avg_return >= 0 ? "+" : ""}{r.avg_return.toFixed(1)}%
-                    </td>
-                    <td className="py-1.5 text-right tabular-nums text-text-secondary">
-                      {r.sharpe.toFixed(2)}
-                    </td>
-                    <td className={cn(
-                      "py-1.5 text-right tabular-nums",
-                      r.beta_to_cycle >= 0 ? "text-accent-green" : "text-accent-amber",
-                    )}>
-                      {r.beta_to_cycle >= 0 ? "+" : ""}{r.beta_to_cycle.toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+  const expectedBlock =
+    expectedReturns.length > 0 ? (
+      <div className={cn(section === "full" && "mt-5 border-t border-border pt-3", section === "expected" && "mt-0")}>
+        <div className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
+          Expected Returns (Current Phase: {phaseLabelForTitle(currentPhase)})
         </div>
-      )}
-
-      <div className="mt-3 text-[10px] text-text-muted italic">
-        Historical patterns, not investment advice. Past cycle returns do not guarantee future results.
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-text-muted text-xs uppercase tracking-wider border-b border-border">
+                <th className="pb-2 text-left font-medium">Asset</th>
+                <th className="pb-2 text-right font-medium">Avg Return</th>
+                <th className="pb-2 text-right font-medium">Sharpe</th>
+                <th className="pb-2 text-right font-medium">Beta to Cycle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expectedReturns.map((r) => (
+                <tr key={r.asset_class} className="border-b border-border/30">
+                  <td className="py-1.5 text-text-primary font-light">{r.asset_class}</td>
+                  <td className={cn(
+                    "py-1.5 text-right tabular-nums font-medium",
+                    r.avg_return >= 0 ? "text-accent-green" : "text-accent-red",
+                  )}>
+                    {r.avg_return >= 0 ? "+" : ""}{r.avg_return.toFixed(1)}%
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums text-text-secondary">
+                    {r.sharpe.toFixed(2)}
+                  </td>
+                  <td className={cn(
+                    "py-1.5 text-right tabular-nums",
+                    r.beta_to_cycle >= 0 ? "text-accent-green" : "text-accent-amber",
+                  )}>
+                    {r.beta_to_cycle >= 0 ? "+" : ""}{r.beta_to_cycle.toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+    ) : null;
+
+  const disclaimer = (
+    <div className="mt-3 text-[10px] text-text-muted italic">
+      Historical patterns, not investment advice. Past cycle returns do not guarantee future results.
+    </div>
+  );
+
+  if (section === "allocation") {
+    const inner = (
+      <>
+        {allocationTable}
+        {embed ? null : disclaimer}
+      </>
+    );
+    if (embed) return <div className="flex flex-col">{inner}</div>;
+    return (
+      <div className="card">
+        <div className="card-header">Tactical Asset Allocation by Cycle Phase</div>
+        {inner}
+      </div>
+    );
+  }
+
+  if (section === "expected") {
+    const inner = (
+      <>
+        {expectedReturns.length === 0 ? (
+          <div className="text-sm text-text-muted">No expected returns for this phase.</div>
+        ) : (
+          expectedBlock
+        )}
+        {embed ? null : disclaimer}
+      </>
+    );
+    if (embed) return <div className="flex flex-col">{inner}</div>;
+    return (
+      <div className="card">
+        <div className="card-header">Expected Returns (Current Phase: {phaseLabelForTitle(currentPhase)})</div>
+        {inner}
+      </div>
+    );
+  }
+
+  const inner = (
+    <>
+      {allocationTable}
+      {expectedBlock}
+      {disclaimer}
+    </>
+  );
+
+  if (embed) {
+    return <div className="flex flex-col">{inner}</div>;
+  }
+
+  return (
+    <div className="card">
+      <div className="card-header">Tactical Asset Allocation by Cycle Phase</div>
+      {inner}
     </div>
   );
 }

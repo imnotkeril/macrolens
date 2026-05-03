@@ -1,5 +1,5 @@
-import { NextDashboardScreen } from "@/components/next-dashboard/NextDashboardScreen";
+import { NextPlaceholderPage } from "@/components/next-dashboard/NextPlaceholderPage";
 
 export default function NextInflationPage() {
-  return <NextDashboardScreen mode="placeholder" placeholderTitle="Inflation" />;
+  return <NextPlaceholderPage title="Inflation" legacyHref="/indicators" />;
 }

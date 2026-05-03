@@ -1,4 +1,4 @@
-import { NextDashboardScreen } from "@/components/next-dashboard/NextDashboardScreen";
+import { NextPlaceholderPage } from "@/components/next-dashboard/NextPlaceholderPage";
 
 type PageProps = {
   params: { section: string };
@@ -9,5 +9,5 @@ function prettifySection(section: string): string {
 }
 
 export default function NextInflationSectionPage({ params }: PageProps) {
-  return <NextDashboardScreen mode="placeholder" placeholderTitle={`Inflation — ${prettifySection(params.section)}`} />;
+  return <NextPlaceholderPage title={`Inflation — ${prettifySection(params.section)}`} legacyHref="/indicators" />;
 }

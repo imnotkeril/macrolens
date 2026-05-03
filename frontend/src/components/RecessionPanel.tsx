@@ -7,9 +7,11 @@ interface Props {
   probability: number;
   models: RecessionModelResult[];
   drivers: CycleDriverContribution[];
+  /** Omit outer card — use inside Next / custom panel */
+  embed?: boolean;
 }
 
-export function RecessionPanel({ probability, models, drivers }: Props) {
+export function RecessionPanel({ probability, models, drivers, embed = false }: Props) {
   const probColor =
     probability < 20 ? "text-accent-green" :
     probability < 40 ? "text-accent-amber" : "text-accent-red";
@@ -24,10 +26,8 @@ export function RecessionPanel({ probability, models, drivers }: Props) {
 
   const top3 = drivers.slice(0, 3);
 
-  return (
-    <div className="card">
-      <div className="card-header">Recession Probability 12M</div>
-
+  const inner = (
+    <>
       {/* Main probability gauge */}
       <div className="flex flex-col items-center py-4">
         <div className={cn("text-5xl font-extralight tabular-nums", probColor)}>
@@ -102,6 +102,17 @@ export function RecessionPanel({ probability, models, drivers }: Props) {
           </div>
         ))}
       </div>
+    </>
+  );
+
+  if (embed) {
+    return <div className="flex flex-col">{inner}</div>;
+  }
+
+  return (
+    <div className="card">
+      <div className="card-header">Recession Probability 12M</div>
+      {inner}
     </div>
   );
 }

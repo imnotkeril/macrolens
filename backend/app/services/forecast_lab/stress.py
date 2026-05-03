@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import math
+from dataclasses import dataclass
 from datetime import date, timedelta
 
 import numpy as np
@@ -15,6 +16,16 @@ from app.models.market_data import MarketData
 logger = logging.getLogger("forecast_lab.stress")
 
 DEFAULT_SYMBOLS = ["SPY", "IWM", "GLD", "TLT", "HYG", "EEM"]
+
+
+@dataclass
+class StressComputeResult:
+    score: float
+    band: str
+    drivers: list[str]
+    universe_symbols: list[str]
+    insufficient_history: bool
+    top_z_contributors: list[tuple[str, float]]
 
 
 async def _monthly_returns(
@@ -78,23 +89,32 @@ async def compute_stress(
     db: AsyncSession,
     as_of: date,
     symbols: list[str] | None = None,
-) -> tuple[float, str, list[str]]:
-    syms = symbols or DEFAULT_SYMBOLS
+) -> StressComputeResult:
+    syms = list(symbols or DEFAULT_SYMBOLS)
     mat = await _monthly_returns(db, as_of, syms)
     drivers: list[str] = []
 
     if mat is None or mat.shape[0] < 8:
-        return 0.25, "low", ["insufficient_market_history"]
+        return StressComputeResult(
+            score=0.25,
+            band="low",
+            drivers=["insufficient_market_history"],
+            universe_symbols=syms,
+            insufficient_history=True,
+            top_z_contributors=[],
+        )
 
     # Latest row (most recent month) vs historical distribution per column
     mat = np.nan_to_num(mat, nan=0.0, posinf=0.0, neginf=0.0)
     last = mat[-1]
     hist = mat[:-1]
-    z_cols = []
+    z_cols: list[float] = []
     for j in range(mat.shape[1]):
         col = hist[:, j]
         mu, sd = col.mean(), col.std() or 1e-9
-        z_cols.append(abs((last[j] - mu) / sd))
+        z_cols.append(float(abs((last[j] - mu) / sd)))
+    z_pairs = sorted(zip(syms, z_cols), key=lambda x: -x[1])[:3]
+    top_z = [(str(s), float(z)) for s, z in z_pairs]
     z_mean = float(np.nanmean(z_cols)) if z_cols else 0.0
     if not math.isfinite(z_mean):
         z_mean = 0.0
@@ -121,4 +141,11 @@ async def compute_stress(
         combined = 0.25
     if z_score_norm > 0.5:
         drivers.append("return_z_spike")
-    return combined, _band_from_score(combined), drivers
+    return StressComputeResult(
+        score=combined,
+        band=_band_from_score(combined),
+        drivers=drivers,
+        universe_symbols=syms,
+        insufficient_history=False,
+        top_z_contributors=top_z,
+    )

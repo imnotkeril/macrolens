@@ -64,7 +64,7 @@ async function fetchJSON<T>(path: string): Promise<T> {
 // Indicators
 export const getIndicators = (category?: IndicatorCategory) =>
   fetchJSON<IndicatorWithLatest[]>(
-    `/api/indicators/${category ? `?category=${category}` : ""}`
+    `/api/indicators${category !== undefined ? `?category=${category}` : ""}`,
   );
 
 export const getCategoryScores = () =>

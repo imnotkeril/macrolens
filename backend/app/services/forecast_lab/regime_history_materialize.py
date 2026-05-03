@@ -6,10 +6,10 @@ import logging
 import uuid
 from datetime import date, datetime, timezone
 from typing import Any
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.forecast_lab import RegimeHistoryMonthly
+from app.models.forecast_lab import ForecastLabPredictionLog, RegimeHistoryMonthly
 from app.services.forecast_lab import features_pit
 from app.services.forecast_lab.asset_implied_labels import load_price_series, symbols_from_asset_expectations
 from app.services.forecast_lab.asset_implied_labels_core import (
@@ -147,6 +147,41 @@ async def materialize_regime_history_monthly(
     elif n_err:
         msg = f"{n_err} month(s) skipped; first_error={first_err}"
     return {"rows": n_ok, "batch_id": batch_id, "horizon_months": h, "message": msg, "errors": n_err}
+
+
+async def latest_ensemble_phase_by_obs_dates(
+    db: AsyncSession,
+    obs_dates: list[date],
+) -> dict[date, str | None]:
+    """
+    For each obs_date, phase_class from the newest ForecastLabPredictionLog row with that as_of_date.
+    Used to show FL ensemble headline in regime history without persisting it on RegimeHistoryMonthly.
+    """
+    if not obs_dates:
+        return {}
+    subq = (
+        select(
+            ForecastLabPredictionLog.as_of_date.label("d"),
+            func.max(ForecastLabPredictionLog.id).label("mx"),
+        )
+        .where(ForecastLabPredictionLog.as_of_date.in_(obs_dates))
+        .group_by(ForecastLabPredictionLog.as_of_date)
+    ).subquery()
+    q = select(ForecastLabPredictionLog).join(
+        subq,
+        (ForecastLabPredictionLog.as_of_date == subq.c.d) & (ForecastLabPredictionLog.id == subq.c.mx),
+    )
+    res = await db.execute(q)
+    out: dict[date, str | None] = {}
+    for log_row in res.scalars().all():
+        pc = None
+        raw = log_row.payload_json
+        if isinstance(raw, dict):
+            v = raw.get("phase_class")
+            if isinstance(v, str) and v.strip():
+                pc = v.strip()
+        out[log_row.as_of_date] = pc
+    return out
 
 
 async def fetch_regime_history(

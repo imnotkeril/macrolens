@@ -14,6 +14,7 @@ from typing import Any
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sqlalchemy.ext.asyncio import AsyncSession
 import xgboost as xgb
@@ -231,6 +232,79 @@ async def run_training(db: AsyncSession) -> dict[str, Any]:
     pred = [int(np.argmax(p)) for p in test_probs]
     acc = float(np.mean(np.array(pred) == y_test)) if len(y_test) else 0.0
 
+    cm_sk = confusion_matrix(y_test, np.array(pred), labels=[0, 1, 2, 3]).tolist() if len(y_test) else []
+    cm_total = int(sum(sum(row) for row in cm_sk)) if cm_sk else 0
+    cm_trace = int(sum(cm_sk[i][i] for i in range(4))) if cm_sk and len(cm_sk) == 4 else 0
+    confusion_accuracy = float(cm_trace / cm_total) if cm_total > 0 else None
+
+    feat_names = features_pit.FEATURE_NAMES
+    fi_pairs = sorted(zip(feat_names, clf.feature_importances_.tolist()), key=lambda x: -x[1])[:5]
+    feature_importance_top = [{"name": str(a), "importance": float(b)} for a, b in fi_pairs]
+
+    max_conf = np.array([float(np.max(p)) for p in test_probs], dtype=float) if test_probs else np.array([])
+    correct = (np.array(pred) == np.array(y_test)).astype(float) if len(y_test) else np.array([])
+    calibration_bins: list[dict[str, Any]] = []
+    if len(max_conf) > 0:
+        edges = np.linspace(0.0, 1.0, 11)
+        for i in range(10):
+            lo, hi = float(edges[i]), float(edges[i + 1])
+            if i < 9:
+                mask = (max_conf >= lo) & (max_conf < hi)
+            else:
+                mask = (max_conf >= lo) & (max_conf <= hi)
+            n_m = int(mask.sum())
+            calibration_bins.append(
+                {
+                    "p_mid": float((lo + hi) / 2),
+                    "n": n_m,
+                    "accuracy": float(correct[mask].mean()) if n_m > 0 else None,
+                }
+            )
+
+    val_dates_list = [dates[i] for i in np.where(val_mask)[0]]
+    ensemble_weight_history: list[dict[str, Any]] = []
+    n_val = len(val_dates_list)
+    if n_val >= 4:
+        n_snapshots = min(14, max(4, n_val))
+        step = max(1, (n_val - 4) // max(1, n_snapshots - 1)) if n_val > 4 else 1
+        ends_set: set[int] = set()
+        # Skip tiny prefixes (e.g. 4 rows): equal log-loss ties normalize to 0.25 each — looks like a bug in the chart.
+        start_end = 8 if n_val >= 8 else 4
+        for end in range(start_end, n_val + 1, step):
+            ends_set.add(end)
+        ends_set.add(n_val)
+        for end in sorted(ends_set):
+            vr = val_rule[:end]
+            vh = val_hmm[:end]
+            vg = val_gbdt[:end]
+            yv = y_val[:end]
+            try:
+                if inc_cycle and len(val_cycle) >= end:
+                    vc = val_cycle[:end]
+                    wr, wh, wg, wc = inverse_logloss_weights_four(vr, vh, vg, vc, yv)
+                    ensemble_weight_history.append(
+                        {
+                            "as_of": val_dates_list[end - 1].isoformat(),
+                            "rule": float(wr),
+                            "hmm": float(wh),
+                            "gbdt": float(wg),
+                            "cycle": float(wc),
+                        }
+                    )
+                else:
+                    wr, wh, wg = inverse_logloss_weights(vr, vh, vg, yv)
+                    ensemble_weight_history.append(
+                        {
+                            "as_of": val_dates_list[end - 1].isoformat(),
+                            "rule": float(wr),
+                            "hmm": float(wh),
+                            "gbdt": float(wg),
+                            "cycle": 0.0,
+                        }
+                    )
+            except Exception:
+                logger.debug("ensemble weight snapshot failed at end=%s", end, exc_info=True)
+
     rec_block: dict[str, Any] = {"trained": False}
     rec_clf_fitted: xgb.XGBClassifier | None = None
     if settings.forecast_lab_train_recession_model:
@@ -287,7 +361,14 @@ async def run_training(db: AsyncSession) -> dict[str, Any]:
         "val_end": str(val_end.date),
         "label_mode": label_mode,
         "label_stats": label_stats,
-        "metrics": {"balanced_test_acc_proxy": acc},
+        "metrics": {
+            "balanced_test_acc_proxy": acc,
+            "confusion_matrix_monthly": cm_sk,
+            "confusion_accuracy": confusion_accuracy,
+            "calibration_bins": calibration_bins,
+            "feature_importance_top": feature_importance_top,
+            "ensemble_weight_history": ensemble_weight_history,
+        },
         "ensemble_weights": {
             "rule": w_rule,
             "hmm": w_hmm,

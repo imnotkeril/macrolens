@@ -7,6 +7,11 @@ import type { TaskProgress } from "@/types";
 
 const REFRESH_POLL_MS = 1500;
 
+/**
+ * Triggers backend `refreshAllData()` (FRED/Yahoo pipeline) and polls `getRefreshProgress`.
+ * On success, invalidates **all** React Query caches so legacy (`/`) and next-dashboard keys refetch —
+ * the pipeline updates many endpoints; narrowing invalidation risks stale legacy pages.
+ */
 export function useDataRefresh() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);

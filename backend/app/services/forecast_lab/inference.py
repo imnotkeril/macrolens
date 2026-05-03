@@ -41,6 +41,7 @@ from app.schemas.forecast_lab import (
     MacroForecastRow,
     PhaseProbabilities,
     StressBlock,
+    StressZContributor,
 )
 
 logger = logging.getLogger("forecast_lab")
@@ -203,7 +204,7 @@ async def build_summary(
     if not math.isfinite(conf):
         conf = 0.25
 
-    stress_val, band, drivers = await compute_stress(db, as_of)
+    stress_res = await compute_stress(db, as_of)
 
     macro_rows: list[MacroForecastRow] = [
         MacroForecastRow(
@@ -306,7 +307,16 @@ async def build_summary(
         ),
         experts=experts,
         macro_forecasts=macro_rows,
-        stress=StressBlock(stress_score=stress_val, stress_band=band, drivers=drivers),
+        stress=StressBlock(
+            stress_score=stress_res.score,
+            stress_band=stress_res.band,
+            drivers=stress_res.drivers,
+            universe_symbols=stress_res.universe_symbols,
+            insufficient_history=stress_res.insufficient_history,
+            top_z_contributors=[
+                StressZContributor(symbol=s, z_abs=z) for s, z in stress_res.top_z_contributors
+            ],
+        ),
         recession_prob_12m=rec_prob,
         recession_reason=rec_reason,
         data_availability=row.availability,

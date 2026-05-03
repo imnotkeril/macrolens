@@ -1,5 +1,5 @@
-import { NextDashboardScreen } from "@/components/next-dashboard/NextDashboardScreen";
+import { NextPlaceholderPage } from "@/components/next-dashboard/NextPlaceholderPage";
 
 export default function NextCalendarAlertsPage() {
-  return <NextDashboardScreen mode="placeholder" placeholderTitle="Calendar & alerts" />;
+  return <NextPlaceholderPage title="Calendar & alerts" legacyHref="/calendar" />;
 }

@@ -14,7 +14,7 @@ from app.services.forecast_lab.asset_implied_labels_core import forward_pair_hit
 from app.services.forecast_lab.dates_util import add_months, iter_month_ends
 from app.services.forecast_lab.expectations import load_expectations
 from app.services.forecast_lab.features_pit import build_feature_row
-from app.services.forecast_lab.rule_phase import determine_quadrant
+from app.services.forecast_lab.rule_phase import QUADRANT_ORDER, determine_quadrant
 
 logger = logging.getLogger("forecast_lab.phase_alignment")
 
@@ -33,7 +33,7 @@ async def compute_phase_asset_alignment(
         return {
             "horizon_months": h,
             "overall_hit_rate": None,
-            "by_quadrant": {},
+            "by_quadrant": {q: None for q in QUADRANT_ORDER},
             "sample_size": 0,
             "note": "no_evaluable_steps (check market symbols and date range)",
         }
@@ -69,11 +69,13 @@ async def compute_phase_asset_alignment(
 
     overall = _mean(hits)
     by_quadrant_f = {k: _mean(v) for k, v in by_q.items() if v}
+    # Always emit all four quadrants so clients can align columns; null = no months in that regime in range.
+    by_quadrant_full: dict[str, float | None] = {q: by_quadrant_f.get(q) for q in QUADRANT_ORDER}
 
     return {
         "horizon_months": h,
         "overall_hit_rate": overall,
-        "by_quadrant": {k: v for k, v in by_quadrant_f.items() if v is not None},
+        "by_quadrant": by_quadrant_full,
         "sample_size": len(hits),
         "note": None if hits else "no_evaluable_steps (check market symbols and date range)",
     }

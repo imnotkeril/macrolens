@@ -7,6 +7,8 @@ interface Props {
   phase: string;
   phaseLabel: string;
   size?: "default" | "large";
+  /** Omit outer card chrome — wrap with Next panel / custom shell */
+  embed?: boolean;
 }
 
 const PHASE_COLORS: Record<string, string> = {
@@ -16,7 +18,7 @@ const PHASE_COLORS: Record<string, string> = {
   contraction: "#ef4444",
 };
 
-export function CycleGauge({ score, phase, phaseLabel, size = "default" }: Props) {
+export function CycleGauge({ score, phase, phaseLabel, size = "default", embed = false }: Props) {
   const color = PHASE_COLORS[phase] ?? "#6b7280";
   // Map score (-100..+100) to angle (-135..+135 degrees)
   const angle = (score / 100) * 135;
@@ -44,9 +46,7 @@ export function CycleGauge({ score, phase, phaseLabel, size = "default" }: Props
     return `M ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2}`;
   };
 
-  return (
-    <div className={cn("card flex flex-col", isLarge && "min-h-[360px] h-full")}>
-      <div className="card-header">Cycle Phase Indicator</div>
+  const body = (
       <div className={cn("flex flex-col items-center py-4", isLarge && "flex-1 justify-center")}>
         <svg width={svgW} height={svgH} viewBox="0 0 240 160" className={isLarge ? "max-h-[280px] w-full" : ""}>
           {/* Background arc segments */}
@@ -118,6 +118,16 @@ export function CycleGauge({ score, phase, phaseLabel, size = "default" }: Props
           </div>
         </div>
       </div>
+  );
+
+  if (embed) {
+    return <div className={cn("flex flex-col", isLarge && "min-h-[320px] justify-center")}>{body}</div>;
+  }
+
+  return (
+    <div className={cn("card flex flex-col", isLarge && "min-h-[360px] h-full")}>
+      <div className="card-header">Cycle Phase Indicator</div>
+      {body}
     </div>
   );
 }

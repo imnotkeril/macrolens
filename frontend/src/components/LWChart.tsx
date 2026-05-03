@@ -28,6 +28,7 @@ import type {
   LogicalRange,
 } from "lightweight-charts";
 import { subMonths } from "date-fns";
+import { rgbaFromCssColor, resolveCssColorForCanvas } from "@/lib/chartCssColor";
 
 /* ── Series configuration ─────────────────────────────────── */
 
@@ -67,6 +68,10 @@ export interface LWChartProps {
   autoSize?: boolean;
   onCrosshairMove?: (time: Time | null, point: { x: number; y: number } | null) => void;
   onVisibleRangeChange?: (range: LogicalRange | null) => void;
+  /** Solid chart pane background (e.g. `var(--nd-panel)` for `/next` shell). */
+  layoutBackgroundColor?: string;
+  /** Period selector + legend styling aligned with Next dashboard tokens instead of legacy `accent`. */
+  uiVariant?: "default" | "next";
 }
 
 export interface LWChartHandle {
@@ -187,6 +192,8 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
     autoSize = true,
     onCrosshairMove,
     onVisibleRangeChange,
+    layoutBackgroundColor,
+    uiVariant = "default",
   },
   ref
 ) {
@@ -257,29 +264,35 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
 
   /* ── Legend update callback ────────────────────────────── */
 
-  const fmtVal = formatValue ?? ((v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 2 }));
+  const fmtVal = useMemo(
+    () => formatValue ?? ((v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 2 })),
+    [formatValue]
+  );
 
   const updateLegend = useCallback(
     (param: MouseEventParams<Time>) => {
       if (!legendRef.current) return;
       const parts: string[] = [];
+      const sepColor =
+        uiVariant === "next" ? resolveCssColorForCanvas("var(--nd-muted)") : "#52525b";
 
       for (const cfg of seriesConfigs) {
         const s = seriesRefs.current.get(cfg.key);
         if (!s) continue;
         const d = param.seriesData?.get(s) as { value?: number } | undefined;
         if (d?.value !== undefined) {
+          const legendColor = resolveCssColorForCanvas(cfg.color);
           parts.push(
-            `<span style="color:${cfg.color}">${cfg.label}: ${fmtVal(d.value)}</span>`
+            `<span style="color:${legendColor}">${cfg.label}: ${fmtVal(d.value)}</span>`
           );
         }
       }
 
       legendRef.current.innerHTML = parts.join(
-        '<span style="color:#3f3f46;margin:0 6px">|</span>'
+        `<span style="color:${sepColor};margin:0 6px">|</span>`
       );
     },
-    [seriesConfigs, fmtVal]
+    [seriesConfigs, fmtVal, uiVariant]
   );
 
   /* ── Create / destroy chart ────────────────────────────── */
@@ -287,8 +300,20 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const layoutBgRaw =
+      layoutBackgroundColor ??
+      ((DARK_THEME.layout.background as { color?: string }).color || "#13131a");
+    const layoutBg =
+      layoutBgRaw === "transparent"
+        ? "transparent"
+        : resolveCssColorForCanvas(layoutBgRaw);
+
     const chart = createChart(containerRef.current, {
       ...DARK_THEME,
+      layout: {
+        ...DARK_THEME.layout,
+        background: { type: ColorType.Solid, color: layoutBg },
+      },
       ...(scrollable && {
         timeScale: {
           ...DARK_THEME.timeScale,
@@ -316,33 +341,35 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
       let s: ISeriesApi<SeriesType>;
 
       if (cfg.type === "area") {
+        const stroke = resolveCssColorForCanvas(cfg.color);
         s = chart.addSeries(AreaSeries, {
-          lineColor: cfg.color,
-          topColor: cfg.color + "18",
+          lineColor: stroke,
+          topColor: rgbaFromCssColor(cfg.color, 0.12),
           bottomColor: "transparent",
           lineWidth: (cfg.lineWidth ?? 2) as 1 | 2 | 3 | 4,
           crosshairMarkerRadius: 3,
-          crosshairMarkerBorderColor: cfg.color,
-          crosshairMarkerBackgroundColor: cfg.color,
+          crosshairMarkerBorderColor: stroke,
+          crosshairMarkerBackgroundColor: stroke,
           lastValueVisible: false,
           priceLineVisible: false,
           priceScaleId: cfg.priceScaleId ?? "right",
         });
       } else if (cfg.type === "histogram") {
         s = chart.addSeries(HistogramSeries, {
-          color: cfg.color,
+          color: resolveCssColorForCanvas(cfg.color),
           lastValueVisible: false,
           priceLineVisible: false,
           priceScaleId: cfg.priceScaleId ?? "right",
         });
       } else {
+        const stroke = resolveCssColorForCanvas(cfg.color);
         s = chart.addSeries(LineSeries, {
-          color: cfg.color,
+          color: stroke,
           lineWidth: (cfg.lineWidth ?? 2) as 1 | 2 | 3 | 4,
           lineStyle: cfg.dashed ? LineStyle.Dashed : LineStyle.Solid,
           crosshairMarkerRadius: 3,
-          crosshairMarkerBorderColor: cfg.color,
-          crosshairMarkerBackgroundColor: cfg.color,
+          crosshairMarkerBorderColor: stroke,
+          crosshairMarkerBackgroundColor: stroke,
           lastValueVisible: false,
           priceLineVisible: false,
           priceScaleId: cfg.priceScaleId ?? "right",
@@ -362,19 +389,20 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
           }),
         });
       }
+    }
 
-      /* Threshold price lines */
-      if (thresholds) {
-        for (const t of thresholds) {
-          s.createPriceLine({
-            price: t.value,
-            color: t.color,
-            lineWidth: 1,
-            lineStyle: LineStyle.Dashed,
-            axisLabelVisible: false,
-            title: t.label,
-          });
-        }
+    /* Threshold price lines (attach once to the main series to avoid duplicates) */
+    const mainSeries = seriesConfigs[0] ? sMap.get(seriesConfigs[0].key) : undefined;
+    if (mainSeries && thresholds?.length) {
+      for (const t of thresholds) {
+        mainSeries.createPriceLine({
+          price: t.value,
+          color: resolveCssColorForCanvas(t.color),
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: t.label,
+        });
       }
     }
 
@@ -435,22 +463,55 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
     };
     // Recreate chart whenever data or config changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered, seriesConfigs, thresholds, recessionBands, height, autoSize, scrollable, yDomain, formatValue, fixedPriceRange]);
+  }, [
+    filtered,
+    seriesConfigs,
+    thresholds,
+    recessionBands,
+    height,
+    autoSize,
+    scrollable,
+    yDomain,
+    formatValue,
+    fixedPriceRange,
+    layoutBackgroundColor,
+  ]);
 
   return (
     <div>
       {/* Period selector */}
       {periodSelector && (
-        <div className="flex gap-1 mb-3">
+        <div
+          className={
+            uiVariant === "next"
+              ? "mb-3 flex justify-end gap-1"
+              : "mb-3 flex gap-1"
+          }
+        >
           {PERIODS.map((p) => (
             <button
               key={p.label}
+              type="button"
               onClick={() => setPeriod(p.label)}
-              className={`px-2.5 py-1 text-[10px] font-medium rounded transition-colors ${
-                period === p.label
-                  ? "bg-accent/20 text-accent border border-accent/30"
-                  : "text-text-muted hover:text-text-secondary border border-transparent"
-              }`}
+              className={
+                uiVariant === "next"
+                  ? "rounded-[2px] px-2.5 py-1 text-[10px] font-medium transition-colors"
+                  : `rounded px-2.5 py-1 text-[10px] font-medium transition-colors ${
+                      period === p.label
+                        ? "border border-accent/30 bg-accent/20 text-accent"
+                        : "border border-transparent text-text-muted hover:text-text-secondary"
+                    }`
+              }
+              style={
+                uiVariant === "next"
+                  ? {
+                      border:
+                        period === p.label ? "1px solid var(--nd-border)" : "1px solid transparent",
+                      background: period === p.label ? "var(--nd-panel-soft)" : "transparent",
+                      color: period === p.label ? "var(--nd-text)" : "var(--nd-muted)",
+                    }
+                  : undefined
+              }
             >
               {p.label}
             </button>
@@ -461,7 +522,12 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
       {/* Legend overlay */}
       <div
         ref={legendRef}
-        className="text-[10px] font-light text-text-secondary mb-1 h-4 overflow-hidden whitespace-nowrap"
+        className={
+          uiVariant === "next"
+            ? "mb-1 h-4 overflow-hidden whitespace-nowrap text-[10px] font-light"
+            : "mb-1 h-4 overflow-hidden whitespace-nowrap text-[10px] font-light text-text-secondary"
+        }
+        style={uiVariant === "next" ? { color: "var(--nd-soft)" } : undefined}
       />
 
       {/* Chart container */}
