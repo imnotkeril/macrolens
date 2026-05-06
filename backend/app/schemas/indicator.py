@@ -53,3 +53,12 @@ class CategoryScore(BaseModel):
     trend: TrendDirection
     indicator_count: int
     color: str  # green / yellow / red
+
+
+class KpiIndicatorsBundle(BaseModel):
+    """All KPI macro-sentiment categories in one payload (one HTTP round-trip)."""
+
+    housing: list[IndicatorWithLatest]
+    orders: list[IndicatorWithLatest]
+    income_sales: list[IndicatorWithLatest]
+    employment: list[IndicatorWithLatest]

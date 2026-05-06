@@ -22,6 +22,7 @@ export const dashboardQueryKeys = {
   yieldHistory: [PREFIX, "yield-history"] as const,
   curveDynamics: [PREFIX, "curve-dynamics"] as const,
   indicatorsAll: [PREFIX, "indicators", "all"] as const,
+  indicatorsKpiBundle: [PREFIX, "indicators", "kpi-bundle"] as const,
   indicatorsByCategory: (category: string) => [PREFIX, "indicators", category] as const,
   indicatorHistory: (id: number, limit: number) => [PREFIX, "indicator-history", id, limit] as const,
 } as const;

@@ -32,3 +32,15 @@ class CurveDynamics(BaseModel):
     long_end_change_1m: float
     short_end_change_3m: float
     long_end_change_3m: float
+
+
+class SpreadPercentileRow(BaseModel):
+    """Key curve spreads with multi-window percentile ranks vs history."""
+
+    key: str
+    label: str
+    current_bp: float
+    percentile_1y: float | None
+    percentile_5y: float | None
+    percentile_10y: float | None
+    historical_mean_bp: float | None

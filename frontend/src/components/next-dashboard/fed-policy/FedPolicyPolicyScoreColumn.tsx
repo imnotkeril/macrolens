@@ -8,7 +8,7 @@ import {
   balanceSheetScoreLabel,
   directionScoreLabel,
   rateVsRStarComponent,
-  R_STAR,
+  R_STAR_FALLBACK,
 } from "@/components/next-dashboard/fed-policy/fedPolicyUtils";
 
 const STANCE_LABELS: Record<string, string> = {
@@ -21,7 +21,7 @@ const STANCE_LABELS: Record<string, string> = {
 
 type Colors = NextShellThemeContextValue["colors"];
 
-type Sentiment = { score: number; pct: number; label: string };
+type Sentiment = { score: number; pct: number; label: string; fromRhetoric?: boolean };
 
 export function FedPolicyPolicyScoreColumn({
   panelStyle,
@@ -38,8 +38,12 @@ export function FedPolicyPolicyScoreColumn({
   sentiment: Sentiment | null;
   hawkColor: string;
 }) {
+  const neutralNominal =
+    status && status.neutral_rate_nominal != null && Number.isFinite(status.neutral_rate_nominal)
+      ? status.neutral_rate_nominal
+      : R_STAR_FALLBACK;
   const mid = status ? (status.current_rate_upper + status.current_rate_lower) / 2 : null;
-  const rateComp = mid != null ? rateVsRStarComponent(mid) : null;
+  const rateComp = mid != null ? rateVsRStarComponent(mid, neutralNominal) : null;
   const dirS = status ? directionScoreLabel(status.rate_direction) : null;
   const bsS = status ? balanceSheetScoreLabel(status.balance_sheet_direction) : null;
 
@@ -71,7 +75,7 @@ export function FedPolicyPolicyScoreColumn({
             </div>
           </div>
           {(() => {
-            const ppDiff = mid != null ? mid - R_STAR : null;
+            const ppDiff = mid != null ? mid - neutralNominal : null;
             const ppStr = ppDiff == null ? "—" : `${ppDiff >= 0 ? "+" : ""}${ppDiff.toFixed(2)}pp`;
             const rateCompStr = rateComp == null ? "—" : `${rateComp >= 0 ? "+" : ""}${rateComp.toFixed(2)}`;
             const ppTone =
@@ -127,7 +131,7 @@ export function FedPolicyPolicyScoreColumn({
                   <tbody>
                     <tr className="border-b" style={{ borderColor: "var(--nd-border-soft)" }}>
                       <td className="min-w-0 py-2.5 align-middle pr-3">
-                        <div style={{ color: "var(--nd-text)" }}>Rate vs Neutral (r*)</div>
+                        <div style={{ color: "var(--nd-text)" }}>Rate vs Neutral (SEP LR)</div>
                       </td>
                       <td
                         className="px-2 py-2.5 align-middle text-center text-[12px] tabular-nums"
@@ -201,7 +205,7 @@ export function FedPolicyPolicyScoreColumn({
           {sentiment ? (
             <div className="mt-3 text-[10px] uppercase tracking-[0.06em]">
               <div className="mb-2 text-[10px] font-semibold tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
-                Hawkish / dovish
+                {sentiment.fromRhetoric ? "Rhetoric (Fed/CB agent)" : "Hawkish / dovish (policy score)"}
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">

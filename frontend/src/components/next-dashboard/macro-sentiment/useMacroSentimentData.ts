@@ -6,6 +6,7 @@ import {
   getCategoryScores,
   getIndicatorHistory,
   getIndicators,
+  getKpiIndicatorsBundle,
   getRegimeCurrent,
   getRegimeHistory,
 } from "@/lib/api";
@@ -16,7 +17,7 @@ import {
   KPI_SCORE_CATEGORIES,
 } from "@/components/next-dashboard/macro-sentiment/macroSentimentConstants";
 import { firstByCategory } from "@/components/next-dashboard/macro-sentiment/macroSentimentUtils";
-import type { IndicatorCategory } from "@/types";
+import type { IndicatorCategory, IndicatorWithLatest, KpiIndicatorsBundle } from "@/types";
 
 export function useMacroSentimentData(activeCategory: IndicatorCategory) {
   const regimeQ = useQuery({
@@ -29,19 +30,12 @@ export function useMacroSentimentData(activeCategory: IndicatorCategory) {
     queryFn: getCategoryScores,
     staleTime: 120_000,
   });
-  /**
-   * Avoid GET /api/indicators without filter (large payload + slow DB) alongside category fetches —
-   * that parallel load was causing intermittent "Failed to fetch" in the browser.
-   * KPI strip uses one scoped request per category; keys match `indicatorsByCategory` so navigation
-   * shares the same React Query cache as the table.
-   */
-  const kpiIndicatorsQueries = useQueries({
-    queries: KPI_SCORE_CATEGORIES.map((cat) => ({
-      queryKey: dashboardQueryKeys.indicatorsByCategory(cat),
-      queryFn: () => getIndicators(cat),
-      staleTime: 120_000,
-      retry: 2,
-    })),
+  /** Single HTTP request for all KPI categories (avoids parallel `/api/indicators?category=` storms). */
+  const kpiBundleQ = useQuery({
+    queryKey: dashboardQueryKeys.indicatorsKpiBundle,
+    queryFn: getKpiIndicatorsBundle,
+    staleTime: 120_000,
+    retry: 2,
   });
   const regimeHistQ = useQuery({
     queryKey: [...dashboardQueryKeys.regimeHistory, "macro-sentiment-composite"],
@@ -53,6 +47,7 @@ export function useMacroSentimentData(activeCategory: IndicatorCategory) {
     queryFn: () => getIndicators(activeCategory),
     staleTime: 120_000,
     retry: 2,
+    enabled: activeCategory === "inflation",
   });
 
   const regime = regimeQ.data;
@@ -69,11 +64,8 @@ export function useMacroSentimentData(activeCategory: IndicatorCategory) {
     add("Regime / cycle", regimeQ);
     add("Category scores", categoriesQ);
     add("Regime history", regimeHistQ);
-    KPI_SCORE_CATEGORIES.forEach((cat, i) => {
-      add(`Indicators (kpi · ${cat})`, kpiIndicatorsQueries[i]!);
-    });
-    // Same React Query cache as KPI row when category is housing | orders | income_sales | employment
-    if (!KPI_SCORE_CATEGORIES.includes(activeCategory)) {
+    add("Macro KPI indicators (bundle)", kpiBundleQ);
+    if (activeCategory === "inflation") {
       add(`Indicators (${activeCategory})`, indicatorsCategoryQ);
     }
     return rows;
@@ -84,30 +76,20 @@ export function useMacroSentimentData(activeCategory: IndicatorCategory) {
     categoriesQ.error,
     regimeHistQ.isError,
     regimeHistQ.error,
+    kpiBundleQ.isError,
+    kpiBundleQ.error,
     indicatorsCategoryQ.isError,
     indicatorsCategoryQ.error,
     activeCategory,
-    kpiIndicatorsQueries[0]?.isError,
-    kpiIndicatorsQueries[0]?.error,
-    kpiIndicatorsQueries[1]?.isError,
-    kpiIndicatorsQueries[1]?.error,
-    kpiIndicatorsQueries[2]?.isError,
-    kpiIndicatorsQueries[2]?.error,
-    kpiIndicatorsQueries[3]?.isError,
-    kpiIndicatorsQueries[3]?.error,
   ]);
 
   const firstIdPerKpi = useMemo(() => {
-    return KPI_SCORE_CATEGORIES.map((cat, idx) => {
-      const rowsForCat = kpiIndicatorsQueries[idx]?.data ?? [];
-      return firstByCategory(rowsForCat, cat)?.id ?? null;
-    });
-  }, [
-    kpiIndicatorsQueries[0]?.data,
-    kpiIndicatorsQueries[1]?.data,
-    kpiIndicatorsQueries[2]?.data,
-    kpiIndicatorsQueries[3]?.data,
-  ]);
+    const b = kpiBundleQ.data;
+    if (!b) return KPI_SCORE_CATEGORIES.map(() => null);
+    return KPI_SCORE_CATEGORIES.map((cat) =>
+      firstByCategory(b[cat as keyof KpiIndicatorsBundle], cat)?.id ?? null,
+    );
+  }, [kpiBundleQ.data]);
 
   const kpiHistories = useQueries({
     queries: KPI_SCORE_CATEGORIES.map((cat, idx) => {
@@ -124,7 +106,17 @@ export function useMacroSentimentData(activeCategory: IndicatorCategory) {
     }),
   });
 
-  const categoryRows = indicatorsCategoryQ.data ?? [];
+  const categoryRows = useMemo((): IndicatorWithLatest[] => {
+    if (activeCategory === "inflation") {
+      return indicatorsCategoryQ.data ?? [];
+    }
+    const b = kpiBundleQ.data;
+    if (!b) return [];
+    return b[activeCategory as keyof KpiIndicatorsBundle] ?? [];
+  }, [activeCategory, kpiBundleQ.data, indicatorsCategoryQ.data]);
+
+  const indicatorsDetailPending =
+    activeCategory === "inflation" ? indicatorsCategoryQ.isPending : kpiBundleQ.isPending;
 
   const rowHistories = useQueries({
     queries: categoryRows.map((ind) => ({
@@ -168,6 +160,7 @@ export function useMacroSentimentData(activeCategory: IndicatorCategory) {
     categoriesQ,
     regimeHistQ,
     indicatorsCategoryQ,
+    indicatorsDetailPending,
     queryErrors,
     regime,
     kpiHistories,

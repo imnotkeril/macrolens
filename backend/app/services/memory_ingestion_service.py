@@ -20,6 +20,7 @@ from app.models.indicator import Indicator, IndicatorValue
 from sqlalchemy import select, desc
 from app.models.fed_policy import FedRate
 from app.models.market_data import YieldData
+from app.services.fed_rate_schema import apply_fed_rate_load_columns
 from app.models.intelligence import AgentSignal, Recommendation, ML2FactorScore, ML2AnomalySignal
 
 
@@ -268,7 +269,10 @@ class MemoryIngestionService:
             )
 
             # fed
-            fed_q = select(FedRate).where(FedRate.date <= as_of).order_by(FedRate.date.desc()).limit(1)
+            fed_q = await apply_fed_rate_load_columns(
+                db,
+                select(FedRate).where(FedRate.date <= as_of).order_by(FedRate.date.desc()).limit(1),
+            )
             fed = (await db.execute(fed_q)).scalar_one_or_none()
             if fed:
                 await self.memory.upsert_document(

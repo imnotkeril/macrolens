@@ -3,11 +3,13 @@ import type {
   IndicatorValue,
   CategoryScore,
   FedPolicyStatus,
+  FedDotPlotPayload,
   FedRate,
   BalanceSheet,
   FomcDashboard,
   YieldCurveSnapshot,
   YieldSpread,
+  SpreadPercentileRow,
   CurveDynamics,
   NavigatorPosition,
   NavigatorRecommendation,
@@ -18,6 +20,7 @@ import type {
   Alert,
   AlertCount,
   IndicatorCategory,
+  KpiIndicatorsBundle,
   TimeSeriesPoint,
   NetLiquidityPoint,
   RatioPoint,
@@ -73,6 +76,9 @@ export const getIndicators = (category?: IndicatorCategory) =>
     `/api/indicators${category !== undefined ? `?category=${category}` : ""}`,
   );
 
+export const getKpiIndicatorsBundle = () =>
+  fetchJSON<KpiIndicatorsBundle>("/api/indicators/kpi-bundle");
+
 export const getCategoryScores = () =>
   fetchJSON<CategoryScore[]>("/api/indicators/categories");
 
@@ -82,6 +88,8 @@ export const getIndicatorHistory = (id: number, limit = 120) =>
 // Fed Policy
 export const getFedStatus = () =>
   fetchJSON<FedPolicyStatus>("/api/fed/current");
+
+export const getFedDotPlot = () => fetchJSON<FedDotPlotPayload>("/api/fed/dot-plot");
 
 export const getRateHistory = (limit = 120) =>
   fetchJSON<FedRate[]>(`/api/fed/rate-history?limit=${limit}`);
@@ -107,6 +115,9 @@ export const getCurveDynamics = () =>
 
 export const getCurveDynamicsAt = (asOf: string) =>
   fetchJSON<CurveDynamics>(`/api/yield-curve/dynamics-at?as_of=${asOf}`);
+
+export const getYieldSpreadPercentiles = () =>
+  fetchJSON<SpreadPercentileRow[]>("/api/yield-curve/spread-percentiles");
 
 // Navigator
 export const getNavigatorRecommendation = () =>

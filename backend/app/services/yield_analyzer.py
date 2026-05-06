@@ -16,7 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.market_data import YieldData
 from app.schemas.yield_curve import (
-    YieldCurveSnapshot, YieldDataResponse, YieldSpread, CurveDynamics,
+    CurveDynamics,
+    SpreadPercentileRow,
+    YieldCurveSnapshot,
+    YieldDataResponse,
+    YieldSpread,
 )
 
 logger = logging.getLogger(__name__)
@@ -26,7 +30,16 @@ MATURITY_ORDER = ["3M", "1Y", "2Y", "3Y", "5Y", "7Y", "10Y", "20Y", "30Y"]
 KEY_SPREADS = [
     ("2Y10Y", "2Y", "10Y"),
     ("3M10Y", "3M", "10Y"),
+    ("2Y5Y", "2Y", "5Y"),
+    ("5Y30Y", "5Y", "30Y"),
 ]
+
+SPREAD_DISPLAY_LABEL = {
+    "2Y10Y": "2Y–10Y",
+    "3M10Y": "3M–10Y",
+    "2Y5Y": "2Y–5Y",
+    "5Y30Y": "5Y–30Y",
+}
 
 
 class YieldAnalyzer:
@@ -228,6 +241,79 @@ class YieldAnalyzer:
         )
         rows = (await self.db.execute(q)).all()
         return [{"date": r[0].isoformat(), "value": round(r[1], 3)} for r in rows]
+
+    async def get_spread_percentile_table(self) -> list[SpreadPercentileRow]:
+        """Percentile context for headline Treasury spreads (bp): 1y / 5y / 10y windows + full-sample mean."""
+        latest = await self._get_latest_date()
+        if not latest:
+            return []
+
+        q = select(YieldData).where(YieldData.date == latest)
+        result = await self.db.execute(q)
+        rows = {r.maturity: r.nominal_yield for r in result.scalars().all()}
+
+        out: list[SpreadPercentileRow] = []
+        for spread_name, short_m, long_m in KEY_SPREADS:
+            if short_m not in rows or long_m not in rows:
+                continue
+            current = (rows[long_m] - rows[short_m]) * 100.0
+            series = await self._daily_spread_series_bp(short_m, long_m)
+            p1, p5, p10, mean_hist = self._percentile_breakdown(series, latest, current)
+            out.append(
+                SpreadPercentileRow(
+                    key=spread_name,
+                    label=SPREAD_DISPLAY_LABEL.get(spread_name, spread_name),
+                    current_bp=round(current, 1),
+                    percentile_1y=p1,
+                    percentile_5y=p5,
+                    percentile_10y=p10,
+                    historical_mean_bp=mean_hist,
+                )
+            )
+        return out
+
+    async def _daily_spread_series_bp(
+        self, short_m: str, long_m: str
+    ) -> list[tuple[date, float]]:
+        """Aligned daily Treasury spreads in basis points (full history in DB)."""
+        short_q = (
+            select(YieldData.date, YieldData.nominal_yield)
+            .where(YieldData.maturity == short_m)
+        )
+        long_q = (
+            select(YieldData.date, YieldData.nominal_yield)
+            .where(YieldData.maturity == long_m)
+        )
+        short_map = {r[0]: r[1] for r in (await self.db.execute(short_q)).all()}
+        long_map = {r[0]: r[1] for r in (await self.db.execute(long_q)).all()}
+        common = sorted(set(short_map.keys()) & set(long_map.keys()))
+        return [(d, round((long_map[d] - short_map[d]) * 100, 3)) for d in common]
+
+    @staticmethod
+    def _percentile_breakdown(
+        series: list[tuple[date, float]],
+        as_of: date,
+        current: float,
+    ) -> tuple[float | None, float | None, float | None, float | None]:
+        if not series:
+            return None, None, None, None
+        all_vals = np.array([v for _, v in series], dtype=float)
+        mean_hist = round(float(np.mean(all_vals)), 1)
+
+        def window_pct(days: int) -> float | None:
+            cutoff = as_of - timedelta(days=days)
+            w = np.array(sorted([v for d, v in series if d >= cutoff]), dtype=float)
+            if w.size < 20:
+                return None
+            rank = float(np.searchsorted(w, current) / len(w) * 100)
+            return round(rank, 1)
+
+        return (
+            window_pct(365),
+            window_pct(365 * 5),
+            window_pct(365 * 10),
+            mean_hist,
+        )
 
     async def is_inverted(self) -> bool:
         spreads = await self.get_spreads()

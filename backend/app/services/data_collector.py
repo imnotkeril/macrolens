@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import date, timedelta
 
@@ -13,10 +14,11 @@ from app.models.economic_calendar import SourceHealthMetric
 from app.models.factor import FactorReturn, SectorPerformance
 from app.config import get_settings
 from app.services.fred_client import (
-    FredClient, INDICATOR_SERIES, YIELD_SERIES, TIPS_SERIES, BREAKEVEN_SERIES,
+    FredClient, INDICATOR_SERIES, YIELD_SERIES, TIPS_SERIES, BREAKEVEN_SERIES, MARKET_SERIES,
 )
 from app.services.yahoo_client import YahooClient
 from app.services.data_sources import FredAdapter, YahooAdapter, SourceRouter
+from app.services.fed_press_service import backfill_fomc_signal_phrases
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +57,7 @@ class DataCollector:
 
             for ind in indicators:
                 await self._collect_indicator(db, ind)
+                await asyncio.sleep(0.12)
 
             await db.commit()
         logger.info("Monthly indicator collection complete")
@@ -72,6 +75,7 @@ class DataCollector:
 
             for ind in indicators:
                 await self._collect_indicator(db, ind)
+                await asyncio.sleep(0.12)
 
             await db.commit()
         logger.info("Weekly indicator collection complete")
@@ -243,9 +247,38 @@ class DataCollector:
                     effr=float(effr.get(ts)) if ts in effr.index else None,
                 ).on_conflict_do_update(
                     constraint="fed_rates_date_key",
-                    set_={"target_upper": float(upper.get(ts, 0)) if ts in upper.index else 0},
+                    set_={
+                        "target_upper": float(upper.get(ts, 0)) if ts in upper.index else 0,
+                        "target_lower": float(lower.get(ts, 0)) if ts in lower.index else 0,
+                        "effr": float(effr.get(ts)) if ts in effr.index else None,
+                    },
                 )
                 await db.execute(stmt)
+
+            try:
+                lr = self.fred.get_latest("FEDTARMDLR")
+                if lr:
+                    obs_date, val = lr
+                    stmt = pg_insert(MarketData).values(
+                        date=obs_date,
+                        symbol="FEDTARMDLR",
+                        value=float(val),
+                        source="fred",
+                    ).on_conflict_do_update(
+                        constraint="uq_market_date_symbol",
+                        set_={"value": float(val), "source": "fred"},
+                    )
+                    await db.execute(stmt)
+            except Exception:
+                logger.exception("FEDTARMDLR upsert failed")
+
+            try:
+                n = await backfill_fomc_signal_phrases(db, max_updates=6)
+                if n:
+                    logger.info("FOMC press excerpts backfilled: %s rows", n)
+            except Exception:
+                logger.exception("FOMC signal phrase backfill failed")
+
             await db.commit()
         logger.info("Fed rate collection complete")
 
@@ -547,6 +580,13 @@ class DataCollector:
                         )
                         await db.execute(stmt)
 
+            # Ensure sparse legacy/context series are backfilled at least once.
+            await self._backfill_sparse_market_series(
+                db=db,
+                symbols=("TERM_PREMIUM_10Y", "TED_SPREAD"),
+                min_points=120,
+            )
+
             await self._write_source_health_metrics(
                 db=db,
                 source_name=market_source,
@@ -554,6 +594,73 @@ class DataCollector:
             )
             await db.commit()
         logger.info("Daily market data collection complete")
+
+    async def _backfill_sparse_market_series(
+        self,
+        db,
+        symbols: tuple[str, ...],
+        min_points: int = 120,
+    ) -> None:
+        """Backfill full FRED history for key symbols when DB coverage is too shallow."""
+        if not self.fred.is_configured:
+            return
+
+        for symbol in symbols:
+            current_count = (
+                await db.execute(
+                    select(func.count(MarketData.date)).where(MarketData.symbol == symbol)
+                )
+            ).scalar() or 0
+            if current_count >= min_points:
+                continue
+
+            fred_id = MARKET_SERIES.get(symbol)
+            if not fred_id:
+                continue
+
+            try:
+                series = self.fred.get_series(fred_id, start=None)
+            except Exception:
+                logger.exception("Sparse-series backfill failed for %s (%s)", symbol, fred_id)
+                continue
+            if series.empty:
+                logger.warning("Sparse-series backfill empty for %s (%s)", symbol, fred_id)
+                continue
+
+            upserts = 0
+            for i, (ts, val) in enumerate(series.items()):
+                d = ts.date() if hasattr(ts, "date") else ts
+                change = None
+                if i > 0:
+                    prev = float(series.iloc[i - 1])
+                    change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
+                stmt = pg_insert(MarketData).values(
+                    date=d,
+                    symbol=symbol,
+                    value=float(val),
+                    change_pct=change,
+                    source="fred",
+                    as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                    quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
+                ).on_conflict_do_update(
+                    constraint="uq_market_date_symbol",
+                    set_={
+                        "value": float(val),
+                        "change_pct": change,
+                        "source": "fred",
+                        "as_of": ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                        "quality_status": self._quality_status_for_point(value=float(val), change_pct=change),
+                    },
+                )
+                await db.execute(stmt)
+                upserts += 1
+
+            logger.info(
+                "Sparse-series backfill completed for %s: prior=%s, upserts=%s",
+                symbol,
+                current_count,
+                upserts,
+            )
 
     async def _load_historical_market_data(self):
         async with async_session() as db:

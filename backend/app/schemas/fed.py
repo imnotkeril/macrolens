@@ -1,4 +1,6 @@
 from datetime import date, datetime
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -8,6 +10,7 @@ class FedRateResponse(BaseModel):
     target_upper: float
     target_lower: float
     effr: float | None = None
+    fomc_signal_phrase: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -32,6 +35,12 @@ class FedPolicyStatus(BaseModel):
     rate_direction: str  # "hiking", "paused", "cutting"
     balance_sheet_direction: str  # "expanding" (QE), "stable", "shrinking" (QT)
     last_change_date: date | None
+    #: FOMC SEP longer-run median (FRED FEDTARMDLR) or configured fallback — nominal % policy anchor.
+    neutral_rate_nominal: float
+    #: Latest Fed/CB agent rhetoric score (−1 dovish … +1 hawkish), when intelligence pipeline has run.
+    rhetoric_score: float | None = None
+    #: Midpoint of target range minus neutral, in percentage points (not percent of neutral).
+    rate_vs_neutral_pp: float
 
 
 class FomcMeetingProb(BaseModel):
@@ -54,3 +63,15 @@ class FomcDashboardResponse(BaseModel):
     rate_path: dict[str, RatePathPoint]
     current_rate: float
     forward_rate: float | None
+    meetings_source: str | None = None  # "cme_fedwatch" | "zq_heuristic"
+    rate_path_source: str | None = None  # "fred_sep" | "extrapolation"
+
+
+class FedDotPlotResponse(BaseModel):
+    """FOMC SEP median path (FRED) + optional live market mid from DB."""
+
+    rate_path: dict[str, RatePathPoint]
+    current_rate: float
+    forward_rate: float | None
+    source: str
+    meta: dict[str, Any] = {}

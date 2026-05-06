@@ -2,35 +2,66 @@
 Fed Policy Tracker — scores Fed stance from -2 (very easy) to +2 (very tight).
 
 Components:
-1. Current rate vs neutral rate (r*) — estimated ~2.5% nominal
+1. Current rate vs neutral nominal anchor — FOMC longer-run median (FRED FEDTARMDLR) in `market_data`, else fallback.
 2. Rate direction — hiking (+), paused (0), cutting (-)
 3. Balance sheet direction — QE (-), stable (0), QT (+)
-4. Rate level vs 10-year history
 """
-import logging
+from __future__ import annotations
+
 from datetime import date, timedelta
 
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.models.fed_policy import FedRate, BalanceSheet
+from app.models.market_data import MarketData
+from app.models.intelligence import AgentSignal
 from app.schemas.fed import FedPolicyStatus
-
-logger = logging.getLogger(__name__)
-
-NEUTRAL_RATE = 2.5  # r* estimate (nominal)
+from app.services.fed_rate_schema import apply_fed_rate_load_columns
 
 
 class FedTracker:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def _fed_stmt(self, stmt):
+        return await apply_fed_rate_load_columns(self.db, stmt)
+
+    async def _neutral_nominal(self) -> float:
+        q = (
+            select(MarketData.value)
+            .where(MarketData.symbol == "FEDTARMDLR")
+            .order_by(desc(MarketData.date))
+            .limit(1)
+        )
+        v = (await self.db.execute(q)).scalar_one_or_none()
+        if v is not None:
+            return float(v)
+        return float(get_settings().neutral_rate_fallback)
+
+    async def _latest_rhetoric_score(self) -> float | None:
+        q = (
+            select(AgentSignal.score)
+            .where(
+                AgentSignal.agent_name == "fed_cb_agent",
+                AgentSignal.signal_type == "cb_rhetoric_proxy",
+                AgentSignal.score.isnot(None),
+            )
+            .order_by(desc(AgentSignal.signal_date))
+            .limit(1)
+        )
+        s = (await self.db.execute(q)).scalar_one_or_none()
+        return float(s) if s is not None else None
+
     async def get_current_status(self) -> FedPolicyStatus:
+        neutral = await self._neutral_nominal()
         latest_rate = await self._get_latest_rate()
         rate_direction = await self._get_rate_direction()
         bs_direction = await self._get_balance_sheet_direction()
-        policy_score = await self._compute_policy_score()
+        policy_score = await self._compute_policy_score(neutral)
         last_change = await self._get_last_rate_change_date()
+        rhetoric = await self._latest_rhetoric_score()
 
         if latest_rate:
             upper = latest_rate.target_upper
@@ -38,6 +69,10 @@ class FedTracker:
             effr = latest_rate.effr
         else:
             upper, lower, effr = 0, 0, None
+
+        midpoint = (upper + lower) / 2 if upper or lower else 0.0
+        # Percentage points: e.g. 3.625% mid vs 3.1% neutral → 0.525 pp
+        rate_vs_neutral_pp = round(midpoint - neutral, 3)
 
         stance = self._score_to_stance(policy_score)
 
@@ -50,18 +85,19 @@ class FedTracker:
             rate_direction=rate_direction,
             balance_sheet_direction=bs_direction,
             last_change_date=last_change,
+            neutral_rate_nominal=round(neutral, 3),
+            rhetoric_score=round(rhetoric, 3) if rhetoric is not None else None,
+            rate_vs_neutral_pp=rate_vs_neutral_pp,
         )
 
     async def _get_latest_rate(self) -> FedRate | None:
-        query = select(FedRate).order_by(desc(FedRate.date)).limit(1)
+        query = await self._fed_stmt(select(FedRate).order_by(desc(FedRate.date)).limit(1))
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
     async def _get_rate_direction(self) -> str:
-        query = (
-            select(FedRate)
-            .order_by(desc(FedRate.date))
-            .limit(90)
+        query = await self._fed_stmt(
+            select(FedRate).order_by(desc(FedRate.date)).limit(90),
         )
         result = await self.db.execute(query)
         rates = result.scalars().all()
@@ -71,7 +107,6 @@ class FedTracker:
 
         current_upper = rates[0].target_upper
 
-        # Look back for the last rate change (skip days with same rate)
         prev_upper = None
         for r in rates[1:]:
             if r.target_upper != current_upper:
@@ -90,7 +125,7 @@ class FedTracker:
         query = (
             select(BalanceSheet)
             .order_by(desc(BalanceSheet.date))
-            .limit(13)  # ~3 months of weekly data
+            .limit(13)
         )
         result = await self.db.execute(query)
         rows = result.scalars().all()
@@ -109,29 +144,18 @@ class FedTracker:
             return "shrinking"
         return "stable"
 
-    async def _compute_policy_score(self) -> float:
-        """
-        Policy score from -2 (very easy) to +2 (very tight).
-        
-        Components:
-        - Rate vs neutral: (midpoint - r*) / r* clamped to [-1, +1]
-        - Rate direction: hiking +0.5, cutting -0.5, paused 0
-        - Balance sheet: QT +0.5, QE -0.5, stable 0
-        """
+    async def _compute_policy_score(self, neutral: float) -> float:
         latest = await self._get_latest_rate()
         if not latest:
             return 0.0
 
         midpoint = (latest.target_upper + latest.target_lower) / 2
+        n = neutral if neutral > 0.25 else float(get_settings().neutral_rate_fallback)
+        rate_component = max(-1.0, min(1.0, (midpoint - n) / n))
 
-        # Component 1: rate level vs neutral (max contribution ±1.0)
-        rate_component = max(-1.0, min(1.0, (midpoint - NEUTRAL_RATE) / NEUTRAL_RATE))
-
-        # Component 2: rate direction (±0.5)
         direction = await self._get_rate_direction()
         dir_component = {"hiking": 0.5, "cutting": -0.5, "paused": 0.0}.get(direction, 0.0)
 
-        # Component 3: balance sheet (±0.5)
         bs_dir = await self._get_balance_sheet_direction()
         bs_component = {"shrinking": 0.5, "expanding": -0.5, "stable": 0.0}.get(bs_dir, 0.0)
 
@@ -139,7 +163,7 @@ class FedTracker:
         return max(-2.0, min(2.0, score))
 
     async def _get_last_rate_change_date(self) -> date | None:
-        query = select(FedRate).order_by(desc(FedRate.date)).limit(365)
+        query = await self._fed_stmt(select(FedRate).order_by(desc(FedRate.date)).limit(365))
         result = await self.db.execute(query)
         rates = result.scalars().all()
 
@@ -165,16 +189,17 @@ class FedTracker:
         return "very_tight"
 
     async def get_policy_score(self) -> float:
-        """Public accessor for Navigator engine."""
-        return await self._compute_policy_score()
+        neutral = await self._neutral_nominal()
+        return await self._compute_policy_score(neutral)
 
     async def get_policy_score_at_date(self, target: date) -> float:
-        """Compute policy score at a historical date (simplified)."""
-        query = (
+        """Compute policy score at a historical date (simplified; uses static neutral fallback)."""
+        neutral = float(get_settings().neutral_rate_fallback)
+        query = await self._fed_stmt(
             select(FedRate)
             .where(FedRate.date <= target)
             .order_by(desc(FedRate.date))
-            .limit(1)
+            .limit(1),
         )
         result = await self.db.execute(query)
         rate = result.scalar_one_or_none()
@@ -182,13 +207,13 @@ class FedTracker:
             return 0.0
 
         midpoint = (rate.target_upper + rate.target_lower) / 2
-        rate_component = max(-1.0, min(1.0, (midpoint - NEUTRAL_RATE) / NEUTRAL_RATE))
+        rate_component = max(-1.0, min(1.0, (midpoint - neutral) / neutral))
 
-        prev_query = (
+        prev_query = await self._fed_stmt(
             select(FedRate)
             .where(FedRate.date <= target - timedelta(days=60))
             .order_by(desc(FedRate.date))
-            .limit(1)
+            .limit(1),
         )
         prev_result = await self.db.execute(prev_query)
         prev_rate = prev_result.scalar_one_or_none()

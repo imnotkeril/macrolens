@@ -243,7 +243,7 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
                 className="mt-2 min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain"
                 style={{ maxHeight: TABLE_SCROLL_MAX_PX }}
               >
-                {data.indicatorsCategoryQ.isPending ? (
+                {data.indicatorsDetailPending ? (
                   <div className="flex min-h-[220px] items-center justify-center text-[14px]" style={{ color: C.muted }}>
                     Loading indicators…
                   </div>

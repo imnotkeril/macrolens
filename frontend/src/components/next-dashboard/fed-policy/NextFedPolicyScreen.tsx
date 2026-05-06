@@ -103,6 +103,22 @@ export function NextFedPolicyScreen() {
 
   const sentiment = useMemo(() => {
     if (!status) return null;
+    const rs = status.rhetoric_score;
+    if (rs != null && Number.isFinite(rs)) {
+      const score = rs;
+      const pct = ((score + 1) / 2) * 100;
+      const label =
+        score <= -0.6
+          ? "Very Dovish"
+          : score <= -0.25
+            ? "Dovish"
+            : score >= 0.6
+              ? "Very Hawkish"
+              : score >= 0.25
+                ? "Hawkish"
+                : "Neutral";
+      return { score, pct, label, fromRhetoric: true as const };
+    }
     const score = status.policy_score;
     const pct = ((score + 2) / 4) * 100;
     const label =
@@ -115,11 +131,16 @@ export function NextFedPolicyScreen() {
             : score >= 0.3
               ? "Hawkish"
               : "Neutral";
-    return { score, pct, label };
+    return { score, pct, label, fromRhetoric: false as const };
   }, [status]);
 
-  const hawkColor =
-    sentiment == null ? C.muted : sentiment.score <= -0.3 ? C.green : sentiment.score >= 0.3 ? C.red : C.yellow;
+  const hawkColor = useMemo(() => {
+    if (!sentiment) return C.muted;
+    if (sentiment.fromRhetoric) {
+      return sentiment.score <= -0.25 ? C.green : sentiment.score >= 0.25 ? C.red : C.yellow;
+    }
+    return sentiment.score <= -0.3 ? C.green : sentiment.score >= 0.3 ? C.red : C.yellow;
+  }, [sentiment, C]);
 
   const updatedAt = useMemo(() => {
     if (status?.last_change_date) return `${status.last_change_date}T12:00:00.000Z`;
@@ -179,7 +200,12 @@ export function NextFedPolicyScreen() {
               sentiment={sentiment}
               hawkColor={hawkColor}
             />
-            <FedPolicyFomcColumn panelStyle={panel} meetings={fomcQ.data?.meetings} isPending={fomcQ.isPending} />
+            <FedPolicyFomcColumn
+              panelStyle={panel}
+              meetings={fomcQ.data?.meetings}
+              isPending={fomcQ.isPending}
+              meetingsSource={fomcQ.data?.meetings_source}
+            />
             <FedPolicyBalanceMetricsColumn panelStyle={panel} bsMetrics={bsMetrics} bsPending={bsQ.isPending} />
           </div>
 

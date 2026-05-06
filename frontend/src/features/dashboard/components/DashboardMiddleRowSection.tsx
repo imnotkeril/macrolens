@@ -27,6 +27,8 @@ type Props = {
   macroSentimentSeries: number[];
   categories: CategoryScore[];
   fedPolicy: number;
+  /** Midpoint minus FOMC longer-run neutral (SEP), percentage points — from `/api/fed/current`. */
+  fedRateVsNeutralPp: number | null;
   fedStance: string;
   fedRateSeries: number[];
   rateDirection: string;
@@ -61,6 +63,7 @@ export function DashboardMiddleRowSection({
   macroSentimentSeries,
   categories,
   fedPolicy,
+  fedRateVsNeutralPp,
   fedStance,
   fedRateSeries,
   rateDirection,
@@ -204,10 +207,14 @@ export function DashboardMiddleRowSection({
               <span>Balance sheet</span>
               <span style={{ color: colors.text }}>{balanceSheetDirection}</span>
             </div>
-            <div className="flex items-center justify-between py-2">
-              <span>Vs neutral (r*)</span>
-              <span style={{ color: colors.text }}>+0.42%</span>
-            </div>
+          <div className="flex items-center justify-between py-2">
+            <span>Vs neutral (SEP)</span>
+            <span style={{ color: colors.text }} className="tabular-nums">
+              {fedRateVsNeutralPp == null || Number.isNaN(fedRateVsNeutralPp)
+                ? "—"
+                : `${fedRateVsNeutralPp >= 0 ? "+" : ""}${fedRateVsNeutralPp.toFixed(2)}pp`}
+            </span>
+          </div>
             <span className="mt-auto shrink-0 pt-2 text-[11px] normal-case tracking-[0.03em]" style={{ color: colors.soft }}>
               Open Fed Policy {"->"}
             </span>

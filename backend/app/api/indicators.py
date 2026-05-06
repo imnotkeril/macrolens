@@ -5,51 +5,48 @@ from sqlalchemy import select, desc
 from app.database import get_db
 from app.models.indicator import Indicator, IndicatorValue, IndicatorCategory
 from app.schemas.indicator import (
-    IndicatorResponse, IndicatorWithLatest, IndicatorValueResponse, CategoryScore,
+    IndicatorResponse,
+    IndicatorWithLatest,
+    IndicatorValueResponse,
+    CategoryScore,
+    KpiIndicatorsBundle,
 )
 from app.services.indicator_analyzer import IndicatorAnalyzer
 from app.services.inflation_service import InflationService
 
 router = APIRouter()
 
+_KPI_CATEGORIES: tuple[IndicatorCategory, ...] = (
+    IndicatorCategory.HOUSING,
+    IndicatorCategory.ORDERS,
+    IndicatorCategory.INCOME_SALES,
+    IndicatorCategory.EMPLOYMENT,
+)
 
-@router.get("/", response_model=list[IndicatorWithLatest])
-async def list_indicators(
-    category: IndicatorCategory | None = None,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    List indicators with latest values.
 
-    Uses one batched query for latest `IndicatorValue` per indicator (PostgreSQL
-    DISTINCT ON) instead of N+1 round-trips. The macro-sentiment page fires four
-    parallel category requests; the old pattern could overwhelm the DB/pool and
-    surface in the browser as 'Failed to fetch'.
-    """
-    query = select(Indicator)
-    if category:
-        query = query.where(Indicator.category == category)
-    query = query.order_by(Indicator.category, Indicator.importance.desc())
-    result = await db.execute(query)
-    indicators = result.scalars().all()
+async def _latest_values_by_indicator_ids(
+    db: AsyncSession, ids: list[int]
+) -> dict[int, IndicatorValue]:
+    if not ids:
+        return {}
+    latest_rows = (
+        await db.execute(
+            select(IndicatorValue)
+            .where(IndicatorValue.indicator_id.in_(ids))
+            .distinct(IndicatorValue.indicator_id)
+            .order_by(IndicatorValue.indicator_id, desc(IndicatorValue.date))
+        )
+    ).scalars().all()
+    return {row.indicator_id: row for row in latest_rows}
 
-    ids = [ind.id for ind in indicators]
-    latest_by_id: dict[int, IndicatorValue] = {}
-    if ids:
-        latest_rows = (
-            await db.execute(
-                select(IndicatorValue)
-                .where(IndicatorValue.indicator_id.in_(ids))
-                .distinct(IndicatorValue.indicator_id)
-                .order_by(IndicatorValue.indicator_id, desc(IndicatorValue.date))
-            )
-        ).scalars().all()
-        latest_by_id = {row.indicator_id: row for row in latest_rows}
 
-    enriched = []
+def _indicator_rows_to_latest(
+    indicators: list[Indicator], latest_by_id: dict[int, IndicatorValue]
+) -> list[IndicatorWithLatest]:
+    out: list[IndicatorWithLatest] = []
     for ind in indicators:
         latest = latest_by_id.get(ind.id)
-        enriched.append(
+        out.append(
             IndicatorWithLatest(
                 id=ind.id,
                 name=ind.name,
@@ -69,7 +66,55 @@ async def list_indicators(
                 surprise=latest.surprise if latest else None,
             )
         )
-    return enriched
+    return out
+
+
+@router.get("/", response_model=list[IndicatorWithLatest])
+async def list_indicators(
+    category: IndicatorCategory | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    List indicators with latest values.
+
+    Uses one batched query for latest `IndicatorValue` per indicator (PostgreSQL
+    DISTINCT ON) instead of N+1 round-trips. Prefer `GET /kpi-bundle` for the
+    macro-sentiment KPI strip (single request vs four parallel `/` calls).
+    """
+    query = select(Indicator)
+    if category:
+        query = query.where(Indicator.category == category)
+    query = query.order_by(Indicator.category, Indicator.importance.desc())
+    result = await db.execute(query)
+    indicators = list(result.scalars().all())
+
+    ids = [ind.id for ind in indicators]
+    latest_by_id = await _latest_values_by_indicator_ids(db, ids)
+    return _indicator_rows_to_latest(indicators, latest_by_id)
+
+
+@router.get("/kpi-bundle", response_model=KpiIndicatorsBundle)
+async def kpi_indicators_bundle(db: AsyncSession = Depends(get_db)):
+    """Housing, orders, income_sales, and employment lists in one response."""
+    result = await db.execute(
+        select(Indicator)
+        .where(Indicator.category.in_(_KPI_CATEGORIES))
+        .order_by(Indicator.category, Indicator.importance.desc())
+    )
+    indicators = list(result.scalars().all())
+    latest_by_id = await _latest_values_by_indicator_ids(db, [ind.id for ind in indicators])
+    enriched = _indicator_rows_to_latest(indicators, latest_by_id)
+
+    buckets: dict[IndicatorCategory, list[IndicatorWithLatest]] = {c: [] for c in _KPI_CATEGORIES}
+    for row in enriched:
+        buckets[row.category].append(row)
+
+    return KpiIndicatorsBundle(
+        housing=buckets[IndicatorCategory.HOUSING],
+        orders=buckets[IndicatorCategory.ORDERS],
+        income_sales=buckets[IndicatorCategory.INCOME_SALES],
+        employment=buckets[IndicatorCategory.EMPLOYMENT],
+    )
 
 
 @router.get("/categories", response_model=list[CategoryScore])

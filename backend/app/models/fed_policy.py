@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Float, Integer, Date, DateTime, String, Index
+from sqlalchemy import Float, Integer, Date, DateTime, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -15,6 +15,8 @@ class FedRate(Base):
     target_upper: Mapped[float] = mapped_column(Float, nullable=False)
     target_lower: Mapped[float] = mapped_column(Float, nullable=False)
     effr: Mapped[float | None] = mapped_column(Float, nullable=True)
+    #: Short excerpt from FOMC monetary policy press release (Fed RSS / HTML), when backfilled.
+    fomc_signal_phrase: Mapped[str | None] = mapped_column(String(600), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

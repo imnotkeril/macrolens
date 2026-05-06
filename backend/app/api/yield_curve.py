@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.schemas.yield_curve import YieldCurveSnapshot, YieldSpread, CurveDynamics
+from app.schemas.yield_curve import (
+    CurveDynamics,
+    SpreadPercentileRow,
+    YieldCurveSnapshot,
+    YieldSpread,
+)
 from app.services.yield_analyzer import YieldAnalyzer
 
 router = APIRouter()
@@ -26,6 +31,13 @@ async def get_historical_curves(db: AsyncSession = Depends(get_db)):
 async def get_spreads(db: AsyncSession = Depends(get_db)):
     analyzer = YieldAnalyzer(db)
     return await analyzer.get_spreads()
+
+
+@router.get("/spread-percentiles", response_model=list[SpreadPercentileRow])
+async def get_spread_percentiles(db: AsyncSession = Depends(get_db)):
+    """Percentile ranks (1y / 5y / 10y windows) and full-sample mean for key Treasury spreads."""
+    analyzer = YieldAnalyzer(db)
+    return await analyzer.get_spread_percentile_table()
 
 
 @router.get("/dynamics", response_model=CurveDynamics)

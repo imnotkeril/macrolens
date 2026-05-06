@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.fed_policy import FedRate
 from app.models.intelligence import AgentSignal
+from app.services.fed_rate_schema import apply_fed_rate_load_columns
 from app.services.agent_persistence import get_or_create_agent_run, upsert_agent_signal
 from app.services.fed_press_ingestion import ingest_fed_press_rss
 from app.services.llm.claude_client import ClaudeClient
@@ -32,7 +33,9 @@ class FedCBAgent:
 
         ctx = await memory.search(db, query="fed policy stance fomc inflation labor", top_k=6, domain="fed_cb")
 
-        q = select(FedRate).order_by(FedRate.date.desc()).limit(2)
+        q = await apply_fed_rate_load_columns(
+            db, select(FedRate).order_by(FedRate.date.desc()).limit(2)
+        )
         rows = (await db.execute(q)).scalars().all()
         rate_payload: dict = {}
         score = 0.0

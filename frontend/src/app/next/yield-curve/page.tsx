@@ -1,5 +1,5 @@
-import { NextPlaceholderPage } from "@/components/next-dashboard/NextPlaceholderPage";
+import { NextYieldCurveScreen } from "@/components/next-dashboard/yield-curve/NextYieldCurveScreen";
 
 export default function NextYieldCurvePage() {
-  return <NextPlaceholderPage title="Yield curve" legacyHref="/analysis" />;
+  return <NextYieldCurveScreen />;
 }

@@ -161,15 +161,17 @@ export function useDashboardData() {
   const fedPolicyDelta = useMemo(() => {
     const rates = fedRateHistoryQ.data;
     if (!rates || rates.length < 2) return null;
+    const neu = fedQ.data?.neutral_rate_nominal;
+    const neutral = neu != null && Number.isFinite(neu) && neu > 0.25 ? neu : 2.5;
     const sorted = [...rates].sort((a, b) => a.date.localeCompare(b.date));
     const latest = sorted[sorted.length - 1];
     const prev = sorted[sorted.length - 2];
     const midpointLatest = (latest.target_upper + latest.target_lower) / 2;
     const midpointPrev = (prev.target_upper + prev.target_lower) / 2;
-    const rateComponentLatest = (midpointLatest - 2.5) / 2.5;
-    const rateComponentPrev = (midpointPrev - 2.5) / 2.5;
+    const rateComponentLatest = (midpointLatest - neutral) / neutral;
+    const rateComponentPrev = (midpointPrev - neutral) / neutral;
     return rateComponentLatest - rateComponentPrev;
-  }, [fedRateHistoryQ.data]);
+  }, [fedRateHistoryQ.data, fedQ.data?.neutral_rate_nominal]);
   const macroSentimentDelta = useMemo(() => {
     const points = regimeHistoryQ.data;
     if (!points || points.length < 2) return null;
@@ -284,6 +286,8 @@ export function useDashboardData() {
   ];
   const geographySource = navigatorQ.data?.geographic ?? {};
 
+  const fedRateVsNeutralPp = fedQ.data?.rate_vs_neutral_pp ?? null;
+
   const queryErrors = useMemo(() => {
     const rows: { label: string; message: string }[] = [];
     const add = (label: string, q: { isError: boolean; error: unknown }) => {
@@ -334,6 +338,7 @@ export function useDashboardData() {
     coreInflationDelta,
     spread2y10y,
     fedRateSeries,
+    fedRateVsNeutralPp,
     quick,
     macroSentimentSeries,
     signals,

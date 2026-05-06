@@ -35,6 +35,12 @@ export interface IndicatorWithLatest {
   surprise: number | null;
 }
 
+/** `GET /api/indicators/kpi-bundle` — one round-trip for macro-sentiment KPI categories. */
+export type KpiIndicatorsBundle = Record<
+  "housing" | "orders" | "income_sales" | "employment",
+  IndicatorWithLatest[]
+>;
+
 export interface IndicatorValue {
   id: number;
   indicator_id: number;
@@ -66,6 +72,12 @@ export interface FedPolicyStatus {
   rate_direction: string;
   balance_sheet_direction: string;
   last_change_date: string | null;
+  /** FOMC SEP longer-run median (FRED FEDTARMDLR) or server fallback — nominal % anchor. */
+  neutral_rate_nominal: number;
+  /** Fed/CB agent rhetoric −1…+1 when intelligence pipeline has produced a signal. */
+  rhetoric_score: number | null;
+  /** Midpoint minus neutral, percentage points. */
+  rate_vs_neutral_pp: number;
 }
 
 export interface FedRate {
@@ -74,6 +86,7 @@ export interface FedRate {
   target_upper: number;
   target_lower: number;
   effr: number | null;
+  fomc_signal_phrase?: string | null;
 }
 
 export interface BalanceSheet {
@@ -105,6 +118,17 @@ export interface FomcDashboard {
   rate_path: Record<string, RatePathPoint>;
   current_rate: number;
   forward_rate: number | null;
+  meetings_source?: string | null;
+  rate_path_source?: string | null;
+}
+
+/** GET /api/fed/dot-plot — SEP path + market mid. */
+export interface FedDotPlotPayload {
+  rate_path: Record<string, RatePathPoint>;
+  current_rate: number;
+  forward_rate: number | null;
+  source: string;
+  meta: Record<string, unknown>;
 }
 
 // ---- Yield Curve ----
@@ -121,6 +145,17 @@ export interface YieldSpread {
   value: number;
   historical_percentile: number | null;
   is_inverted: boolean;
+}
+
+/** GET /api/yield-curve/spread-percentiles */
+export interface SpreadPercentileRow {
+  key: string;
+  label: string;
+  current_bp: number;
+  percentile_1y: number | null;
+  percentile_5y: number | null;
+  percentile_10y: number | null;
+  historical_mean_bp: number | null;
 }
 
 export interface YieldCurveSnapshot {

@@ -75,6 +75,12 @@ class Settings(BaseSettings):
     telegram_ingestion_enabled: bool = False
     telegram_ingest_max_messages: int = 80
 
+    # CME FedWatch REST (optional OAuth bearer for some endpoints)
+    cme_fedwatch_rt_base: str = "https://markets.api.cmegroup.com/fedwatch_rt/v1"
+    cme_fedwatch_bearer_token: str = ""
+    # Nominal neutral policy anchor (%): prefer `market_data` FEDTARMDLR from FRED, else this fallback.
+    neutral_rate_fallback: float = 2.5
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

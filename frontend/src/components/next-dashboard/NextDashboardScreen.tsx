@@ -91,6 +91,7 @@ export function NextDashboardScreen({
     yieldHistoryQ,
     curveDynamicsQ,
     fedPolicy,
+    fedRateVsNeutralPp,
     cycleScore,
     recessionProbPct,
     recessionRisk,
@@ -206,6 +207,7 @@ export function NextDashboardScreen({
               macroSentimentSeries={macroSentimentSeries}
               categories={categories}
               fedPolicy={fedPolicy}
+              fedRateVsNeutralPp={fedRateVsNeutralPp}
               fedStance={fedQ.data?.stance ?? "Moderately Easy"}
               fedRateSeries={fedRateSeries}
               rateDirection={fedQ.data?.rate_direction ?? "Paused"}

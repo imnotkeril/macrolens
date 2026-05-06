@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import date, timedelta
 from typing import Any
 
@@ -8,6 +9,12 @@ from fredapi import Fred
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def _fred_is_rate_limit(exc: BaseException) -> bool:
+    msg = str(exc).lower()
+    return "too many requests" in msg or "rate limit" in msg or "429" in msg
+
 
 # Complete FRED series ID mapping for all tracked indicators
 INDICATOR_SERIES: dict[str, dict[str, Any]] = {
@@ -355,6 +362,10 @@ MARKET_SERIES = {
     "TGA": "WTREGEN",
     "RRP": "RRPONTSYD",
     "USREC": "USREC",
+    # Yield curve / rates context (FRED)
+    # Kim–Wright 10Y zero-coupon term premium (%). (NY Fed ACM is a separate publication; KW is the standard daily FRED benchmark.)
+    "TERM_PREMIUM_10Y": "THREEFYTP10",
+    "TED_SPREAD": "TEDRATE",  # TED spread (legacy; series ends ~2022 — history still useful)
 }
 
 # Regime / Cycle Radar series (stored in market_data table)
@@ -421,16 +432,35 @@ class FredClient:
             raise RuntimeError("FRED API key not configured")
         start = start or self._start_date()
         end = end or date.today().isoformat()
-        try:
-            data = self._fred.get_series(
-                series_id,
-                observation_start=start,
-                observation_end=end,
-            )
-            return data.dropna()
-        except Exception:
-            logger.exception("Failed to fetch FRED series %s", series_id)
-            raise
+        backoff = (1.0, 3.0, 8.0)
+        for attempt in range(len(backoff) + 1):
+            try:
+                data = self._fred.get_series(
+                    series_id,
+                    observation_start=start,
+                    observation_end=end,
+                )
+                return data.dropna()
+            except Exception as e:
+                if _fred_is_rate_limit(e) and attempt < len(backoff):
+                    wait = backoff[attempt]
+                    logger.warning(
+                        "FRED rate limit on %s (attempt %s), sleeping %.1fs",
+                        series_id,
+                        attempt + 1,
+                        wait,
+                    )
+                    time.sleep(wait)
+                    continue
+                if _fred_is_rate_limit(e):
+                    logger.warning(
+                        "FRED rate limit exhausted for %s — returning empty series",
+                        series_id,
+                    )
+                    return pd.Series(dtype=float)
+                logger.exception("Failed to fetch FRED series %s", series_id)
+                raise
+        return pd.Series(dtype=float)
 
     def get_latest(self, series_id: str) -> tuple[date, float] | None:
         try:

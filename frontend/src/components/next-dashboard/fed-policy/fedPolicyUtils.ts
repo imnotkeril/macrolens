@@ -1,14 +1,18 @@
 import type { BalanceSheet, FedRate } from "@/types";
 
-export const R_STAR = 2.5;
+/** Fallback when API has not yet returned `neutral_rate_nominal` (should be rare). */
+export const R_STAR_FALLBACK = 2.5;
+/** @deprecated Use `neutral_rate_nominal` from `/api/fed/current` or `R_STAR_FALLBACK`. */
+export const R_STAR = R_STAR_FALLBACK;
 
 export function fedRateMid(r: FedRate): number {
   return (r.target_upper + r.target_lower) / 2;
 }
 
-/** Normalized rate-vs-r* contribution in [-1, 1], aligned with backend FedTracker. */
-export function rateVsRStarComponent(mid: number): number {
-  return Math.max(-1, Math.min(1, (mid - R_STAR) / R_STAR));
+/** Normalized rate-vs-neutral contribution in [-1, 1], aligned with backend FedTracker. */
+export function rateVsRStarComponent(mid: number, neutralNominal: number = R_STAR_FALLBACK): number {
+  const n = neutralNominal > 0.25 ? neutralNominal : R_STAR_FALLBACK;
+  return Math.max(-1, Math.min(1, (mid - n) / n));
 }
 
 export function directionScoreLabel(direction: string): { label: string; delta: number } {
@@ -51,8 +55,17 @@ export function buildRateChangeRows(rates: FedRate[], limit = 16) {
     const midCur = fedRateMid(cur);
     const bps = Math.round((midCur - midPrev) * 100);
     const decision = bps > 0 ? "Hike" : bps < 0 ? "Cut" : "Hold";
+    const phrase = cur.fomc_signal_phrase?.trim();
     const signal =
-      decision === "Hold" ? "pausing" : decision === "Cut" ? "easing" : "tightening";
+      phrase && phrase.length > 0
+        ? phrase.length > 220
+          ? `${phrase.slice(0, 217)}…`
+          : phrase
+        : decision === "Hold"
+          ? "pausing"
+          : decision === "Cut"
+            ? "easing"
+            : "tightening";
     rows.push({
       date: cur.date,
       decision,
