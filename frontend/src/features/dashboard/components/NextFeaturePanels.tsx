@@ -12,8 +12,6 @@ type Palette = {
   green: string;
 };
 
-type RecessionModelRow = { name: string; pct: number; dot: string };
-
 type SharedDeps = {
   colors: Palette;
   panelStyle: CSSProperties;
@@ -25,52 +23,6 @@ type SharedDeps = {
   FedPolicyScaleBarComponent: ComponentType<{ value: number }>;
   FedRateHistorySparkComponent: ComponentType<{ values: number[] }>;
 };
-
-export function RecessionMonitorSinglePanel({
-  colors,
-  panelStyle,
-  recessionProbPct,
-  recessionRisk,
-  recessionModelRows,
-  formatPercent,
-  RiskSegmentDonutComponent,
-}: SharedDeps & {
-  recessionProbPct: number | null;
-  recessionRisk: { label: string; color: string };
-  recessionModelRows: RecessionModelRow[];
-}) {
-  return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" style={panelStyle}>
-      <div className="shrink-0">
-        <div className="text-[18px] uppercase leading-none tracking-[0.08em]">Recession Probability</div>
-      </div>
-      <div className="mt-3 grid shrink-0 items-start gap-2 border-b pb-3" style={{ borderColor: colors.borderSoft, gridTemplateColumns: "minmax(0,1fr) auto" }}>
-        <div className="min-w-0">
-          <div className="text-[24px] leading-none tabular-nums">{formatPercent(recessionProbPct, 0)}</div>
-          <div className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: recessionRisk.color }}>{recessionRisk.label}</div>
-        </div>
-        <RiskSegmentDonutComponent value={recessionProbPct} />
-      </div>
-      <div className="mt-3 flex min-h-0 flex-1 flex-col text-[11px]">
-        <div className="mb-2 flex shrink-0 items-center justify-between pb-1 text-[10px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
-          <span>Model</span>
-          <span>Probability</span>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-0.5">
-          {recessionModelRows.map((row) => (
-            <div key={row.name} className="flex items-center justify-between gap-2 py-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: row.dot }} />
-                <span className="min-w-0 truncate text-[11px]" style={{ color: colors.soft }}>{row.name}</span>
-              </div>
-              <span className="shrink-0 text-[11px] tabular-nums" style={{ color: colors.text }}>{formatPercent(row.pct, 0)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function MacroSentimentSinglePanel({
   colors,

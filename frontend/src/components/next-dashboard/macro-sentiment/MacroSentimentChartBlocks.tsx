@@ -31,6 +31,18 @@ const rechartsTooltipStyle = {
   color: "var(--nd-text)",
 };
 
+function roundedAutoDomain(values: number[], minStep = 0.1): [number, number] {
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  const span = Math.max(1e-9, hi - lo);
+  const rawLo = lo - span * 0.1;
+  const rawHi = hi + span * 0.1;
+  const stepBase = Math.max(minStep, Math.abs(rawHi - rawLo) / 8);
+  const pow10 = Math.pow(10, Math.floor(Math.log10(stepBase)));
+  const step = Math.ceil(stepBase / pow10) * pow10;
+  return [Math.floor(rawLo / step) * step, Math.ceil(rawHi / step) * step];
+}
+
 export function filterChartPeriod<T extends { date: string }>(rows: T[], period: string): T[] {
   if (period === "ALL") return rows;
   const p = CHART_PERIODS.find((x) => x.label === period);
@@ -80,10 +92,7 @@ export function MacroSentimentDetailChart({
     if (!filtered.length) return [0, 1] as [number, number];
     const vals = filtered.map((d) => d.v).filter(Number.isFinite);
     if (!vals.length) return [0, 1];
-    const lo = Math.min(...vals);
-    const hi = Math.max(...vals);
-    const pad = Math.max(1e-9, (hi - lo) * 0.08);
-    return [lo - pad, hi + pad] as [number, number];
+    return roundedAutoDomain(vals, 0.01);
   }, [filtered]);
 
   if (!filtered.length) {
@@ -171,20 +180,8 @@ export function MacroSentimentZScoreChart({
   const zDomain = useMemo(() => {
     const vals = filtered.map((d) => d.z).filter((z): z is number => z != null && Number.isFinite(z));
     if (!vals.length) return [-2.5, 2.5] as [number, number];
-    let lo = Math.min(...vals);
-    let hi = Math.max(...vals);
-    const span = hi - lo;
-    const pad = Math.max(span * 0.12, 0.35);
-    lo -= pad;
-    hi += pad;
-    lo = Math.max(lo, -4);
-    hi = Math.min(hi, 4);
-    if (hi - lo < 2) {
-      const mid = (hi + lo) / 2;
-      lo = mid - 1.1;
-      hi = mid + 1.1;
-    }
-    return [lo, hi] as [number, number];
+    // Keep key z reference guides visible while autoscaling by selected TF.
+    return roundedAutoDomain([...vals, 0, Z_SCORE_BAND, -Z_SCORE_BAND], 0.1);
   }, [filtered]);
 
   const hasAnyZ = useMemo(
@@ -286,6 +283,8 @@ export function IndicatorDetailCharts({
   levelRows: Array<{ date: string; v: number }>;
   zRows: Array<{ date: string; z: number | null }>;
 }) {
+  const LEVEL_CHART_HEIGHT = 360;
+  const Z_CHART_HEIGHT = 200;
   const [period, setPeriod] = useState("1Y");
 
   useEffect(() => {
@@ -297,22 +296,19 @@ export function IndicatorDetailCharts({
       <ChartPeriodStrip period={period} onChange={setPeriod} />
       <div className="mt-2 grid gap-3 lg:grid-cols-1">
         <div>
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
-            Level
-          </div>
           <MacroSentimentDetailChart
             palette={C}
             rows={levelRows}
             period={period}
-            height={200}
+            height={LEVEL_CHART_HEIGHT}
             formatY={(v) => fmtIndicator(v, selectedRow.unit)}
           />
         </div>
         <div>
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
-            Rolling z-score (window {Z_ROLLING_WINDOW})
+            Rolling z-score
           </div>
-          <MacroSentimentZScoreChart palette={C} rows={zRows} period={period} height={172} />
+          <MacroSentimentZScoreChart palette={C} rows={zRows} period={period} height={Z_CHART_HEIGHT} />
         </div>
       </div>
     </div>

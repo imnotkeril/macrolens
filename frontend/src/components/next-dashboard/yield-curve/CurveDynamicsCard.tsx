@@ -148,7 +148,7 @@ export function CurveDynamicsCard({
               {lastMomentum != null ? `${lastMomentum >= 0 ? "+" : ""}${lastMomentum.toFixed(2)}` : "—"}
             </span>
           </div>
-          <div className="h-[42px] w-full">
+          <div className="h-[64px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
                 <XAxis dataKey="date" hide />

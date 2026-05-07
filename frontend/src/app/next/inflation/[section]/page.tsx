@@ -1,4 +1,4 @@
-import { NextInflationScreen } from "@/components/next-dashboard/inflation/NextInflationScreen";
+import { redirect } from "next/navigation";
 
 type PageProps = {
   params: { section: string };
@@ -6,5 +6,5 @@ type PageProps = {
 
 export default function NextInflationSectionPage({ params }: PageProps) {
   void params.section;
-  return <NextInflationScreen />;
+  redirect("/next/inflation");
 }

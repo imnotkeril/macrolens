@@ -30,12 +30,14 @@ export function InflationSingleLineCard({
   rows,
   lineColor,
   pending,
+  height = 264,
 }: {
   title: string;
   subtitle?: string;
   rows: RatioPoint[] | undefined;
   lineColor: string;
   pending: boolean;
+  height?: number;
 }) {
   const [frame, setFrame] = useState<InflationFrame>("1Y");
   const sorted = useMemo(() => sortSeries(rows), [rows]);
@@ -69,15 +71,15 @@ export function InflationSingleLineCard({
       </div>
 
       {pending && !sorted.length ? (
-        <div className="flex min-h-[264px] items-center justify-center text-[12px]" style={{ color: "var(--nd-muted)" }}>
+        <div className="flex items-center justify-center text-[12px]" style={{ color: "var(--nd-muted)", height }}>
           Loading…
         </div>
       ) : !displayRows.length ? (
-        <div className="flex min-h-[264px] items-center justify-center text-[12px]" style={{ color: "var(--nd-muted)" }}>
+        <div className="flex items-center justify-center text-[12px]" style={{ color: "var(--nd-muted)", height }}>
           No observations.
         </div>
       ) : (
-        <div style={{ width: "100%", height: 264 }}>
+        <div style={{ width: "100%", height }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={displayRows} margin={{ top: 6, right: 10, left: 10, bottom: 2 }}>
               <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
@@ -115,7 +117,12 @@ export function InflationSingleLineCard({
                 }}
                 formatter={(v: unknown) => {
                   const n = typeof v === "number" ? v : Number(v);
-                  return [Number.isFinite(n) ? `${n.toFixed(2)}%` : "—", title];
+                  return [
+                    <span key="val" style={{ color: "var(--nd-text)" }}>
+                      {Number.isFinite(n) ? `${n.toFixed(2)}%` : "—"}
+                    </span>,
+                    title,
+                  ];
                 }}
               />
               <ReferenceLine

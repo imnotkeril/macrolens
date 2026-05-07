@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.indicator import Indicator, IndicatorValue
+from app.models.indicator import Indicator, IndicatorCategory, IndicatorValue
 from app.models.market_data import MarketData, YieldData
 
 logger = logging.getLogger(__name__)
@@ -188,6 +188,51 @@ class InflationService:
             for r in (await self.db.execute(sticky_q)).all()
         ]
 
+        # Effective fed funds (daily) for real policy rate = EFFR - Core PCE YoY
+        effr_q = (
+            select(MarketData.date, MarketData.value)
+            .where(
+                MarketData.symbol == "EFFR_DAILY",
+                MarketData.date >= cutoff,
+            )
+            .order_by(MarketData.date)
+        )
+        effr = [
+            {"date": r.date.isoformat(), "value": r.value}
+            for r in (await self.db.execute(effr_q)).all()
+        ]
+
+        # Inflation diffusion proxy: share of inflation-category indicators above 3%.
+        # This is computed cross-sectionally by date from DB indicators tagged as INFLATION.
+        infl_ids_rows = (
+            await self.db.execute(
+                select(Indicator.id).where(Indicator.category == IndicatorCategory.INFLATION)
+            )
+        ).all()
+        infl_ids = [r.id for r in infl_ids_rows]
+        diffusion: list[dict] = []
+        if infl_ids:
+            vals = (
+                await self.db.execute(
+                    select(IndicatorValue.date, IndicatorValue.value)
+                    .where(
+                        IndicatorValue.indicator_id.in_(infl_ids),
+                        IndicatorValue.date >= cutoff,
+                    )
+                    .order_by(IndicatorValue.date)
+                )
+            ).all()
+            by_date: dict[date, list[float]] = {}
+            for r in vals:
+                by_date.setdefault(r.date, []).append(float(r.value))
+            for d in sorted(by_date.keys()):
+                arr = by_date[d]
+                if not arr:
+                    continue
+                above = sum(1 for v in arr if v > 3.0)
+                share = (above / len(arr)) * 100.0
+                diffusion.append({"date": d.isoformat(), "value": round(share, 2)})
+
         return {
             "spx": spx,
             "cpi_yoy": await self.get_inflation_series(
@@ -213,4 +258,6 @@ class InflationService:
             "t5yie": t5yie,
             "t10yie": t10yie,
             "sticky_cpi": sticky_cpi,
+            "effr": effr,
+            "inflation_diffusion": diffusion,
         }

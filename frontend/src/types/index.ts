@@ -625,6 +625,8 @@ export interface InflationDashboardData {
   t5yie: RatioPoint[];
   t10yie: RatioPoint[];
   sticky_cpi: RatioPoint[];
+  effr?: RatioPoint[];
+  inflation_diffusion?: RatioPoint[];
 }
 
 // ---- Alerts ----

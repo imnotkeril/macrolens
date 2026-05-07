@@ -39,8 +39,8 @@ const HISTORY_DAYS = Math.max(
 );
 /** Inner chart height — rows 2 & 3 use identical card chrome. */
 const ROW_CHART_H = 268;
-/** Row 1 cards share one visual height. */
-const ROW1_CARD_MIN_H = "min-h-[452px]";
+/** Row 1 cards share one fixed visual height. */
+const ROW1_CARD_H = "h-[452px]";
 
 export function NextYieldCurveScreen() {
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
@@ -210,10 +210,10 @@ export function NextYieldCurveScreen() {
           <QueryErrorBanner colors={C} errors={queryErrors} onRetry={onRetry} />
 
           <div className="grid grid-cols-1 gap-2 xl:grid-cols-[minmax(0,1.35fr)_336px_minmax(0,0.94fr)] xl:items-stretch">
-            <div className={`min-h-0 min-w-0 ${ROW1_CARD_MIN_H}`} style={panel}>
+            <div className={`min-h-0 min-w-0 overflow-hidden ${ROW1_CARD_H}`} style={panel}>
               <YieldCurveSnapshotCard palette={C} snapshot={curveQ.data} history={curveHistQ.data} height={314} />
             </div>
-            <div className={`min-h-0 min-w-0 ${ROW1_CARD_MIN_H}`} style={panel}>
+            <div className={`min-h-0 min-w-0 overflow-hidden ${ROW1_CARD_H}`} style={panel}>
               <CurveDynamicsCard
                 palette={C}
                 dynamics={dynQ.data}
@@ -222,7 +222,7 @@ export function NextYieldCurveScreen() {
                 persistenceWeeks={regimePersistenceWeeks}
               />
             </div>
-            <div className={`flex min-h-0 min-w-0 flex-col gap-2 ${ROW1_CARD_MIN_H}`} style={panel}>
+            <div className={`flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden ${ROW1_CARD_H}`} style={panel}>
               <YieldCurvePercentileTable rows={pctQ.data} pending={pctQ.isPending} />
               <div className="flex min-h-0 flex-1 border-t border-[var(--nd-border-soft)] pt-2">
                 <CurveMomentumChart
@@ -299,7 +299,6 @@ export function NextYieldCurveScreen() {
                 yTickFormat={(v) => `${v.toFixed(1)}%`}
                 tooltipFormat={(v) => `${v.toFixed(2)}%`}
                 referenceLines={[{ y: 2.0, label: "Fed target" }]}
-                includeReferenceLinesInDomain
                 initialPeriod="ALL"
               />
             </div>

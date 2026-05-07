@@ -30,6 +30,18 @@ const rechartsTooltipStyle = {
   color: "var(--nd-text)",
 };
 
+function roundedAutoDomain(values: number[], minStep = 0.01): [number, number] {
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  const span = Math.max(1e-9, hi - lo);
+  const rawLo = lo - span * 0.1;
+  const rawHi = hi + span * 0.1;
+  const stepBase = Math.max(minStep, Math.abs(rawHi - rawLo) / 8);
+  const pow10 = Math.pow(10, Math.floor(Math.log10(stepBase)));
+  const step = Math.ceil(stepBase / pow10) * pow10;
+  return [Math.floor(rawLo / step) * step, Math.ceil(rawHi / step) * step];
+}
+
 export type FedFundsRateRow = {
   date: string;
   target_upper: number;
@@ -56,10 +68,7 @@ export function FedFundsHistoryRecharts({
       vals.push(d.target_upper, d.target_lower);
       if (d.effr != null && Number.isFinite(d.effr)) vals.push(d.effr);
     }
-    const lo = Math.min(...vals);
-    const hi = Math.max(...vals);
-    const pad = Math.max(1e-6, (hi - lo) * 0.08);
-    return [lo - pad, hi + pad] as [number, number];
+    return roundedAutoDomain(vals, 0.01);
   }, [filtered]);
 
   if (!filtered.length) {
@@ -172,10 +181,7 @@ export function FedForwardRateRecharts({
   const yDomain = useMemo(() => {
     if (!filtered.length) return [0, 1] as [number, number];
     const vals = filtered.map((d) => d.value).filter(Number.isFinite);
-    const lo = Math.min(...vals);
-    const hi = Math.max(...vals);
-    const pad = Math.max(1e-6, (hi - lo) * 0.08);
-    return [lo - pad, hi + pad] as [number, number];
+    return roundedAutoDomain(vals, 0.01);
   }, [filtered]);
 
   if (!filtered.length) {
@@ -267,10 +273,7 @@ export function FedNetLiquidityRecharts({
   const yDomain = useMemo(() => {
     if (!filtered.length) return [0, 1] as [number, number];
     const vals = filtered.map((d) => d.value).filter(Number.isFinite);
-    const lo = Math.min(...vals);
-    const hi = Math.max(...vals);
-    const pad = Math.max(1e-9, (hi - lo) * 0.08);
-    return [lo - pad, hi + pad] as [number, number];
+    return roundedAutoDomain(vals, 1);
   }, [filtered]);
 
   const fmtT = (v: number) => `$${(v / 1e6).toFixed(2)}T`;

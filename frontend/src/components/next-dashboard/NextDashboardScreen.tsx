@@ -13,7 +13,7 @@ import { DashboardRecommendationsSection } from "@/features/dashboard/components
 import { DashboardTopRowSection } from "@/features/dashboard/components/DashboardTopRowSection";
 import { DashboardMiddleRowSection } from "@/features/dashboard/components/DashboardMiddleRowSection";
 import { SnapshotDetailModal, type SnapshotDetailKind } from "@/features/dashboard/components/SnapshotDetailModal";
-import { FedPolicySinglePanel, RecessionMonitorSinglePanel } from "@/features/dashboard/components/NextFeaturePanels";
+import { FedPolicySinglePanel } from "@/features/dashboard/components/NextFeaturePanels";
 import {
   ConfidenceSegments,
   FedPolicyScaleBar,
@@ -56,7 +56,7 @@ import { NEXT_DASHBOARD_QUERY_ROOT } from "@/features/dashboard/queryKeys";
 /** Panel layout: viewport-relative grid; parity with Trading Navigator proportions. */
 
 type NextDashboardScreenProps = {
-  mode?: "dashboard" | "placeholder" | "recession-monitor" | "fed-policy";
+  mode?: "dashboard" | "placeholder" | "fed-policy";
   placeholderTitle?: string;
   /** Shown on placeholder: link to the same content in the classic (TopNav) app */
   placeholderLegacyHref?: string;
@@ -250,23 +250,6 @@ export function NextDashboardScreen({
               onOpenIdeas={() => setSnapshotDetail("ideas")}
             />
           </section>
-          ) : mode === "recession-monitor" ? (
-            <section style={{ display: "grid", gap: 12 }}>
-              <RecessionMonitorSinglePanel
-                panelStyle={nextPanelFillBelowChromeStyle(C)}
-                colors={C}
-                recessionProbPct={recessionProbPct}
-                recessionRisk={recessionRisk}
-                recessionModelRows={recessionModelRows}
-                formatPercent={fmtPct}
-                formatNumber={fmtNumber}
-                RiskSegmentDonutComponent={RiskSegmentDonut}
-                MacroSentimentSparkBlockComponent={MacroSentimentSparkBlock}
-                MacroCategoryRowComponent={MacroCategoryRow}
-                FedPolicyScaleBarComponent={FedPolicyScaleBar}
-                FedRateHistorySparkComponent={FedRateHistorySpark}
-              />
-            </section>
           ) : mode === "fed-policy" ? (
             <section style={{ display: "grid", gap: 12 }}>
               <FedPolicySinglePanel

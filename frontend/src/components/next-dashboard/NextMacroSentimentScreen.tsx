@@ -15,7 +15,6 @@ import { CATEGORY_LABELS } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { NEXT_DASHBOARD_QUERY_ROOT } from "@/features/dashboard/queryKeys";
 import {
-  CATEGORY_PHASE,
   KPI_SCORE_CATEGORIES,
   SIDEBAR,
   MACRO_INDICATOR_NAME_MAX_PX,
@@ -44,11 +43,13 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
   const queryClient = useQueryClient();
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
   const surface = useMemo(() => nextPanelSurfaceStyle(C), [C]);
+  const topKpiSurface = useMemo(() => ({ ...surface, padding: "8px 12px" } as const), [surface]);
   /** Tighter vertical chrome than default `nextPanelSurfaceStyle` — only outer card padding, content unchanged. */
   const macroPanelSurface = useMemo(
     () => ({ ...surface, padding: "12px 22px" } as const),
     [surface],
   );
+  const categoryRowHeightPx = 290;
   const [selectedIndicatorId, setSelectedIndicatorId] = useState<number | null>(null);
 
   const activeCategory = slugToCategory(sectionSlug);
@@ -89,14 +90,25 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
 
   const TrendGlyph = ({ trend, score }: { trend: TrendDirection; score: number }) => {
     const label = trendLabel(score, trend);
+    const isSlightly = label.startsWith("Slightly ");
+    const labelTail = isSlightly ? label.replace("Slightly ", "") : "";
     const Icon =
       trend === "improving" ? ArrowUp : trend === "deteriorating" ? ArrowDown : Math.abs(score) < 0.08 ? Minus : ArrowRight;
     const color =
       trend === "improving" ? C.green : trend === "deteriorating" ? C.red : C.muted;
     return (
-      <span className="flex items-center gap-1 text-[12px]" style={{ color }}>
+      <span className="flex max-w-full items-start gap-1 text-[12px]" style={{ color }}>
         <Icon className="h-4 w-4 shrink-0" strokeWidth={2.2} aria-hidden />
-        <span className="uppercase tracking-[0.06em]">{label}</span>
+        <span className="uppercase leading-[1.05] tracking-[0.06em]">
+          {isSlightly ? (
+            <>
+              <span className="block">Slightly</span>
+              <span className="block">{labelTail}</span>
+            </>
+          ) : (
+            label
+          )}
+        </span>
       </span>
     );
   };
@@ -122,17 +134,20 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
           />
           {/* KPI strip — composite first */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="flex flex-col px-0.5 py-0.5" style={surface}>
+            <div className="flex flex-col px-0.5 py-0.5" style={topKpiSurface}>
               <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
                 Composite Macro Sentiment
               </div>
               <div className="mt-2 flex items-start justify-between gap-2">
-                <div className="shrink-0">
-                  <div className="text-[28px] font-extralight leading-none tabular-nums" style={{ color: C.blue }}>
+                <div className="w-[5.25rem] shrink-0">
+                  <div
+                    className="font-extralight leading-none tabular-nums"
+                    style={{ color: C.blue, fontSize: "calc(28px + 0.05rem)" }}
+                  >
                     {data.regime ? data.compositeZ.toFixed(2) : "—"}
                   </div>
                   <div
-                    className="mt-2 text-[12px] tabular-nums tracking-[0.02em]"
+                    className="mt-2 w-full truncate text-[14px] tabular-nums tracking-[0.02em]"
                     style={{
                       color: data.compositeDelta != null ? (data.compositeDelta >= 0 ? C.green : C.red) : C.muted,
                     }}
@@ -153,19 +168,19 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
               const sparkVals = historySparkValues(sparkQ?.data, 10).slice(-8);
               const stroke = row?.color === "green" ? C.green : row?.color === "red" ? C.red : C.yellow;
               return (
-                <div key={cat} className="flex flex-col px-0.5 py-0.5" style={surface}>
+                <div key={cat} className="flex flex-col px-0.5 py-0.5" style={topKpiSurface}>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
                     {CATEGORY_LABELS[cat] ?? cat}
                   </div>
-                  <div className="mt-0.5 text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
-                    {CATEGORY_PHASE[cat]}
-                  </div>
                   <div className="mt-2 flex items-start justify-between gap-2">
-                    <div className="shrink-0">
-                      <div className="text-[28px] font-extralight leading-none tabular-nums" style={{ color: "var(--nd-text)" }}>
+                    <div className="w-[5.95rem] shrink-0">
+                      <div
+                        className="font-extralight leading-none tabular-nums"
+                        style={{ color: "var(--nd-text)", fontSize: "calc(28px + 0.05rem)" }}
+                      >
                         {row ? row.score.toFixed(2) : "—"}
                       </div>
-                      <div className="mt-2">
+                      <div className="mt-2 w-full">
                         {row ? (
                           <TrendGlyph trend={row.trend} score={row.score} />
                         ) : (
@@ -185,18 +200,15 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
           </div>
 
           {/* Sidebar + table — equal height on xl; table body scrolls */}
-          <div
-            className="flex min-h-0 flex-col gap-2 xl:flex-row xl:items-stretch"
-            style={{ minHeight: TABLE_SCROLL_MAX_PX + 80 }}
-          >
+          <div className="flex min-h-0 flex-col gap-2 xl:flex-row xl:items-stretch">
             <aside
-              className="flex w-full shrink-0 flex-col xl:w-[248px] xl:min-h-0"
-              style={{ ...macroPanelSurface, minHeight: TABLE_SCROLL_MAX_PX + 56 }}
+              className="flex w-full shrink-0 flex-col xl:w-[220px] xl:min-h-0"
+              style={{ ...macroPanelSurface, height: categoryRowHeightPx, minHeight: categoryRowHeightPx }}
             >
               <div className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
                 View by category
               </div>
-              <nav className="mt-3 flex flex-1 flex-col gap-1.5">
+              <nav className="mt-3 flex flex-col gap-1.5">
                 {SIDEBAR.map((item) => {
                   const href = `/next/macro-sentiment/${item.slug}`;
                   const isActive = activeCategory === slugToCategory(item.slug);
@@ -205,7 +217,7 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
                       key={item.slug}
                       href={href}
                       className={cn(
-                        "rounded-[2px] px-3 py-2.5 text-[13px] font-light transition-colors",
+                        "rounded-[2px] px-2.5 py-2.5 text-center text-[13px] font-light transition-colors",
                         isActive ? "border" : "border border-transparent hover:opacity-90",
                       )}
                       style={{
@@ -228,20 +240,17 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
 
             <div
               className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden xl:min-h-0"
-              style={{ ...macroPanelSurface, minHeight: TABLE_SCROLL_MAX_PX + 56 }}
+              style={{ ...macroPanelSurface, height: categoryRowHeightPx, minHeight: categoryRowHeightPx }}
             >
-              <div className="shrink-0 border-b pb-3" style={{ borderColor: "var(--nd-border-soft)" }}>
+              <div className="shrink-0 border-b pb-1" style={{ borderColor: "var(--nd-border-soft)" }}>
                 <h2 className="text-[16px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-text)" }}>
-                  {CATEGORY_LABELS[activeCategory] ?? activeCategory}{" "}
-                  <span className="font-normal" style={{ color: "var(--nd-muted)" }}>
-                    ({CATEGORY_PHASE[activeCategory]})
-                  </span>
+                  {CATEGORY_LABELS[activeCategory] ?? activeCategory}
                 </h2>
               </div>
 
               <div
-                className="mt-2 min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain"
-                style={{ maxHeight: TABLE_SCROLL_MAX_PX }}
+                className="mt-1 min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain pb-1"
+                style={{ maxHeight: categoryRowHeightPx - 44 }}
               >
                 {data.indicatorsDetailPending ? (
                   <div className="flex min-h-[220px] items-center justify-center text-[14px]" style={{ color: C.muted }}>
@@ -256,11 +265,11 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
                     <colgroup>
                       <col style={{ width: MACRO_INDICATOR_NAME_MAX_PX }} />
                       <col style={{ width: "5.75rem" }} />
-                      <col style={{ width: "3.25rem" }} />
+                      <col style={{ width: "4rem" }} />
                       <col style={{ width: "26%" }} />
                       <col style={{ width: MACRO_PCT_COL_WIDTH_REM }} />
                       <col style={{ width: MACRO_PCT_COL_WIDTH_REM }} />
-                      <col style={{ width: "36%" }} />
+                      <col style={{ width: "35%" }} />
                     </colgroup>
                     <thead>
                       <tr
@@ -274,13 +283,13 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
                         <th className="py-3 pl-0 pr-2 text-left font-medium" style={{ maxWidth: MACRO_INDICATOR_NAME_MAX_PX }}>
                           Indicator (FRED)
                         </th>
-                        <th className="px-1 py-3 text-right font-medium">Latest</th>
-                        <th className="px-1 py-3 text-right font-medium">Z-Score</th>
+                        <th className="px-1 py-3 text-center font-medium">Latest</th>
+                        <th className="px-1 py-3 text-center font-medium whitespace-nowrap">Z-Score</th>
                         <th className="px-1 py-3 text-center font-medium">Trend (6M)</th>
-                        <th className="px-0.5 py-3 text-right font-medium" style={{ width: MACRO_PCT_COL_WIDTH_REM }}>
+                        <th className="px-0.5 py-3 text-center font-medium" style={{ width: MACRO_PCT_COL_WIDTH_REM }}>
                           MoM
                         </th>
-                        <th className="px-0.5 py-3 text-right font-medium" style={{ width: MACRO_PCT_COL_WIDTH_REM }}>
+                        <th className="px-0.5 py-3 text-center font-medium" style={{ width: MACRO_PCT_COL_WIDTH_REM }}>
                           YoY
                         </th>
                         <th className="py-3 pl-2 pr-0 text-center font-medium">History</th>
@@ -312,7 +321,7 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
                             )}
                             style={{ borderColor: "var(--nd-border-soft)" }}
                           >
-                            <td className="py-3 pr-2 align-top" style={{ maxWidth: MACRO_INDICATOR_NAME_MAX_PX, width: MACRO_INDICATOR_NAME_MAX_PX }}>
+                            <td className="py-3 pr-2 align-middle" style={{ maxWidth: MACRO_INDICATOR_NAME_MAX_PX, width: MACRO_INDICATOR_NAME_MAX_PX }}>
                               <div
                                 className="line-clamp-2 break-words font-light leading-snug"
                                 style={{ color: "var(--nd-text)", maxWidth: MACRO_INDICATOR_NAME_MAX_PX }}
@@ -323,15 +332,15 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
                                 {row.fred_series_id}
                               </div>
                             </td>
-                            <td className="px-1 py-3 text-right align-top tabular-nums">
-                              <div style={{ color: "var(--nd-text)" }}>
+                            <td className="px-1 py-3 text-center align-middle tabular-nums">
+                              <div className="flex justify-center" style={{ color: "var(--nd-text)" }}>
                                 {row.latest_value != null ? fmtIndicator(row.latest_value, row.unit) : "—"}
                               </div>
-                              <div className="mt-0.5 text-[11px]" style={{ color: "var(--nd-muted)" }}>
+                              <div className="mt-0.5 text-center text-[11px]" style={{ color: "var(--nd-muted)" }}>
                                 {row.latest_date ? format(parseISO(row.latest_date), "MMM yyyy") : "—"}
                               </div>
                             </td>
-                            <td className="px-1 py-3 text-right align-top tabular-nums font-medium" style={{ color: zColor }}>
+                            <td className="px-1 py-3 text-center align-middle tabular-nums font-medium" style={{ color: zColor }}>
                               {row.z_score != null ? row.z_score.toFixed(2) : "—"}
                             </td>
                             <td className="min-w-0 px-1 py-3 align-middle">
@@ -344,13 +353,13 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
                               </div>
                             </td>
                             <td
-                              className="px-0.5 py-3 text-right align-top font-mono tabular-nums text-[12px] whitespace-nowrap"
+                              className="px-0.5 py-3 text-center align-middle font-mono tabular-nums text-[12px] whitespace-nowrap"
                               style={{ color: "var(--nd-soft)", width: MACRO_PCT_COL_WIDTH_REM, maxWidth: MACRO_PCT_COL_WIDTH_REM }}
                             >
                               {momPct(row)}
                             </td>
                             <td
-                              className="px-0.5 py-3 text-right align-top font-mono tabular-nums text-[12px] whitespace-nowrap"
+                              className="px-0.5 py-3 text-center align-middle font-mono tabular-nums text-[12px] whitespace-nowrap"
                               style={{ color: "var(--nd-soft)", width: MACRO_PCT_COL_WIDTH_REM, maxWidth: MACRO_PCT_COL_WIDTH_REM }}
                             >
                               {approxYoY(hist, row)}

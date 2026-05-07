@@ -9,12 +9,13 @@ export function slugToCategory(slug: string | undefined): IndicatorCategory {
 }
 
 export function trendLabel(score: number, trend: TrendDirection): string {
-  if (trend === "improving") return "Improving";
+  if (trend === "improving") {
+    return score > 0.35 ? "Improving" : "Slightly Improving";
+  }
   if (trend === "deteriorating") {
     return score < -0.35 ? "Weakening" : "Slightly Weakening";
   }
-  if (Math.abs(score) < 0.08) return "Neutral";
-  return "Flat";
+  return "Neutral";
 }
 
 export function formatSignedTwoDecimals(delta: number): string {

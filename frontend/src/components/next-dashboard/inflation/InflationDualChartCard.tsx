@@ -7,7 +7,6 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
-  Legend,
   Line,
   ReferenceLine,
   ResponsiveContainer,
@@ -20,6 +19,7 @@ import { ChartPeriodStrip } from "@/components/next-dashboard/macro-sentiment/Ma
 import {
   computeBarColorFlags,
   filterSeriesByFrame,
+  normalizeOverlayToRange,
   type InflationFrame,
   sortSeries,
 } from "./inflationUtils";
@@ -31,6 +31,8 @@ const TIP: CSSProperties = {
   fontSize: 12,
   color: "var(--nd-text)",
 };
+const YOY_CHART_MIN_H = 266;
+const MOM_CHART_H = 92;
 
 type LineDef = {
   dataKey: string;
@@ -38,12 +40,24 @@ type LineDef = {
   name: string;
 };
 
+function roundedAutoDomain(values: number[], padPct = 0.1): [number, number] {
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  const span = Math.max(1e-9, hi - lo);
+  const rawLo = lo - span * padPct;
+  const rawHi = hi + span * padPct;
+  if (!Number.isFinite(rawLo) || !Number.isFinite(rawHi)) return [0, 1];
+  // Inflation page uses exact 10% padding from visible range.
+  return [rawLo, rawHi];
+}
+
 export function InflationDualChartCard({
   title,
   subtitle,
   yoyPrimary,
   yoySecondary,
   mom,
+  spxRows,
   pending,
 }: {
   title: string;
@@ -51,9 +65,10 @@ export function InflationDualChartCard({
   yoyPrimary: { name: string; rows: RatioPoint[] | undefined; color: string };
   yoySecondary: { name: string; rows: RatioPoint[] | undefined; color: string };
   mom: { name: string; rows: RatioPoint[] | undefined };
+  spxRows?: RatioPoint[];
   pending: boolean;
 }) {
-  const [frame, setFrame] = useState<InflationFrame>("1Y");
+  const [frame, setFrame] = useState<InflationFrame>("ALL");
 
   const pSorted = useMemo(() => sortSeries(yoyPrimary.rows), [yoyPrimary.rows]);
   const sSorted = useMemo(() => sortSeries(yoySecondary.rows), [yoySecondary.rows]);
@@ -75,8 +90,10 @@ export function InflationDualChartCard({
       if (row) row.secondary = r.value;
       else byDate.set(r.date, { date: r.date, secondary: r.value });
     }
-    return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
-  }, [pDisplay, sDisplay]);
+    const baseRows = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+    const spxScaled = normalizeOverlayToRange(baseRows, spxRows);
+    return baseRows.map((row) => ({ ...row, spx: spxScaled[row.date] }));
+  }, [pDisplay, sDisplay, spxRows]);
 
   const momRows = useMemo(() => computeBarColorFlags(mDisplay), [mDisplay]);
 
@@ -84,31 +101,26 @@ export function InflationDualChartCard({
     if (!yoyRows.length) return [0, 1] as [number, number];
     const vals = yoyRows.flatMap((r) => [r.primary, r.secondary]).filter((v): v is number => Number.isFinite(v));
     if (!vals.length) return [0, 1] as [number, number];
-    const lo = Math.min(...vals, 2);
-    const hi = Math.max(...vals, 2);
-    const pad = Math.max(0.2, (hi - lo) * 0.16);
-    return [lo - pad, hi + pad] as [number, number];
+    return roundedAutoDomain(vals, 0.1);
   }, [yoyRows]);
 
   const momDomain = useMemo(() => {
     if (!momRows.length) return [-1, 1] as [number, number];
     const vals = momRows.map((d) => d.value).filter(Number.isFinite);
     if (!vals.length) return [-1, 1] as [number, number];
-    const lo = Math.min(...vals, 0);
-    const hi = Math.max(...vals, 0);
-    const pad = Math.max(0.08, (hi - lo) * 0.14);
-    return [lo - pad, hi + pad] as [number, number];
+    return roundedAutoDomain(vals, 0.1);
   }, [momRows]);
 
   const lines: LineDef[] = [
     { dataKey: "primary", stroke: yoyPrimary.color, name: yoyPrimary.name },
     { dataKey: "secondary", stroke: yoySecondary.color, name: yoySecondary.name },
+    { dataKey: "spx", stroke: "rgba(203, 209, 221, 0.45)", name: "SPX" },
   ];
 
   const hasData = yoyRows.length > 0 || momRows.length > 0;
 
   return (
-    <div className="flex min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-text)" }}>
@@ -132,8 +144,8 @@ export function InflationDualChartCard({
           No observations.
         </div>
       ) : (
-        <>
-          <div style={{ width: "100%", height: 246 }}>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1" style={{ minHeight: YOY_CHART_MIN_H }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={yoyRows} margin={{ top: 6, right: 10, left: 4, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
@@ -157,7 +169,12 @@ export function InflationDualChartCard({
                   }}
                   formatter={(v: unknown, _name, entry) => {
                     const n = typeof v === "number" ? v : Number(v);
-                    return [Number.isFinite(n) ? `${n.toFixed(2)}%` : "—", String(entry.name)];
+                    return [
+                      <span key="val" style={{ color: "var(--nd-text)" }}>
+                        {Number.isFinite(n) ? `${n.toFixed(2)}%` : "—"}
+                      </span>,
+                      String(entry.name),
+                    ];
                   }}
                 />
                 <ReferenceLine
@@ -176,18 +193,13 @@ export function InflationDualChartCard({
                     strokeWidth={1.8}
                     dot={false}
                     isAnimationActive={false}
+                    connectNulls
                   />
                 ))}
-                <Legend
-                  verticalAlign="top"
-                  align="center"
-                  iconType="line"
-                  wrapperStyle={{ fontSize: 11, paddingTop: 2, color: "var(--nd-muted)" }}
-                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <div className="-mt-2 border-t border-[var(--nd-border-soft)] pt-2" style={{ width: "100%", height: 112 }}>
+          <div className="mt-auto border-t border-[var(--nd-border-soft)] pt-2" style={{ width: "100%", height: MOM_CHART_H }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={momRows} margin={{ top: 0, right: 10, left: 4, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
@@ -224,7 +236,12 @@ export function InflationDualChartCard({
                   }}
                   formatter={(v: unknown) => {
                     const n = typeof v === "number" ? v : Number(v);
-                    return [Number.isFinite(n) ? `${n.toFixed(2)}%` : "—", mom.name];
+                    return [
+                      <span key="val" style={{ color: "var(--nd-text)" }}>
+                        {Number.isFinite(n) ? `${n.toFixed(2)}%` : "—"}
+                      </span>,
+                      mom.name,
+                    ];
                   }}
                 />
                 <ReferenceLine y={0} stroke="rgba(255,255,255,0.25)" strokeDasharray="3 3" />
@@ -237,7 +254,15 @@ export function InflationDualChartCard({
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-        </>
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px]" style={{ color: "var(--nd-muted)" }}>
+            {lines.map((line) => (
+              <span key={line.dataKey} className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-[2px] w-3 rounded" style={{ backgroundColor: line.stroke }} />
+                <span>{line.name}</span>
+              </span>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

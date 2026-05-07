@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
 import {
-  Activity,
   CalendarDays,
   CircleDollarSign,
   Compass,
@@ -110,31 +109,10 @@ export const nextDashboardCssTokenColors = {
 export const NEXT_DASHBOARD_NAV_ITEMS: SidebarNavItem[] = [
   { label: "Dashboard", icon: Grid2X2, href: "/next/dashboard" },
   { label: "Radar", icon: Gauge, href: "/next/radar" },
-  {
-    label: "Macro Sentiment",
-    icon: LineChart,
-    href: "/next/macro-sentiment",
-    children: [
-      { label: "Housing", href: "/next/macro-sentiment/housing" },
-      { label: "Orders & Production", href: "/next/macro-sentiment/orders-production" },
-      { label: "Income & Sales", href: "/next/macro-sentiment/income-sales" },
-      { label: "Employment", href: "/next/macro-sentiment/employment" },
-      { label: "Inflation", href: "/next/macro-sentiment/inflation" },
-    ],
-  },
+  { label: "Macro Sentiment", icon: LineChart, href: "/next/macro-sentiment" },
   { label: "Fed Policy", icon: CircleDollarSign, href: "/next/fed-policy" },
   { label: "Yield Curve", icon: TrendingUp, href: "/next/yield-curve" },
-  { label: "Recession Monitor", icon: Activity, href: "/next/recession-monitor" },
-  {
-    label: "Inflation",
-    icon: Sparkles,
-    href: "/next/inflation",
-    children: [
-      { label: "CPI", href: "/next/inflation/cpi" },
-      { label: "PCE", href: "/next/inflation/pce" },
-      { label: "PPI", href: "/next/inflation/ppi" },
-    ],
-  },
+  { label: "Inflation", icon: Sparkles, href: "/next/inflation" },
   {
     label: "Analysis",
     icon: Compass,

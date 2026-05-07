@@ -25,17 +25,14 @@ export const SIDEBAR: { slug: string; label: string; note?: string }[] = [
   { slug: "orders-production", label: "Orders & Production" },
   { slug: "income-sales", label: "Income & Sales" },
   { slug: "employment", label: "Employment" },
-  { slug: "inflation", label: "Inflation", note: "Tracked separately" },
+  { slug: "inflation", label: "Inflation" },
 ];
 
 /** Table body scroll — ~5 rows + header; aligns with sidebar column height on xl. */
 export const TABLE_SCROLL_MAX_PX = 392;
 
-/**
- * Max width for the indicator name column — sized for "Chicago Fed National Activity Index" at table `text-[13px]`.
- * (Slightly padded for font-weight / subpixel rounding.)
- */
-export const MACRO_INDICATOR_NAME_MAX_PX = 272;
+/** Max width for the indicator name column, capped around "Case-Shiller Home Price Index". */
+export const MACRO_INDICATOR_NAME_MAX_PX = 244;
 
 /** MoM / YoY: minimal equal width; tabular % fits in one line. */
 export const MACRO_PCT_COL_WIDTH_REM = "3.5rem";
