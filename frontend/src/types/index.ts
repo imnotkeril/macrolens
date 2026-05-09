@@ -559,12 +559,24 @@ export interface IndicesDashboardData {
   stable_dominance_current?: number | null;
 }
 
+/** CoinGecko-derived crypto dominance time series (see /api/market/crypto-dominance-history). */
+export interface CryptoDominanceHistoryData {
+  btc_dominance_pct: RatioPoint[];
+  stable_dominance_pct: RatioPoint[];
+  source: string;
+  btc_dominance_current?: number | null;
+  stable_dominance_current?: number | null;
+  message?: string;
+}
+
 // ---- Breadth Dashboard ----
 export interface BreadthDashboardData {
   SP500?: TimeSeriesPoint[];
   MMTW?: TimeSeriesPoint[];
   MMFI?: TimeSeriesPoint[];
   MMTH?: TimeSeriesPoint[];
+  NAA200?: TimeSeriesPoint[];
+  NAA50?: TimeSeriesPoint[];
   VIX?: TimeSeriesPoint[];
   PCC?: TimeSeriesPoint[];
   NYHGH?: TimeSeriesPoint[];

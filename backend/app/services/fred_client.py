@@ -366,10 +366,14 @@ MARKET_SERIES = {
     # Kim–Wright 10Y zero-coupon term premium (%). (NY Fed ACM is a separate publication; KW is the standard daily FRED benchmark.)
     "TERM_PREMIUM_10Y": "THREEFYTP10",
     "TED_SPREAD": "TEDRATE",  # TED spread (legacy; series ends ~2022 — history still useful)
+    # ISM Manufacturing diffusion indices (monthly) — new orders / inventories ratio
+    "ISM_NO": "NAPMNO",
+    # Inventories sub-index (NAPMI is the composite headline — do not use). New key ISM_INVT avoids stale ISM_INV rows.
+    "ISM_INVT": "NAPMII",
 }
 
 # Regime / Cycle Radar series (stored in market_data table)
-# NAPM/NAPMNOI/ISMPMN/DGNO not available; use OECD manufacturing confidence + DGORDER
+# Note: NAPMNO/NAPMII (ISM_NO/ISM_INVT) for macro ratio; regime still uses DGORDER proxy where needed
 REGIME_SERIES = {
     "ISM_PMI": "BSCICP02USM460S",
     "ISM_NEW_ORDERS": "DGORDER",

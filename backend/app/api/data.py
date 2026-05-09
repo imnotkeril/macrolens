@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _refresh_lock = asyncio.Lock()
+_refresh_schedule_lock = asyncio.Lock()
+_refresh_background_task: asyncio.Task | None = None
 
 
 @router.get("/refresh-progress")
@@ -114,12 +116,22 @@ async def backfill_history(
     }
 
 
-@router.post("/refresh")
-async def refresh_all_data():
-    """Trigger a full data refresh (all collectors) on demand."""
-    if _refresh_lock.locked():
-        raise HTTPException(status_code=409, detail="Refresh already in progress")
+async def _run_refresh_pipeline() -> None:
+    """Long-running collectors — runs under lock; progress via GET /refresh-progress."""
+    try:
+        await _run_refresh_locked()
+    except Exception as e:
+        logger.exception("Refresh pipeline crashed")
+        set_refresh_progress(
+            percent=100.0,
+            message="Refresh failed.",
+            log_line=f"[100%] Fatal error: {e}",
+            done=True,
+            error=str(e),
+        )
 
+
+async def _run_refresh_locked() -> None:
     init_refresh_progress()
     total_steps = 8  # 7 collectors + alert_checks
 
@@ -140,6 +152,7 @@ async def refresh_all_data():
                     log_line="[0%] Seeding indicators…",
                 )
                 from app.seed import seed_indicators
+
                 await seed_indicators()
                 set_refresh_progress(log_line="[0%] Indicators seeded.")
                 logger.info("Seeded indicators (was 0)")
@@ -230,10 +243,25 @@ async def refresh_all_data():
             error="; ".join(errors) if errors else None,
         )
 
-    return {
-        "status": "completed" if not errors else "completed_with_errors",
-        "errors": errors,
-    }
+
+def _clear_refresh_task(task: asyncio.Task) -> None:
+    global _refresh_background_task
+    if _refresh_background_task is task:
+        _refresh_background_task = None
+
+
+@router.post("/refresh")
+async def refresh_all_data():
+    """Start a full data refresh in the background. Poll GET /refresh-progress until done."""
+    global _refresh_background_task
+
+    async with _refresh_schedule_lock:
+        if _refresh_background_task is not None and not _refresh_background_task.done():
+            raise HTTPException(status_code=409, detail="Refresh already in progress")
+        _refresh_background_task = asyncio.create_task(_run_refresh_pipeline())
+        _refresh_background_task.add_done_callback(_clear_refresh_task)
+
+    return {"status": "accepted", "errors": []}
 
 
 @router.get("/source-health")

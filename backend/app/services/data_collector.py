@@ -16,7 +16,7 @@ from app.config import get_settings
 from app.services.fred_client import (
     FredClient, INDICATOR_SERIES, YIELD_SERIES, TIPS_SERIES, BREAKEVEN_SERIES, MARKET_SERIES,
 )
-from app.services.yahoo_client import YahooClient
+from app.services.yahoo_client import YahooClient, YAHOO_MACRO_ETFS
 from app.services.data_sources import FredAdapter, YahooAdapter, SourceRouter
 from app.services.fed_press_service import backfill_fomc_signal_phrases
 
@@ -548,6 +548,13 @@ class DataCollector:
                     )
                     await db.execute(stmt)
 
+            # Full Yahoo history for macro symbols that only have ~14d from the loop above (IJH, BDIY, DBC, ZB_FUT).
+            await self._backfill_sparse_yahoo_macro_symbols(
+                db,
+                symbols=("IJH", "BDIY", "DBC", "ZB_FUT"),
+                min_points=250,
+            )
+
             # FRED macro overview series (CNLEI, ECBBS)
             if self.fred.is_configured:
                 macro_fred, macro_source = self.market_router.fetch_macro_overview_data(
@@ -583,7 +590,7 @@ class DataCollector:
             # Ensure sparse legacy/context series are backfilled at least once.
             await self._backfill_sparse_market_series(
                 db=db,
-                symbols=("TERM_PREMIUM_10Y", "TED_SPREAD"),
+                symbols=("TERM_PREMIUM_10Y", "TED_SPREAD", "ISM_NO", "ISM_INVT"),
                 min_points=120,
             )
 
@@ -658,6 +665,67 @@ class DataCollector:
             logger.info(
                 "Sparse-series backfill completed for %s: prior=%s, upserts=%s",
                 symbol,
+                current_count,
+                upserts,
+            )
+
+    async def _backfill_sparse_yahoo_macro_symbols(
+        self,
+        db,
+        symbols: tuple[str, ...],
+        min_points: int = 250,
+    ) -> None:
+        """Load full Yahoo window for macro keys when the DB has almost no rows (daily job only pulls ~14d)."""
+        for symbol in symbols:
+            ticker = YAHOO_MACRO_ETFS.get(symbol)
+            if not ticker:
+                continue
+            current_count = (
+                await db.execute(
+                    select(func.count(MarketData.date)).where(MarketData.symbol == symbol)
+                )
+            ).scalar() or 0
+            if current_count >= min_points:
+                continue
+            try:
+                series = self.yahoo.get_series(ticker, start=None)
+            except Exception:
+                logger.exception("Yahoo macro history backfill failed for %s (%s)", symbol, ticker)
+                continue
+            if series.empty:
+                logger.warning("Yahoo macro backfill empty for %s (%s)", symbol, ticker)
+                continue
+            upserts = 0
+            for i, (ts, val) in enumerate(series.items()):
+                d = ts.date() if hasattr(ts, "date") else ts
+                change = None
+                if i > 0:
+                    prev = float(series.iloc[i - 1])
+                    change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
+                stmt = pg_insert(MarketData).values(
+                    date=d,
+                    symbol=symbol,
+                    value=float(val),
+                    change_pct=change,
+                    source="yahoo",
+                    as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                    quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
+                ).on_conflict_do_update(
+                    constraint="uq_market_date_symbol",
+                    set_={
+                        "value": float(val),
+                        "change_pct": change,
+                        "source": "yahoo",
+                        "as_of": ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                        "quality_status": self._quality_status_for_point(value=float(val), change_pct=change),
+                    },
+                )
+                await db.execute(stmt)
+                upserts += 1
+            logger.info(
+                "Yahoo macro history backfill: %s (%s) prior=%s upserts=%s",
+                symbol,
+                ticker,
                 current_count,
                 upserts,
             )

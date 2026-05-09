@@ -36,6 +36,7 @@ import type {
   MacroOverviewData,
   InflationDashboardData,
   IndicesDashboardData,
+  CryptoDominanceHistoryData,
   RatesDashboardData,
   SectorsDashboardData,
   CurrencyDashboardData,
@@ -227,6 +228,10 @@ export const getRatesDashboard = (days = 365 * 5) =>
 export const getIndicesDashboard = (days = 365 * 5) =>
   fetchJSON<IndicesDashboardData>(`/api/market/indices-dashboard?days=${days}`);
 
+/** Historical BTC / stablecoin share of crypto market cap (CoinGecko). */
+export const getCryptoDominanceHistory = (days = 365 * 5) =>
+  fetchJSON<CryptoDominanceHistoryData>(`/api/market/crypto-dominance-history?days=${days}`);
+
 // Breadth Dashboard
 export const getBreadthDashboard = (days = 365 * 5) =>
   fetchJSON<BreadthDashboardData>(`/api/market/breadth?days=${days}`);
@@ -326,7 +331,8 @@ export async function postMLRegimeTrain(): Promise<MLTrainResponse> {
 }
 
 // Data refresh (FRED + Yahoo: many series, can take 5–15 min)
-const REFRESH_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
+/** POST /refresh returns immediately (background job); only the handshake needs to finish. */
+const REFRESH_POST_TIMEOUT_MS = 90 * 1000;
 
 export function getRefreshProgress(): Promise<TaskProgress> {
   return fetchJSON<TaskProgress>(`/api/data/refresh-progress`);
@@ -405,7 +411,7 @@ export const postSnapshotAnalysisIndicators = async () => {
 
 export async function refreshAllData(): Promise<{ status: string; errors: string[] }> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), REFRESH_POST_TIMEOUT_MS);
   try {
     const res = await fetch(`${apiFetchOrigin()}/api/data/refresh`, {
       method: "POST",
@@ -413,11 +419,11 @@ export async function refreshAllData(): Promise<{ status: string; errors: string
     });
     if (res.status === 409) throw new Error("Refresh already in progress");
     if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
-    return res.json();
+    return res.json() as Promise<{ status: string; errors: string[] }>;
   } catch (e) {
     if (e instanceof Error && e.name === "AbortError") {
       throw new Error(
-        "Refresh timed out (20 min). Backend may still be running — check server logs. Try again later."
+        "Could not start refresh (request timed out). Check backend is reachable and try again."
       );
     }
     throw e;

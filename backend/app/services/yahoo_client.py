@@ -65,6 +65,7 @@ YAHOO_MACRO_ETFS = {
     "TIP": "TIP",          # iShares TIPS Bond ETF
     "IEF": "IEF",          # iShares 7-10 Year Treasury Bond ETF
     "IVV": "IVV",          # iShares Core S&P 500 ETF
+    "IJH": "IJH",          # iShares Core S&P Mid-Cap ETF (vs IJR small-cap ratio)
     "SPY": "SPY",          # Forecast Lab asset_implied pairs + sector proxy
     "IWM": "IWM",          # Russell 2000 ETF (pairs vs SPY)
     "VTV": "VTV",          # Value factor ETF
@@ -84,6 +85,11 @@ YAHOO_MACRO_ETFS = {
     "TAIEX": "^TWII",      # Taiwan TAIEX Index
     "USDCNH": "CNY=X",     # USD/CNY onshore yuan
     "CEW": "CEW",           # WisdomTree Emerging Currency Strategy Fund
+    # Proxies for macro ratio charts (BCOM/ZB, Baltic Dry)
+    # ^BDIY often has no Yahoo history; BDRY ETF tracks dry bulk / Baltic proxy
+    "BDIY": "BDRY",
+    "DBC": "DBC",          # Invesco DB Commodity Index ETF (~BCOM basket)
+    "ZB_FUT": "ZB=F",      # 30Y U.S. Treasury bond futures (ZB)
 }
 
 SECTOR_LABELS = {

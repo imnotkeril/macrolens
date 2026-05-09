@@ -115,6 +115,16 @@ async def get_indices_dashboard(
     return await svc.get_indices_dashboard(days)
 
 
+@router.get("/crypto-dominance-history")
+async def get_crypto_dominance_history(
+    days: int = Query(365 * 5),
+    db: AsyncSession = Depends(get_db),
+):
+    """BTC % and stablecoin % of crypto market cap over time (CoinGecko market caps)."""
+    svc = MarketService(db)
+    return await svc.get_crypto_dominance_history(days)
+
+
 @router.get("/macro-overview")
 async def get_macro_overview(
     days: int = Query(365 * 5),

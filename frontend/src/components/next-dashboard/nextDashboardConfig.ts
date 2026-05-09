@@ -118,15 +118,13 @@ export const NEXT_DASHBOARD_NAV_ITEMS: SidebarNavItem[] = [
     icon: Compass,
     href: "/next/analysis",
     children: [
+      { label: "Relative Performance", href: "/next/analysis/relative-performance" },
       { label: "Major Indices & Bitcoin", href: "/next/analysis/major-indices-bitcoin" },
-      { label: "Sectors & Sentiment", href: "/next/analysis/sectors-sentiment" },
       { label: "Market Breadth", href: "/next/analysis/market-breadth" },
       { label: "Macro Overview", href: "/next/analysis/macro-overview" },
-      { label: "Commodities & Global Activity", href: "/next/analysis/commodities-global-activity" },
-      { label: "Risk Appetite & Relative Performance", href: "/next/analysis/risk-appetite-relative-performance" },
     ],
   },
   { label: "Forecast Lab", icon: FlaskConical, href: "/next/forecast-lab" },
-  { label: "Calendar & Alerts", icon: CalendarDays, href: "/next/calendar-alerts" },
+  { label: "Calendar", icon: CalendarDays, href: "/next/calendar" },
   { label: "Reports", icon: Package, href: "/next/reports" },
 ];

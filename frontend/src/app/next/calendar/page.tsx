@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function NextCalendarAlertsPage() {
+export default function CalendarIndexPage() {
   redirect("/next/calendar/briefings");
 }

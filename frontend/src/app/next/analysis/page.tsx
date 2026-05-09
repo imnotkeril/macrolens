@@ -1,5 +1,5 @@
-import { NextPlaceholderPage } from "@/components/next-dashboard/NextPlaceholderPage";
+import { redirect } from "next/navigation";
 
 export default function NextAnalysisPage() {
-  return <NextPlaceholderPage title="Analysis" legacyHref="/analysis" />;
+  redirect("/next/analysis/relative-performance");
 }

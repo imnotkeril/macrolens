@@ -95,12 +95,18 @@ const PERIODS = [
 /* ── Dark theme ───────────────────────────────────────────── */
 
 /* v5: layout.background must include ColorType or the library keeps default white. */
+/** Scale typography: default legacy UI vs `/next` shell (IBM Plex Mono, loaded in root layout). */
+const LAYOUT_FONT_DEFAULT = "Inter, system-ui, sans-serif";
+const LAYOUT_FONT_NEXT = "'IBM Plex Mono', ui-monospace, monospace";
+
 const DARK_THEME = {
   layout: {
     background: { type: ColorType.Solid, color: "#13131a" },
     textColor: "#a1a1aa",
-    fontFamily: "Inter, system-ui, sans-serif",
+    fontFamily: LAYOUT_FONT_DEFAULT,
     fontSize: 10,
+    /** TradingView OSS license allows hiding the logo if attribution is provided elsewhere (e.g. project docs / about). */
+    attributionLogo: false,
   },
   grid: {
     vertLines: { color: "rgba(255,255,255,0.04)" },
@@ -313,6 +319,8 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
       layout: {
         ...DARK_THEME.layout,
         background: { type: ColorType.Solid, color: layoutBg },
+        fontFamily: uiVariant === "next" ? LAYOUT_FONT_NEXT : DARK_THEME.layout.fontFamily,
+        attributionLogo: false,
       },
       ...(scrollable && {
         timeScale: {
@@ -475,6 +483,7 @@ const LWChart = forwardRef<LWChartHandle, LWChartProps>(function LWChart(
     formatValue,
     fixedPriceRange,
     layoutBackgroundColor,
+    uiVariant,
   ]);
 
   return (

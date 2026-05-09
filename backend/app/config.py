@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     # Nominal neutral policy anchor (%): prefer `market_data` FEDTARMDLR from FRED, else this fallback.
     neutral_rate_fallback: float = 2.5
 
+    # CoinGecko Pro: optional `x-cg-pro-api-key` for long history (`days=max`) on market_chart.
+    coingecko_api_key: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

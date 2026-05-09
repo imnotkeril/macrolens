@@ -70,7 +70,7 @@ export function NextDashboardShell({
       (item) =>
         pathname === item.href ||
         pathname.startsWith(`${item.href}/`) ||
-        item.children?.some((child) => pathname === child.href),
+        item.children?.some((child) => pathname === child.href || pathname.startsWith(`${child.href}/`)),
     );
     if (current?.children?.length) {
       setExpandedNav(current.label);
@@ -124,7 +124,7 @@ export function NextDashboardShell({
               const isActive =
                 pathname === item.href ||
                 pathname.startsWith(`${item.href}/`) ||
-                item.children?.some((child) => pathname === child.href);
+                item.children?.some((child) => pathname === child.href || pathname.startsWith(`${child.href}/`));
               const isExpanded = expandedNav === item.label;
               return (
                 <div key={item.label}>
@@ -157,7 +157,12 @@ export function NextDashboardShell({
                           key={child.href}
                           href={child.href}
                           className="block transition-opacity hover:opacity-90"
-                          style={{ color: pathname === child.href ? colors.text : colors.muted }}
+                          style={{
+                            color:
+                              pathname === child.href || pathname.startsWith(`${child.href}/`)
+                                ? colors.text
+                                : colors.muted,
+                          }}
                         >
                           {child.label}
                         </Link>
@@ -255,7 +260,7 @@ export function NextDashboardShell({
           </div>
         </aside>
 
-        <main className="min-w-0" style={{ padding: "14px 18px 20px" }}>
+        <main className="flex h-full min-h-0 min-w-0 flex-col" style={{ padding: "14px 18px 20px" }}>
           {children}
         </main>
       </div>

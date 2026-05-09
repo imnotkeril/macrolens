@@ -1,10 +1,11 @@
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.models.market_data import MarketData, YieldData
 from app.models.fed_policy import BalanceSheet
 from app.models.factor import FactorReturn, SectorPerformance
@@ -236,7 +237,9 @@ class MarketService:
     async def get_breadth_dashboard(self, days: int = 365 * 5) -> dict:
         """Return all series needed for the Market Breadth Dashboard (TradingView-style)."""
         symbols = [
-            "SP500", "MMTW", "MMFI", "MMTH", "VIX", "PCC",
+            "SP500", "MMTW", "MMFI", "MMTH",
+            "NAA200", "NAA50",
+            "VIX", "PCC",
             "NYHGH", "NYLOW", "NYMO", "NYSI", "TVOL.US",
         ]
         result = {}
@@ -755,6 +758,126 @@ class MarketService:
             result["stable_dominance_current"] = None
 
         return result
+
+    async def get_crypto_dominance_history(self, days: int = 365) -> dict:
+        """Historical BTC % and stablecoin % of crypto market cap via CoinGecko (no DB).
+
+        Uses market_caps from bitcoin, ethereum, tether, usd-coin and scales totals using
+        CoinGecko `/global` snapshot so levels align with official dominance percentages.
+        """
+        import httpx
+
+        days_use = max(7, min(int(days), 365 * 5))
+        cg_key = (get_settings().coingecko_api_key or "").strip()
+        # Public CoinGecko API returns 401 on market_chart with days=max without Pro key.
+        if cg_key:
+            headers = {"x-cg-pro-api-key": cg_key}
+            days_param = "max" if days_use > 365 else str(days_use)
+        else:
+            headers = {}
+            days_param = str(min(days_use, 365))
+
+        base = "https://api.coingecko.com/api/v3"
+        coin_ids = ("bitcoin", "ethereum", "tether", "usd-coin")
+
+        async with httpx.AsyncClient(timeout=45.0, headers=headers) as client:
+            gr = await client.get(f"{base}/global")
+            gdata = gr.json().get("data", {}) if gr.status_code == 200 else {}
+            mcp = gdata.get("market_cap_percentage") or {}
+            btc_target = float(mcp["btc"]) if mcp.get("btc") is not None else None
+            stable_target = sum(
+                float(mcp[k]) for k in ("usdt", "usdc", "dai", "busd", "tusd") if mcp.get(k) is not None
+            ) or None
+            total_market_usd = float(gdata.get("total_market_cap", {}).get("usd") or 0) or None
+
+            caps_by_coin: dict[str, dict[int, float]] = {}
+            for cid in coin_ids:
+                r = await client.get(
+                    f"{base}/coins/{cid}/market_chart",
+                    params={"vs_currency": "usd", "days": days_param},
+                )
+                if r.status_code != 200:
+                    logger.warning("CoinGecko market_chart %s: %s", cid, r.status_code)
+                    return {
+                        "btc_dominance_pct": [],
+                        "stable_dominance_pct": [],
+                        "source": "error",
+                        "message": f"CoinGecko {cid} failed ({r.status_code})",
+                    }
+                raw = r.json().get("market_caps") or []
+                caps_by_coin[cid] = {int(ts): float(val) for ts, val in raw if val is not None}
+
+            all_ts = sorted(set().union(*[set(caps_by_coin[c].keys()) for c in coin_ids]))
+            if not all_ts:
+                return {
+                    "btc_dominance_pct": [],
+                    "stable_dominance_pct": [],
+                    "source": "empty",
+                    "message": "No market cap points returned",
+                }
+
+            rows_btc: list[dict] = []
+            rows_stable: list[dict] = []
+
+            def iso_day(ts_ms: int) -> str:
+                return datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).date().isoformat()
+
+            last_ts = all_ts[-1]
+            b_last = caps_by_coin["bitcoin"].get(last_ts, 0)
+            e_last = caps_by_coin["ethereum"].get(last_ts, 0)
+            u_last = caps_by_coin["tether"].get(last_ts, 0)
+            c_last = caps_by_coin["usd-coin"].get(last_ts, 0)
+            sum_last = b_last + e_last + u_last + c_last
+
+            scale_factor = 1.0
+            if total_market_usd and sum_last > 0:
+                scale_factor = total_market_usd / sum_last
+
+            for ts in all_ts:
+                b = caps_by_coin["bitcoin"].get(ts)
+                e = caps_by_coin["ethereum"].get(ts)
+                if b is None or e is None:
+                    continue
+                u = caps_by_coin["tether"].get(ts) or 0.0
+                cc = caps_by_coin["usd-coin"].get(ts) or 0.0
+                stable_raw = u + cc
+                denom = (b + e + stable_raw) * scale_factor
+                if denom <= 0:
+                    continue
+                btc_pct = 100.0 * b * scale_factor / denom
+                stable_pct = 100.0 * stable_raw * scale_factor / denom
+                d_iso = iso_day(ts)
+                rows_btc.append({"date": d_iso, "value": round(btc_pct, 4)})
+                rows_stable.append({"date": d_iso, "value": round(stable_pct, 4)})
+
+            def _dedupe_last_by_date(points: list[dict]) -> list[dict]:
+                by_d: dict[str, float] = {}
+                for p in points:
+                    by_d[p["date"]] = float(p["value"])
+                return [{"date": d, "value": round(v, 4)} for d, v in sorted(by_d.items())]
+
+            rows_btc = _dedupe_last_by_date(rows_btc)
+            rows_stable = _dedupe_last_by_date(rows_stable)
+
+            # Soft calibration to CoinGecko global percentages (corrects altcoins not in top4)
+            if btc_target and rows_btc:
+                adj = btc_target / rows_btc[-1]["value"] if rows_btc[-1]["value"] else 1.0
+                if 0.85 <= adj <= 1.15:
+                    for row in rows_btc:
+                        row["value"] = round(min(100.0, max(0.0, row["value"] * adj)), 4)
+            if stable_target and rows_stable:
+                adj_s = stable_target / rows_stable[-1]["value"] if rows_stable[-1]["value"] else 1.0
+                if 0.7 <= adj_s <= 1.3:
+                    for row in rows_stable:
+                        row["value"] = round(min(100.0, max(0.0, row["value"] * adj_s)), 4)
+
+            return {
+                "btc_dominance_pct": rows_btc,
+                "stable_dominance_pct": rows_stable,
+                "source": "coingecko_market_caps",
+                "btc_dominance_current": btc_target,
+                "stable_dominance_current": stable_target,
+            }
 
     # ------------------------------------------------------------------
     # Rates & Yield Curve dashboard
