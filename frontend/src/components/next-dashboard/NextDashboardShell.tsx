@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Grid2X2, RefreshCw, Settings, Sparkles, type LucideIcon } from "lucide-react";
 import type { TaskProgress } from "@/types";
+import { useOptionalReportStack } from "@/components/next-dashboard/nextReportStack";
 
 function sidebarRefreshHint(progress: TaskProgress | null) {
   if (!progress) return "Starting…";
@@ -46,6 +47,10 @@ type NextDashboardShellProps = {
   onRefresh: () => void;
   onThemeToggle: () => void;
   children: ReactNode;
+  /** Read-only snapshot layout: no refresh control, print-friendly root class */
+  reportLayout?: boolean;
+  /** Composite PDF: per-section @page height from measured content (preview route only) */
+  variablePdfPages?: boolean;
 };
 
 export function NextDashboardShell({
@@ -59,7 +64,12 @@ export function NextDashboardShell({
   onRefresh,
   onThemeToggle,
   children,
+  reportLayout = false,
+  variablePdfPages = false,
 }: NextDashboardShellProps) {
+  const reportStack = useOptionalReportStack();
+  const embedded = reportStack?.embedded ?? false;
+  const effectiveReportLayout = reportLayout || (reportStack?.reportLayout ?? false);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -86,14 +96,19 @@ export function NextDashboardShell({
     frameRef.current.scrollTo({ left: 0, top: 0 });
   }, []);
 
+  const variablePdfClass = variablePdfPages && effectiveReportLayout ? " nd-report-shell--variable-pdf" : "";
+  const outerClass = embedded
+    ? `relative z-[1] min-h-screen w-full overflow-auto${effectiveReportLayout ? ` nd-report-shell${variablePdfClass}` : ""}`
+    : `fixed inset-0 z-[60] overflow-auto${effectiveReportLayout ? ` nd-report-shell${variablePdfClass}` : ""}`;
+
   return (
     <div
       ref={frameRef}
-      className="fixed inset-0 z-[60] overflow-auto"
+      className={outerClass}
       style={{ ...shellThemeVars, background: colors.bg, color: colors.text, fontFamily: "var(--font-plex-mono), ui-monospace, monospace" }}
     >
       <div
-        className="grid min-h-screen"
+        className="nd-report-shell-inner-grid grid min-h-screen"
         style={{
           width: "100%",
           gridTemplateColumns: `${sidebarCollapsed ? 110 : 320}px minmax(0, 1fr)`,
@@ -176,7 +191,31 @@ export function NextDashboardShell({
 
           <div className={`mt-auto ${sidebarCollapsed ? "" : "ml-[30px]"}`}>
             <div className="border-t pt-[22px]" style={{ borderColor: colors.borderSoft }}>
-              {sidebarCollapsed ? (
+              {effectiveReportLayout ? (
+                sidebarCollapsed ? (
+                  <div className="flex justify-center print:hidden">
+                    <span className="text-[10px] uppercase tracking-[0.08em]" style={{ color: colors.muted }} title="Snapshot">
+                      Snap
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="shrink-0 text-[11px] uppercase tracking-[0.08em]" style={{ color: colors.muted }}>
+                        Report snapshot
+                      </span>
+                      <div className="flex min-w-0 items-baseline gap-2">
+                        <span className="shrink-0 text-[11px] uppercase tracking-[0.08em]" style={{ color: colors.muted }}>
+                          Data as of
+                        </span>
+                        <span className="truncate text-[12px] leading-none tabular-nums" style={{ color: colors.text }}>
+                          {updatedAt}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )
+              ) : sidebarCollapsed ? (
                 <div className="flex justify-center">
                   <button
                     type="button"
@@ -260,7 +299,19 @@ export function NextDashboardShell({
           </div>
         </aside>
 
-        <main className="flex h-full min-h-0 min-w-0 flex-col" style={{ padding: "14px 18px 20px" }}>
+        {/*
+          Report preview stacks multiple tall sections; h-full locks main to the viewport and flex-shrink
+          squashes each .nd-report-pdf-section into a fraction of the window. Use min-h-full so main grows
+          with content (grid row expands); normal dashboard keeps h-full to fill the shell.
+        */}
+        <main
+          className={
+            effectiveReportLayout
+              ? "flex min-h-full min-h-0 min-w-0 flex-col"
+              : "flex h-full min-h-0 min-w-0 flex-col"
+          }
+          style={{ padding: "14px 18px 20px" }}
+        >
           {children}
         </main>
       </div>

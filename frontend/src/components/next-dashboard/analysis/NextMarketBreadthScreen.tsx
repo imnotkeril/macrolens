@@ -34,6 +34,10 @@ import {
   filterRowsByLookback,
 } from "@/components/next-dashboard/analysis/majorIndicesUtils";
 import type { BreadthDashboardData, IndexPricePoint, IndicesDashboardData, RatioPoint } from "@/types";
+import {
+  reportEmbedDenseGridClass,
+  reportEmbedSectionClass,
+} from "@/components/next-dashboard/reports/reportEmbedLayoutClasses";
 
 const FETCH_DAYS = 365 * 15 + 400;
 
@@ -70,14 +74,16 @@ function latestDashboardDate(data: IndicesDashboardData | undefined): string {
   return max;
 }
 
-export function NextMarketBreadthScreen() {
+export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boolean }) {
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
   const queryClient = useQueryClient();
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
   const surface = useMemo(() => nextPanelSurfaceStyle(C), [C]);
   const panel = useMemo(() => ({ ...surface, padding: "10px 14px" } as const), [surface]);
   /** Uniform grid cells — equal row/col fractions; inner charts flex-fill */
-  const chartCard = "flex h-full min-h-0 min-w-0 flex-col overflow-hidden";
+  /** overflow-hidden clips Recharts in print/PDF — screen keeps clip, print uses visible + min tile height */
+  const chartCard =
+    "flex h-full min-h-0 min-w-0 flex-col overflow-hidden print:overflow-visible print:h-auto print:min-h-[280px]";
 
   const [tfKey, setTfKey] = useState<MarketBreadthTfKey>("2Y");
   const lookbackDays = tfDays(tfKey);
@@ -158,20 +164,8 @@ export function NextMarketBreadthScreen() {
     return [Math.max(0, Math.floor(lo - pad)), Math.ceil(hi + pad)];
   }, [prepared.vix]);
 
-  return (
-    <>
-      <NextDashboardShell
-        navItems={NEXT_DASHBOARD_NAV_ITEMS}
-        colors={C}
-        shellThemeVars={shellThemeVars}
-        updatedAt={updatedAt}
-        refreshing={refreshing}
-        refreshResult={refreshResult}
-        progress={progress}
-        onRefresh={handleRefresh}
-        onThemeToggle={toggleTheme}
-      >
-        <section className="flex min-h-0 flex-1 flex-col gap-3">
+  const mainColumn = (
+        <section className={reportEmbedSectionClass(omitShell)}>
           <QueryErrorBanner colors={C} errors={errors} onRetry={onRetry} />
 
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
@@ -183,11 +177,16 @@ export function NextMarketBreadthScreen() {
           </div>
 
           {loading ? (
-            <div className="flex flex-1 items-center justify-center py-16 text-[13px]" style={{ color: "var(--nd-muted)" }}>
+            <div
+              className={`flex items-center justify-center py-16 text-[13px] ${omitShell ? "min-h-[320px] shrink-0" : "flex-1"}`}
+              style={{ color: "var(--nd-muted)" }}
+            >
               Loading market breadth…
             </div>
           ) : (
-            <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[repeat(9,minmax(0,1fr))] gap-2 xl:grid-cols-3 xl:grid-rows-[repeat(3,minmax(0,1fr))]">
+            <div
+              className={`nd-report-dense-chart-grid grid grid-cols-1 grid-rows-[repeat(9,minmax(0,1fr))] gap-2 xl:grid-cols-3 xl:grid-rows-[repeat(3,minmax(0,1fr))] print:grid-cols-3 print:grid-rows-[repeat(3,minmax(0,1fr))] print:flex-none print:h-auto ${reportEmbedDenseGridClass(omitShell)}`}
+            >
               {/* Row 1 */}
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
@@ -345,7 +344,27 @@ export function NextMarketBreadthScreen() {
             </div>
           )}
         </section>
-      </NextDashboardShell>
+  );
+
+  return (
+    <>
+      {omitShell ? (
+        mainColumn
+      ) : (
+        <NextDashboardShell
+          navItems={NEXT_DASHBOARD_NAV_ITEMS}
+          colors={C}
+          shellThemeVars={shellThemeVars}
+          updatedAt={updatedAt}
+          refreshing={refreshing}
+          refreshResult={refreshResult}
+          progress={progress}
+          onRefresh={handleRefresh}
+          onThemeToggle={toggleTheme}
+        >
+          {mainColumn}
+        </NextDashboardShell>
+      )}
     </>
   );
 }

@@ -207,7 +207,11 @@ export function InflationComponentsCard({
         Inflation Components
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 xl:grid-cols-[minmax(0,1fr)_350px] xl:gap-0">
+      {/*
+        Avoid minmax(0,1fr) on the bar column: it can shrink to 0 in tight grids (e.g. col-span in a 4-col layout),
+        so the fixed 350px donut column slides left and paints over the composed chart. Use a positive min track.
+      */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 xl:grid-cols-[minmax(12rem,1fr)_minmax(220px,350px)] xl:gap-0 print:grid-cols-[minmax(12rem,1fr)_minmax(220px,350px)] print:gap-0">
         <div className="min-h-[248px] min-w-0 h-[280px] xl:h-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={displayRows} stackOffset="sign" margin={{ top: 4, right: 4, left: 2, bottom: 8 }}>
@@ -275,7 +279,7 @@ export function InflationComponentsCard({
           </ResponsiveContainer>
         </div>
 
-        <div className="flex min-h-[248px] min-w-0 h-[280px] items-center justify-center px-6 xl:h-full xl:px-6">
+        <div className="flex min-h-[248px] min-w-0 h-[280px] items-center justify-center overflow-hidden px-6 xl:h-full xl:px-6">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart margin={{ top: 6, right: 4, bottom: 6, left: 4 }}>
               <Pie

@@ -84,3 +84,179 @@
 .stagger-4 { animation-delay: 0.2s; }
 .stagger-5 { animation-delay: 0.25s; }
 .stagger-6 { animation-delay: 0.3s; }
+
+/*
+ * Report PDF: Full HD page (1920×1080 @ 96dpi ≈ 20in × 11.25in).
+ * Named @page so other routes still print on normal paper sizes.
+ *
+ * Print zoom: default 1 so PDF typography matches the screen. Lower --nd-report-print-zoom
+ * only if you need everything squeezed onto fewer pages (will shrink fonts/charts).
+ */
+@page nd-report-page {
+  size: 20in 11.25in;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: var(--nd-bg, #070b10) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  html:has(.nd-report-shell),
+  body:has(.nd-report-shell) {
+    width: 1920px !important;
+    min-width: 1920px !important;
+    margin: 0 !important;
+  }
+  .nd-report-shell {
+    --nd-report-print-zoom: 1;
+    page: nd-report-page;
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    overflow: visible !important;
+    width: 1920px !important;
+    min-width: 1920px !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    height: auto !important;
+    page-break-inside: auto;
+  }
+  /*
+   * Without variable PDF: force new page before each section after the first.
+   * With .nd-report-shell--variable-pdf, JS injects @page per section — skip static breaks (would fight named pages).
+   */
+  .nd-report-shell:not(.nd-report-shell--variable-pdf) .nd-report-pdf-section:not(:first-child) {
+    break-before: page;
+    page-break-before: always;
+  }
+  .nd-report-shell.nd-report-shell--variable-pdf {
+    page: auto !important;
+  }
+  .nd-report-shell--variable-pdf .nd-report-pdf-section {
+    overflow: visible !important;
+  }
+  /*
+   * Kill viewport-height stretching in print — otherwise min-h-screen + main h-full make the content
+   * column as tall as a full page, so Chromium inserts massive black gutters when it paginates.
+   */
+  .nd-report-shell > .nd-report-shell-inner-grid {
+    min-height: 0 !important;
+    height: auto !important;
+    width: 1920px !important;
+    min-width: 1920px !important;
+    max-width: none !important;
+    /* Sidebar hidden in print — main fills full HD width */
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .nd-report-shell > .nd-report-shell-inner-grid > main {
+    height: auto !important;
+    flex-grow: 0 !important;
+    min-height: 0 !important;
+    /* zoom on main breaks page-break / gap math in Chrome print PDF */
+    zoom: unset !important;
+    padding: 10px 14px 14px !important;
+  }
+  /* Hard-paint Radar desktop grid in print (do not rely on print viewport hitting xl) */
+  .nd-report-shell .nd-radar-main-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(270px, 360px) !important;
+    grid-template-rows: auto auto !important;
+    align-items: stretch !important;
+  }
+  /*
+   * Print viewport is often < xl breakpoint — without this, dashboard rows stay 1 column
+   * and every card spans the full paper width (ultra-wide sparklines / scale bars in PDF).
+   */
+  .nd-dashboard-top-grid {
+    grid-template-columns: minmax(0, 600fr) minmax(0, 472fr) minmax(0, 488fr) !important;
+  }
+  .nd-dashboard-middle-grid {
+    grid-template-columns: minmax(0, 252fr) minmax(0, 410fr) minmax(0, 438fr) minmax(0, 458fr) !important;
+  }
+  .nd-report-shell aside {
+    display: none !important;
+  }
+  /*
+   * Radar: desktop layout uses hidden + xl:flex; mobile uses xl:hidden.
+   * Print viewport often fails xl — browser would only render the stacked mobile column (one card width).
+   */
+  .nd-report-shell .nd-radar-desktop-layout {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .nd-report-shell .nd-radar-mobile-layout {
+    display: none !important;
+  }
+  /*
+   * Do NOT force break-inside: avoid on dashboard tiles for PDF.
+   * When a tile is taller than the remaining space on a sheet, avoid creates a huge blank gap
+   * and the tile jumps to the next page — looks broken vs on-screen preview.
+   * Flow across pages instead (charts/panels may split at page edges).
+   */
+  .nd-report-shell .nd-dashboard-panel {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+  /* Radar / long sections: allow the grid to paginate instead of one giant unbreakable block */
+  .nd-report-shell .nd-report-print-flow {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+  .nd-report-shell,
+  .nd-report-shell svg,
+  .nd-report-shell canvas {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Navigator / yield: flex slots often compute 0 height for SVG/Recharts in print */
+  .nd-report-shell .macro-navigator-svg-host {
+    min-height: 280px !important;
+  }
+  .nd-report-shell .macro-navigator-svg-host svg {
+    max-height: none !important;
+    min-height: 260px !important;
+  }
+  .nd-report-shell .nd-yield-recharts-slot {
+    min-height: 260px !important;
+  }
+  /*
+   * Analysis screens (Market breadth, Macro overview): grid rows use minmax(0,1fr). When @page has a
+   * definite height (variable PDF), fr tracks absorb that height and charts look crushed. Use auto rows
+   * + minimum tile height so intrinsic layout matches screen before height measurement.
+   *
+   * Card wrappers also used overflow-hidden — that clips chart rows in PDF; force visible + min heights
+   * for Recharts (same idea as .macro-navigator-svg-host / .nd-yield-recharts-slot above).
+   */
+  .nd-report-shell .nd-report-dense-chart-grid {
+    flex: 0 1 auto !important;
+    height: auto !important;
+    max-height: none !important;
+    /* minmax row floor — print viewport is short; `auto` alone still allowed squashed rows before @page reflow */
+    grid-template-rows: repeat(3, minmax(280px, auto)) !important;
+    align-content: start !important;
+  }
+  .nd-report-shell .nd-report-dense-chart-grid > * {
+    min-height: 280px !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  .nd-report-shell .nd-report-dense-chart-grid .recharts-responsive-container {
+    min-height: 240px !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+  /* flex-1 + min-h-0 lets chart areas collapse to 0 in print without this floor */
+  .nd-report-shell .nd-report-dense-chart-grid > * .min-h-0.flex-1 {
+    min-height: 200px !important;
+  }
+  .nd-report-shell .nd-report-dense-chart-grid svg {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}

@@ -35,6 +35,10 @@ import {
 } from "@/components/next-dashboard/analysis/macroRatiosUtils";
 import { filterRowsByLookback } from "@/components/next-dashboard/analysis/majorIndicesUtils";
 import type { MacroOverviewData, NetLiquidityPoint, RatioPoint, RecessionBand } from "@/types";
+import {
+  reportEmbedDenseGridClass,
+  reportEmbedSectionClass,
+} from "@/components/next-dashboard/reports/reportEmbedLayoutClasses";
 
 const FETCH_DAYS = 365 * 15 + 400;
 
@@ -172,16 +176,26 @@ const PAGE1_CHARTS: Page1Spec[] = [
   },
 ];
 
-export function NextMacroRatiosScreen() {
+export function NextMacroRatiosScreen({
+  omitShell = false,
+  /** When set (e.g. PDF section), lock Macro overview to this page and hide Page 1 / Page 2 toggle */
+  macroOverviewPage,
+}: {
+  omitShell?: boolean;
+  macroOverviewPage?: 1 | 2;
+}) {
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
   const queryClient = useQueryClient();
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
   const surface = useMemo(() => nextPanelSurfaceStyle(C), [C]);
   const panel = useMemo(() => ({ ...surface, padding: "10px 14px" } as const), [surface]);
-  const chartCard = "flex h-full min-h-0 min-w-0 flex-col overflow-hidden";
+  const chartCard =
+    "flex h-full min-h-0 min-w-0 flex-col overflow-hidden print:overflow-visible print:h-auto print:min-h-[280px]";
 
   const [tfKey, setTfKey] = useState<MacroRatiosTfKey>("2Y");
-  const [page, setPage] = useState<1 | 2>(1);
+  const [pageInternal, setPageInternal] = useState<1 | 2>(1);
+  const macroPageLocked = macroOverviewPage != null;
+  const page: 1 | 2 = macroOverviewPage ?? pageInternal;
   const lookbackDays = macroRatiosTfDays(tfKey);
 
   const macroQ = useQuery({
@@ -413,20 +427,8 @@ export function NextMacroRatiosScreen() {
     }
   }
 
-  return (
-    <>
-      <NextDashboardShell
-        navItems={NEXT_DASHBOARD_NAV_ITEMS}
-        colors={C}
-        shellThemeVars={shellThemeVars}
-        updatedAt={latestOverviewDate(overview)}
-        refreshing={refreshing}
-        refreshResult={refreshResult}
-        progress={progress}
-        onRefresh={handleRefresh}
-        onThemeToggle={toggleTheme}
-      >
-        <section className="flex min-h-0 flex-1 flex-col gap-3">
+  const mainColumn = (
+        <section className={reportEmbedSectionClass(omitShell)}>
           <QueryErrorBanner colors={C} errors={errors} onRetry={onRetry} />
 
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
@@ -445,17 +447,22 @@ export function NextMacroRatiosScreen() {
               )}
             </p>
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <MacroRatiosPageStrip page={page} onSelect={setPage} />
+              {!macroPageLocked ? <MacroRatiosPageStrip page={page} onSelect={setPageInternal} /> : null}
               <MacroRatiosTfStrip selectedKey={tfKey} onSelect={setTfKey} />
             </div>
           </div>
 
           {loading ? (
-            <div className="flex flex-1 items-center justify-center py-16 text-[13px]" style={{ color: "var(--nd-muted)" }}>
+            <div
+              className={`flex items-center justify-center py-16 text-[13px] ${omitShell ? "min-h-[960px] shrink-0" : "flex-1"}`}
+              style={{ color: "var(--nd-muted)" }}
+            >
               Loading macro overview…
             </div>
           ) : page === 1 ? (
-            <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[repeat(12,minmax(0,1fr))] gap-2 sm:grid-cols-2 lg:grid-rows-[repeat(6,minmax(0,1fr))] xl:grid-cols-4 xl:grid-rows-[repeat(3,minmax(0,1fr))]">
+            <div
+              className={`nd-report-dense-chart-grid grid grid-cols-1 grid-rows-[repeat(12,minmax(0,1fr))] gap-2 sm:grid-cols-2 lg:grid-rows-[repeat(6,minmax(0,1fr))] xl:grid-cols-4 xl:grid-rows-[repeat(3,minmax(0,1fr))] print:grid-cols-4 print:grid-rows-[repeat(3,minmax(0,1fr))] print:flex-none print:h-auto ${reportEmbedDenseGridClass(omitShell)}`}
+            >
               {PAGE1_CHARTS.map((spec, idx) => {
                 const { rows, rightLabel, formatR } = dataForSpec(spec);
                 return (
@@ -534,7 +541,9 @@ export function NextMacroRatiosScreen() {
               </div>
             </div>
           ) : (
-            <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[repeat(12,minmax(0,1fr))] gap-2 sm:grid-cols-2 lg:grid-rows-[repeat(6,minmax(0,1fr))] xl:grid-cols-4 xl:grid-rows-[repeat(3,minmax(0,1fr))]">
+            <div
+              className={`nd-report-dense-chart-grid grid grid-cols-1 grid-rows-[repeat(12,minmax(0,1fr))] gap-2 sm:grid-cols-2 lg:grid-rows-[repeat(6,minmax(0,1fr))] xl:grid-cols-4 xl:grid-rows-[repeat(3,minmax(0,1fr))] print:grid-cols-4 print:grid-rows-[repeat(3,minmax(0,1fr))] print:flex-none print:h-auto ${reportEmbedDenseGridClass(omitShell)}`}
+            >
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
                   title="1. Inflation expectations (TIP/IEF)"
@@ -769,7 +778,27 @@ export function NextMacroRatiosScreen() {
             </div>
           )}
         </section>
-      </NextDashboardShell>
+  );
+
+  return (
+    <>
+      {omitShell ? (
+        mainColumn
+      ) : (
+        <NextDashboardShell
+          navItems={NEXT_DASHBOARD_NAV_ITEMS}
+          colors={C}
+          shellThemeVars={shellThemeVars}
+          updatedAt={latestOverviewDate(overview)}
+          refreshing={refreshing}
+          refreshResult={refreshResult}
+          progress={progress}
+          onRefresh={handleRefresh}
+          onThemeToggle={toggleTheme}
+        >
+          {mainColumn}
+        </NextDashboardShell>
+      )}
     </>
   );
 }

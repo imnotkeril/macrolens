@@ -5,6 +5,10 @@ const config: Config = {
   darkMode: "class",
   theme: {
     extend: {
+      screens: {
+        /** PDF / browser print: viewport is usually below xl — duplicate desktop grids with print: variants */
+        print: { raw: "print" },
+      },
       colors: {
         /** Dark Fintech — UI spec (MacroLens dashboard) */
         tn: {
