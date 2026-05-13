@@ -94,12 +94,18 @@ export function DashboardTopRowSection({
 }: Props) {
   return (
     <div
-      className="grid gap-[14px] [grid-template-columns:minmax(0,1fr)] xl:[grid-template-columns:680fr_532fr_360fr]"
+      className="nd-dashboard-top-grid grid gap-[14px] [grid-template-columns:minmax(0,1fr)] xl:[grid-template-columns:600fr_472fr_488fr]"
     >
-      <div className="flex h-[460px] max-xl:h-auto max-xl:min-h-[260px] min-h-0 w-full flex-col" style={basePanelStyle}>
-        <div className="min-h-0 flex-1">
-          <SectionTitleComponent label="Macro Navigator" />
-          <div className="mt-0.5 h-full pb-2">
+      <div
+        className="nd-dashboard-panel flex h-[460px] max-xl:h-auto max-xl:min-h-[260px] min-h-0 w-full flex-col print:break-inside-avoid"
+        style={basePanelStyle}
+      >
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden print:overflow-visible">
+          <div className="shrink-0">
+            <SectionTitleComponent label="Macro Navigator" />
+          </div>
+          {/* flex-1 + min-h-0 alone can collapse this slot to 0 height (SVG max-h-full → invisible). */}
+          <div className="mt-0.5 flex min-h-[220px] flex-1 flex-col overflow-hidden pb-2 print:min-h-[280px] print:overflow-visible">
             <MacroNavigatorSvgComponent
               growthScore={growthScore}
               fedPolicy={fedPolicy}
@@ -108,7 +114,7 @@ export function DashboardTopRowSection({
             />
           </div>
         </div>
-        <div className="mt-auto border-t pt-[10px]" style={{ borderColor: colors.borderSoft }}>
+        <div className="mt-auto shrink-0 border-t pt-[10px]" style={{ borderColor: colors.borderSoft }}>
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em]" style={{ color: colors.text }}>
             <span>Confidence</span>
             <span
@@ -123,7 +129,10 @@ export function DashboardTopRowSection({
         </div>
       </div>
 
-      <div className="flex h-[460px] max-xl:h-auto max-xl:min-h-[260px] min-h-0 w-full flex-col" style={basePanelStyle}>
+      <div
+        className="nd-dashboard-panel flex h-[460px] max-xl:h-auto max-xl:min-h-[260px] min-h-0 w-full flex-col print:break-inside-avoid"
+        style={basePanelStyle}
+      >
         <SectionTitleComponent label="Cross-Asset Signals" />
         <div
           className="mt-2 grid min-h-0 flex-1"
@@ -133,7 +142,10 @@ export function DashboardTopRowSection({
         </div>
       </div>
 
-      <div className="h-[460px] max-xl:h-auto max-xl:min-h-[260px] w-full" style={basePanelStyle}>
+      <div
+        className="nd-dashboard-panel h-[460px] max-xl:h-auto max-xl:min-h-[260px] w-full print:break-inside-avoid"
+        style={basePanelStyle}
+      >
         <div className="mb-1 flex items-start justify-between gap-3">
           <div>
             <div className="text-[18px] uppercase leading-none tracking-[0.08em]">Active Regime</div>
@@ -145,7 +157,7 @@ export function DashboardTopRowSection({
             {activeRegimeLabel}
           </span>
         </div>
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 w-full min-w-0 space-y-4">
           <InflationQuickRowComponent
             cpiValue={inflationLatest}
             coreValue={coreInflationLatest}

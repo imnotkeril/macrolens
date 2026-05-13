@@ -30,7 +30,7 @@ export function dailyIndexToWeeklyLast(daily: IndexPricePoint[]): WeeklyIndexPoi
     g.push(p);
     groups.set(k, g);
   }
-  const keys = [...groups.keys()].sort((a, b) => a.localeCompare(b));
+  const keys = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
   return keys.map((k) => {
     const group = groups.get(k)!;
     const last = group.reduce((a, b) => (a.date > b.date ? a : b));
@@ -68,7 +68,7 @@ export function computeSwingSupportLevels(weekly: WeeklyIndexPoint[], maxLevels 
   }
   if (!troughs.length) return [];
   const rounded = troughs.map((x) => Math.round(x * 100) / 100);
-  const uniq = [...new Set(rounded)].sort((a, b) => a - b);
+  const uniq = Array.from(new Set(rounded)).sort((a, b) => a - b);
   return uniq.slice(0, maxLevels);
 }
 

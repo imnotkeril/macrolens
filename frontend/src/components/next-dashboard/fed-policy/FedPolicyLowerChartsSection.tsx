@@ -42,7 +42,7 @@ export function FedPolicyLowerChartsSection({
 }) {
   return (
     <>
-      <div className="grid grid-cols-1 gap-2 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 xl:grid-cols-2 print:grid-cols-2">
         <div style={panelStyle}>
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
             Fed funds rate history
@@ -69,7 +69,7 @@ export function FedPolicyLowerChartsSection({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 xl:grid-cols-2 print:grid-cols-2">
         <div style={panelStyle}>
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
             Fed balance sheet — stacked composition

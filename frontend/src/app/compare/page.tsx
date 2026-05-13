@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function ComparePage() {
-  redirect("/next/dashboard");
+  redirect("/dashboard");
 }

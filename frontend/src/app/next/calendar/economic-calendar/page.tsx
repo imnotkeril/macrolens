@@ -1,5 +1,5 @@
-import { NextCalendarPlaceholder } from "@/components/next-dashboard/calendar/NextCalendarPlaceholder";
+import { NextEconomicCalendarScreen } from "@/components/next-dashboard/calendar/NextEconomicCalendarScreen";
 
 export default function EconomicCalendarPage() {
-  return <NextCalendarPlaceholder title="Economic calendar" />;
+  return <NextEconomicCalendarScreen />;
 }

@@ -135,7 +135,7 @@ const EQUITY_COLUMNS: EquityColumnDef[] = [
   },
 ];
 
-export function NextMajorIndicesScreen() {
+export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: boolean }) {
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
   const queryClient = useQueryClient();
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
@@ -292,19 +292,7 @@ export function NextMajorIndicesScreen() {
 
   const loading = idxQ.isPending;
 
-  return (
-    <>
-      <NextDashboardShell
-        navItems={NEXT_DASHBOARD_NAV_ITEMS}
-        colors={C}
-        shellThemeVars={shellThemeVars}
-        updatedAt={updatedAt}
-        refreshing={refreshing}
-        refreshResult={refreshResult}
-        progress={progress}
-        onRefresh={handleRefresh}
-        onThemeToggle={toggleTheme}
-      >
+  const mainColumn = (
         <section className="flex flex-col gap-2">
           <QueryErrorBanner colors={C} errors={errors} onRetry={onRetry} />
 
@@ -313,7 +301,7 @@ export function NextMajorIndicesScreen() {
               Loading major indices…
             </div>
           ) : (
-            <div className="grid gap-2 xl:grid-cols-4 xl:items-stretch">
+            <div className="grid gap-2 xl:grid-cols-4 xl:items-stretch print:grid-cols-4">
               {EQUITY_COLUMNS.map((col, idx) => {
                 const block = equityPrepared?.[col.id];
                 const ci = idx as 0 | 1 | 2;
@@ -528,7 +516,27 @@ export function NextMajorIndicesScreen() {
             </div>
           )}
         </section>
-      </NextDashboardShell>
+  );
+
+  return (
+    <>
+      {omitShell ? (
+        mainColumn
+      ) : (
+        <NextDashboardShell
+          navItems={NEXT_DASHBOARD_NAV_ITEMS}
+          colors={C}
+          shellThemeVars={shellThemeVars}
+          updatedAt={updatedAt}
+          refreshing={refreshing}
+          refreshResult={refreshResult}
+          progress={progress}
+          onRefresh={handleRefresh}
+          onThemeToggle={toggleTheme}
+        >
+          {mainColumn}
+        </NextDashboardShell>
+      )}
     </>
   );
 }

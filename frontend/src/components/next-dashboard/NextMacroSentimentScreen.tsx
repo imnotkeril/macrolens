@@ -210,7 +210,7 @@ export function NextMacroSentimentScreen({ sectionSlug }: { sectionSlug?: string
               </div>
               <nav className="mt-3 flex flex-col gap-1.5">
                 {SIDEBAR.map((item) => {
-                  const href = `/next/macro-sentiment/${item.slug}`;
+                  const href = `/macro-sentiment/${item.slug}`;
                   const isActive = activeCategory === slugToCategory(item.slug);
                   return (
                     <Link

@@ -190,7 +190,7 @@ export function NextMacroRatiosScreen({
   const surface = useMemo(() => nextPanelSurfaceStyle(C), [C]);
   const panel = useMemo(() => ({ ...surface, padding: "10px 14px" } as const), [surface]);
   const chartCard =
-    "flex h-full min-h-0 min-w-0 flex-col overflow-hidden print:overflow-visible print:h-auto print:min-h-[280px]";
+    "flex h-full min-h-0 min-w-0 flex-col overflow-hidden print:h-auto print:min-h-[280px]";
 
   const [tfKey, setTfKey] = useState<MacroRatiosTfKey>("2Y");
   const [pageInternal, setPageInternal] = useState<1 | 2>(1);

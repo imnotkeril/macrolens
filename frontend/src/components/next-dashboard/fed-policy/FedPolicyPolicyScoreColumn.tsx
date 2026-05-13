@@ -48,7 +48,7 @@ export function FedPolicyPolicyScoreColumn({
   const bsS = status ? balanceSheetScoreLabel(status.balance_sheet_direction) : null;
 
   return (
-    <div className="flex min-h-0 flex-col gap-3 xl:col-span-3" style={panelStyle}>
+    <div className="flex min-h-0 flex-col gap-3 xl:col-span-3 print:col-span-3" style={panelStyle}>
       {status ? (
         <>
           <div className="flex items-start justify-between gap-3">

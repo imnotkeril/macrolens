@@ -22,7 +22,7 @@ export function FedPolicyFomcColumn({
         ? "ZQ heuristic (fallback)"
         : null;
   return (
-    <div className="flex min-h-0 flex-col gap-3 xl:col-span-5" style={panelStyle}>
+    <div className="flex min-h-0 flex-col gap-3 xl:col-span-5 print:col-span-5" style={panelStyle}>
       <div>
         <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
           FOMC probabilities

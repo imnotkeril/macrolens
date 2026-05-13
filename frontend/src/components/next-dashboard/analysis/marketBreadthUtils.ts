@@ -12,7 +12,7 @@ export function breadthValuesToWeeklyLast(rows: RatioPoint[]): RatioPoint[] {
     g.push(p);
     groups.set(wk, g);
   }
-  const keys = [...groups.keys()].sort((a, b) => a.localeCompare(b));
+  const keys = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
   return keys.map((k) => {
     const group = groups.get(k)!;
     const last = group.reduce((a, b) => (a.date > b.date ? a : b));
@@ -38,7 +38,7 @@ export function mergeHighsLows(
     cur.l = p.value;
     byDate.set(p.date, cur);
   }
-  return [...byDate.entries()]
+  return Array.from(byDate.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([date, v]) => ({
       date,

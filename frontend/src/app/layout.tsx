@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, IBM_Plex_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import { AppFrame } from "@/components/AppFrame";
 import { QueryProvider } from "@/components/QueryProvider";
+import { NextShellThemeProvider } from "@/components/next-dashboard/nextShellTheme";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -32,7 +33,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark">
       <body className={`${inter.variable} ${plexSans.variable} ${plexMono.variable} font-sans`}>
         <QueryProvider>
-          <AppFrame>{children}</AppFrame>
+          <NextShellThemeProvider>
+            <AppFrame>{children}</AppFrame>
+          </NextShellThemeProvider>
         </QueryProvider>
       </body>
     </html>

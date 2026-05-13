@@ -1,5 +1,5 @@
-import { NextCalendarPlaceholder } from "@/components/next-dashboard/calendar/NextCalendarPlaceholder";
+import { NextFomcMinutesScreen } from "@/components/next-dashboard/calendar/NextFomcMinutesScreen";
 
 export default function FomcMinutesPage() {
-  return <NextCalendarPlaceholder title="FOMC minutes" />;
+  return <NextFomcMinutesScreen />;
 }

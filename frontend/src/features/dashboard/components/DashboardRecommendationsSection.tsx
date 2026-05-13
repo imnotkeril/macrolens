@@ -188,7 +188,10 @@ export function DashboardRecommendationsSection({
   onOpenIdeas,
 }: Props) {
   return (
-    <div style={{ background: colors.panel, border: `1px solid ${colors.border}`, borderRadius: "4px", padding: "20px 22px", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.012)", minHeight: 0, overflow: "hidden", height: 280 }}>
+    <div
+      className="nd-dashboard-panel print:break-inside-avoid"
+      style={{ background: colors.panel, border: `1px solid ${colors.border}`, borderRadius: "4px", padding: "20px 22px", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.012)", minHeight: 0, overflow: "hidden", height: 280 }}
+    >
       <div className="mb-1 text-[18px] uppercase leading-none tracking-[0.08em]">Recommendations Snapshot</div>
       <div className="mt-3 grid grid-cols-[0.82fr_0.95fr_1.24fr_2.84fr] gap-0 text-[12px]" style={{ color: colors.soft }}>
         <div className="flex h-full flex-col pr-3">

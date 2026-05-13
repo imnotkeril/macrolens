@@ -107,24 +107,24 @@ export const nextDashboardCssTokenColors = {
 } as const;
 
 export const NEXT_DASHBOARD_NAV_ITEMS: SidebarNavItem[] = [
-  { label: "Dashboard", icon: Grid2X2, href: "/next/dashboard" },
-  { label: "Radar", icon: Gauge, href: "/next/radar" },
-  { label: "Macro Sentiment", icon: LineChart, href: "/next/macro-sentiment" },
-  { label: "Fed Policy", icon: CircleDollarSign, href: "/next/fed-policy" },
-  { label: "Yield Curve", icon: TrendingUp, href: "/next/yield-curve" },
-  { label: "Inflation", icon: Sparkles, href: "/next/inflation" },
+  { label: "Dashboard", icon: Grid2X2, href: "/dashboard" },
+  { label: "Radar", icon: Gauge, href: "/radar" },
+  { label: "Macro Sentiment", icon: LineChart, href: "/macro-sentiment" },
+  { label: "Fed Policy", icon: CircleDollarSign, href: "/fed-policy" },
+  { label: "Yield Curve", icon: TrendingUp, href: "/yield-curve" },
+  { label: "Inflation", icon: Sparkles, href: "/inflation" },
   {
     label: "Analysis",
     icon: Compass,
-    href: "/next/analysis",
+    href: "/analysis",
     children: [
-      { label: "Relative Performance", href: "/next/analysis/relative-performance" },
-      { label: "Major Indices & Bitcoin", href: "/next/analysis/major-indices-bitcoin" },
-      { label: "Market Breadth", href: "/next/analysis/market-breadth" },
-      { label: "Macro Overview", href: "/next/analysis/macro-overview" },
+      { label: "Relative Performance", href: "/analysis/relative-performance" },
+      { label: "Major Indices & Bitcoin", href: "/analysis/major-indices-bitcoin" },
+      { label: "Market Breadth", href: "/analysis/market-breadth" },
+      { label: "Macro Overview", href: "/analysis/macro-overview" },
     ],
   },
-  { label: "Forecast Lab", icon: FlaskConical, href: "/next/forecast-lab" },
-  { label: "Calendar", icon: CalendarDays, href: "/next/calendar" },
-  { label: "Reports", icon: Package, href: "/next/reports" },
+  { label: "Forecast Lab", icon: FlaskConical, href: "/forecast-lab" },
+  { label: "Calendar", icon: CalendarDays, href: "/calendar" },
+  { label: "Reports", icon: Package, href: "/reports" },
 ];

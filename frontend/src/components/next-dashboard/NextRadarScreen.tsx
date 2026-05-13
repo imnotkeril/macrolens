@@ -27,7 +27,7 @@ import {
 import type { RegimeHistoryPoint } from "@/types";
 import { NEXT_DASHBOARD_QUERY_ROOT } from "@/features/dashboard/queryKeys";
 
-export function NextRadarScreen() {
+export function NextRadarScreen({ omitShell = false }: { omitShell?: boolean }) {
   const queryClient = useQueryClient();
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
@@ -104,20 +104,7 @@ export function NextRadarScreen() {
     recessionQ.error,
   ]);
 
-  return (
-    <>
-      <NextDashboardShell
-        navItems={NEXT_DASHBOARD_NAV_ITEMS}
-        colors={C}
-        shellThemeVars={shellThemeVars}
-        updatedAt={updatedAt}
-        refreshing={refreshing}
-        refreshResult={refreshResult}
-        progress={progress}
-        onRefresh={handleRefresh}
-        onThemeToggle={toggleTheme}
-      >
-        {loadingShell ? (
+  const mainColumn = loadingShell ? (
           <div
             className="flex min-h-[40vh] items-center justify-center text-[13px]"
             style={{ color: C.muted }}
@@ -125,16 +112,16 @@ export function NextRadarScreen() {
             Loading cycle radar…
           </div>
         ) : regime ? (
-          <section className="flex flex-col gap-3">
+          <section className="nd-report-print-flow flex flex-col gap-3">
             <QueryErrorBanner
               title="Secondary radar data failed to load"
               colors={C}
               errors={secondaryErrors}
               onRetry={() => void queryClient.invalidateQueries({ queryKey: [NEXT_DASHBOARD_QUERY_ROOT] })}
             />
-            <div className="hidden min-h-0 flex-col gap-3 xl:flex">
+            <div className="nd-radar-desktop-layout hidden min-h-0 flex-col gap-3 xl:flex">
               <div
-                className="grid min-h-0 gap-3"
+                className="nd-radar-main-grid grid min-h-0 gap-3"
                 style={{
                   gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) minmax(270px, 360px)",
                   gridTemplateRows: "auto auto",
@@ -179,7 +166,7 @@ export function NextRadarScreen() {
               <RadarTablesSection colors={C} surface={surface} regime={regime} layout="split" />
             </div>
 
-            <div className="flex flex-col gap-3 xl:hidden">
+            <div className="nd-radar-mobile-layout flex flex-col gap-3 xl:hidden">
               <RadarCycleScorePanel colors={C} surface={surfaceTopRow} regime={regime} />
               <RadarRecessionProbPanel colors={C} surface={surfaceTopRow} regime={regime} />
               <RadarCycleTimelinePanel
@@ -210,8 +197,27 @@ export function NextRadarScreen() {
           >
             Cycle radar data unavailable.
           </div>
-        )}
-      </NextDashboardShell>
+        );
+
+  return (
+    <>
+      {omitShell ? (
+        mainColumn
+      ) : (
+        <NextDashboardShell
+          navItems={NEXT_DASHBOARD_NAV_ITEMS}
+          colors={C}
+          shellThemeVars={shellThemeVars}
+          updatedAt={updatedAt}
+          refreshing={refreshing}
+          refreshResult={refreshResult}
+          progress={progress}
+          onRefresh={handleRefresh}
+          onThemeToggle={toggleTheme}
+        >
+          {mainColumn}
+        </NextDashboardShell>
+      )}
     </>
   );
 }

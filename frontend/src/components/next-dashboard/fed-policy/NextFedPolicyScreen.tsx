@@ -26,7 +26,7 @@ import { FedPolicyBalanceMetricsColumn } from "@/components/next-dashboard/fed-p
 import { FedPolicyRateDecisionHistoryTable } from "@/components/next-dashboard/fed-policy/FedPolicyRateDecisionHistoryTable";
 import { FedPolicyLowerChartsSection } from "@/components/next-dashboard/fed-policy/FedPolicyLowerChartsSection";
 
-export function NextFedPolicyScreen() {
+export function NextFedPolicyScreen({ omitShell = false }: { omitShell?: boolean }) {
   const { shellThemeVars, toggleTheme, colors: C, theme } = useNextShellTheme();
   const queryClient = useQueryClient();
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
@@ -175,23 +175,11 @@ export function NextFedPolicyScreen() {
 
   const onRetry = () => void queryClient.invalidateQueries({ queryKey: [NEXT_FED_POLICY_QUERY_ROOT] });
 
-  return (
-    <>
-      <NextDashboardShell
-        navItems={NEXT_DASHBOARD_NAV_ITEMS}
-        colors={C}
-        shellThemeVars={shellThemeVars}
-        updatedAt={updatedAt}
-        refreshing={refreshing}
-        refreshResult={refreshResult}
-        progress={progress}
-        onRefresh={handleRefresh}
-        onThemeToggle={toggleTheme}
-      >
+  const mainColumn = (
         <section className="flex flex-col gap-2">
           <QueryErrorBanner colors={C} errors={queryErrors} onRetry={onRetry} />
 
-          <div className="grid grid-cols-1 gap-2 xl:grid-cols-12">
+          <div className="grid grid-cols-1 gap-2 xl:grid-cols-12 print:grid-cols-12">
             <FedPolicyPolicyScoreColumn
               panelStyle={panel}
               status={status}
@@ -209,8 +197,8 @@ export function NextFedPolicyScreen() {
             <FedPolicyBalanceMetricsColumn panelStyle={panel} bsMetrics={bsMetrics} bsPending={bsQ.isPending} />
           </div>
 
-          <div className="grid grid-cols-1 gap-2 xl:grid-cols-12 xl:items-stretch xl:min-h-0 xl:h-[340px]">
-            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden xl:col-span-4" style={panel}>
+          <div className="grid grid-cols-1 gap-2 xl:grid-cols-12 xl:items-stretch xl:min-h-0 xl:h-[340px] print:grid-cols-12 print:items-stretch print:min-h-0 print:h-[340px]">
+            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden xl:col-span-4 print:col-span-4" style={panel}>
               {fomcQ.data ? (
                 <FedRatePathDotPlot fomc={fomcQ.data} palette={C} />
               ) : (
@@ -219,7 +207,7 @@ export function NextFedPolicyScreen() {
                 </div>
               )}
             </div>
-            <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden xl:col-span-4" style={panel}>
+            <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden xl:col-span-4 print:col-span-4" style={panel}>
               <div className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
                 Rate decision history
               </div>
@@ -231,7 +219,7 @@ export function NextFedPolicyScreen() {
                 />
               </div>
             </div>
-            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden xl:col-span-4" style={panel}>
+            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden xl:col-span-4 print:col-span-4" style={panel}>
               <NextFedPolicyAiCard />
             </div>
           </div>
@@ -250,7 +238,27 @@ export function NextFedPolicyScreen() {
             balancePalette={balanceHex}
           />
         </section>
-      </NextDashboardShell>
+  );
+
+  return (
+    <>
+      {omitShell ? (
+        mainColumn
+      ) : (
+        <NextDashboardShell
+          navItems={NEXT_DASHBOARD_NAV_ITEMS}
+          colors={C}
+          shellThemeVars={shellThemeVars}
+          updatedAt={updatedAt}
+          refreshing={refreshing}
+          refreshResult={refreshResult}
+          progress={progress}
+          onRefresh={handleRefresh}
+          onThemeToggle={toggleTheme}
+        >
+          {mainColumn}
+        </NextDashboardShell>
+      )}
     </>
   );
 }

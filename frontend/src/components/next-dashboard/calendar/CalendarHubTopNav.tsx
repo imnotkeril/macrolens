@@ -10,11 +10,11 @@ type HubNavColors = {
 };
 
 const HUB_LINKS = [
-  { href: "/next/calendar/briefings", label: "Briefings" },
-  { href: "/next/calendar/economic-calendar", label: "Calendar" },
-  { href: "/next/calendar/events", label: "Events" },
-  { href: "/next/calendar/fomc-minutes", label: "FOMC Minutes" },
-  { href: "/next/calendar/news", label: "News" },
+  { href: "/calendar/briefings", label: "Briefings" },
+  { href: "/calendar/economic-calendar", label: "Calendar" },
+  { href: "/calendar/events", label: "Events" },
+  { href: "/calendar/fomc-minutes", label: "FOMC Minutes" },
+  { href: "/calendar/news", label: "News" },
 ] as const;
 
 type CalendarHubTopNavProps = {

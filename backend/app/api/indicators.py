@@ -69,6 +69,7 @@ def _indicator_rows_to_latest(
     return out
 
 
+@router.get("", response_model=list[IndicatorWithLatest])
 @router.get("/", response_model=list[IndicatorWithLatest])
 async def list_indicators(
     category: IndicatorCategory | None = None,

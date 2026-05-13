@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { NextCalendarArchiveDropdown } from "@/components/next-dashboard/calendar/NextCalendarArchiveDropdown";
 import { nextPanelSurfaceStyle } from "@/components/next-dashboard/nextPanelSurface";
 import { useNextShellTheme } from "@/components/next-dashboard/nextShellTheme";
 import { BRIEFING_ARCHIVE_DAYS, getEveningBriefDemo, getMorningBriefDemo } from "@/components/next-dashboard/calendar/briefingDemoData";
@@ -624,6 +625,12 @@ export function NextBriefingsScreen() {
   const surface = useMemo(() => nextPanelSurfaceStyle(C), [C]);
   const [edition, setEdition] = useState<BriefEdition>("morning");
   const [archiveDate, setArchiveDate] = useState<string>(BRIEFING_ARCHIVE_DAYS[0]?.date ?? "");
+  const [archiveOpen, setArchiveOpen] = useState(false);
+
+  const briefingArchiveOptions = useMemo(
+    () => BRIEFING_ARCHIVE_DAYS.map((d) => ({ value: d.date, label: d.label })),
+    [],
+  );
 
   const importancePalette = useMemo(
     () => ({
@@ -639,7 +646,9 @@ export function NextBriefingsScreen() {
 
   return (
     <section className="flex flex-col gap-2">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div
+        className={`flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between ${archiveOpen ? "relative z-50" : ""}`}
+      >
         <div className="flex gap-1 border-b sm:gap-2" style={{ borderColor: C.borderSoft }}>
           {(
             [
@@ -665,24 +674,13 @@ export function NextBriefingsScreen() {
             );
           })}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: C.muted }}>
-            Archive
-          </span>
-          <select
-            className="rounded border px-2 py-1.5 text-[11px] uppercase tracking-[0.08em]"
-            style={{ borderColor: C.borderSoft, color: C.text, background: C.panel }}
-            value={archiveDate}
-            onChange={(e) => setArchiveDate(e.target.value)}
-            aria-label="Briefing archive date"
-          >
-            {BRIEFING_ARCHIVE_DAYS.map((d) => (
-              <option key={d.date} value={d.date}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <NextCalendarArchiveDropdown
+          value={archiveDate}
+          onValueChange={setArchiveDate}
+          options={briefingArchiveOptions}
+          aria-label="Briefing archive date"
+          onOpenChange={setArchiveOpen}
+        />
       </div>
 
       {edition === "morning" ? (

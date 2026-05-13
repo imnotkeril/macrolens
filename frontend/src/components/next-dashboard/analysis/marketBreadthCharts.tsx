@@ -268,11 +268,11 @@ export function HighsLowsBarChart({
                 return String(v);
               }
             }}
-            formatter={(value: unknown, name: string) => {
+            formatter={(value: unknown, name?: string | number) => {
               const n = typeof value === "number" ? value : Number(value);
               const abs = Number.isFinite(n) ? Math.abs(n) : null;
               const label = name === "highs" ? "New highs" : "New lows";
-              return [abs == null ? "—" : Math.round(abs).toLocaleString(), label];
+              return [abs == null ? "—" : Math.round(abs).toLocaleString("en-US"), label];
             }}
           />
           <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
@@ -505,7 +505,7 @@ export function LineMetricChart({
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       {last != null ? (
         <div
-          className="pointer-events-none absolute right-1 top-1 z-10 rounded border px-1.5 py-0.5 font-mono text-[10px] tabular-nums"
+          className="pointer-events-none absolute right-2 top-1 z-10 rounded border px-1.5 py-0.5 font-mono text-[10px] tabular-nums"
           style={{
             borderColor: "var(--nd-border-soft)",
             background: "var(--nd-panel-soft)",
@@ -517,7 +517,8 @@ export function LineMetricChart({
       ) : null}
       <div className="min-h-0 w-full flex-1">
         <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={sorted} margin={{ top: 8, right: 10, left: 4, bottom: 20 }}>
+        {/* Wider margins — print/PDF + overflow:hidden tiles clip last px of plot/strokes without inset */}
+        <ComposedChart data={sorted} margin={{ top: 10, right: 26, left: 12, bottom: 22 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
           <XAxis
             dataKey="date"

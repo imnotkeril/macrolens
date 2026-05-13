@@ -72,10 +72,13 @@ async function fetchJSON<T>(path: string): Promise<T> {
 }
 
 // Indicators
-export const getIndicators = (category?: IndicatorCategory) =>
-  fetchJSON<IndicatorWithLatest[]>(
-    `/api/indicators${category !== undefined ? `?category=${category}` : ""}`,
-  );
+export const getIndicators = (category?: IndicatorCategory) => {
+  const path =
+    category !== undefined
+      ? `/api/indicators/?category=${encodeURIComponent(category)}`
+      : `/api/indicators/`;
+  return fetchJSON<IndicatorWithLatest[]>(path);
+};
 
 export const getKpiIndicatorsBundle = () =>
   fetchJSON<KpiIndicatorsBundle>("/api/indicators/kpi-bundle");

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, type CSSProperties, type ComponentType } from "react";
+import type { NextShellThemeContextValue } from "@/components/next-dashboard/nextShellTheme";
+import { YieldCurveSnapshotCard } from "@/components/next-dashboard/yield-curve/YieldCurveSnapshotCard";
 import type { CategoryScore, YieldCurveSnapshot } from "@/types";
 
 type Palette = {
@@ -46,11 +48,8 @@ type Props = {
   MacroCategoryRowComponent: ComponentType<{ row: CategoryScore }>;
   FedPolicyScaleBarComponent: ComponentType<{ value: number }>;
   FedRateHistorySparkComponent: ComponentType<{ values: number[] }>;
-  NavigatorYieldCurveMiniComponent: ComponentType<{
-    snapshot: YieldCurveSnapshot | null | undefined;
-    history: YieldCurveSnapshot[] | null | undefined;
-    fillContainer?: boolean;
-  }>;
+  /** Same palette tokens as `/yield-curve` — passed to `YieldCurveSnapshotCard`. */
+  yieldPalette: NextShellThemeContextValue["colors"];
 };
 
 export function DashboardMiddleRowSection({
@@ -81,7 +80,7 @@ export function DashboardMiddleRowSection({
   MacroCategoryRowComponent,
   FedPolicyScaleBarComponent,
   FedRateHistorySparkComponent,
-  NavigatorYieldCurveMiniComponent,
+  yieldPalette,
 }: Props) {
   const quadChrome = useMemo(() => {
     const s = { ...quadPanelStyle } as CSSProperties & { height?: number | string };
@@ -90,9 +89,9 @@ export function DashboardMiddleRowSection({
   }, [quadPanelStyle]);
 
   return (
-    <div className="grid items-stretch gap-[14px] [grid-template-columns:minmax(0,1fr)] xl:[grid-template-columns:252fr_410fr_438fr_458fr]">
+    <div className="nd-dashboard-middle-grid grid items-stretch gap-[14px] [grid-template-columns:minmax(0,1fr)] xl:[grid-template-columns:252fr_410fr_438fr_458fr]">
       <div
-        className="flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden"
+        className="nd-dashboard-panel flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden print:break-inside-avoid"
         style={quadChrome}
       >
         <div className="shrink-0">
@@ -122,7 +121,7 @@ export function DashboardMiddleRowSection({
             ))}
           </div>
           <Link
-            href="/next/radar"
+            href="/radar"
             className="mt-1.5 shrink-0 pt-1 text-[11px] tracking-[0.03em] transition-opacity hover:opacity-90"
             style={{ color: colors.soft }}
           >
@@ -132,7 +131,7 @@ export function DashboardMiddleRowSection({
       </div>
 
       <div
-        className="flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden"
+        className="nd-dashboard-panel flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden print:break-inside-avoid"
         style={quadChrome}
       >
         <div className="mb-1 text-[18px] uppercase leading-none tracking-[0.08em]">Macro Sentiment Score</div>
@@ -153,7 +152,7 @@ export function DashboardMiddleRowSection({
               ))}
             </div>
             <Link
-              href="/next/macro-sentiment"
+              href="/macro-sentiment"
               className="mt-2 shrink-0 pt-0.5 text-[11px] tracking-[0.03em] transition-opacity hover:opacity-90"
               style={{ color: colors.soft }}
             >
@@ -164,12 +163,12 @@ export function DashboardMiddleRowSection({
       </div>
 
       <Link
-        href="/next/fed-policy"
+        href="/fed-policy"
         className="contents no-underline outline-none focus-visible:ring-2 focus-visible:ring-[var(--nd-border)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nd-panel)]"
         aria-label="Open full Fed Policy page"
       >
         <div
-          className="flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden"
+          className="nd-dashboard-panel flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden print:break-inside-avoid"
           style={quadChrome}
         >
           <div className="mb-1 text-[18px] uppercase leading-none tracking-[0.08em]">Fed Policy Score</div>
@@ -223,7 +222,7 @@ export function DashboardMiddleRowSection({
       </Link>
 
       <div
-        className="relative flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden"
+        className="nd-dashboard-panel relative flex h-[360px] max-xl:h-auto max-xl:min-h-[280px] min-h-0 min-w-0 flex-col overflow-hidden print:break-inside-avoid"
         style={quadChrome}
       >
         <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
@@ -238,8 +237,15 @@ export function DashboardMiddleRowSection({
             </div>
           </div>
         </div>
-        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-          <NavigatorYieldCurveMiniComponent snapshot={yieldCurveSnapshot} history={yieldHistory} fillContainer />
+        <div className="flex min-h-[168px] w-full min-w-0 flex-1 basis-0 flex-col self-stretch overflow-hidden print:min-h-[260px] print:overflow-visible">
+          <YieldCurveSnapshotCard
+            palette={yieldPalette}
+            snapshot={yieldCurveSnapshot ?? undefined}
+            history={yieldHistory ?? undefined}
+            fillHeight
+            hideTitle
+            hideMetrics
+          />
         </div>
         <div className="mt-auto shrink-0 border-t px-1 pt-2 pb-0.5" style={{ borderColor: colors.borderSoft }}>
           <div className="grid grid-cols-2 gap-0">
@@ -260,7 +266,7 @@ export function DashboardMiddleRowSection({
             </div>
           </div>
           <Link
-            href="/next/yield-curve"
+            href="/yield-curve"
             className="mt-1 block pt-1 text-[11px] tracking-[0.03em] transition-opacity hover:opacity-90"
             style={{ color: colors.soft }}
           >

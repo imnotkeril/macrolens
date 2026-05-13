@@ -42,7 +42,7 @@ const ROW_CHART_H = 268;
 /** Row 1 cards share one fixed visual height. */
 const ROW1_CARD_H = "h-[452px]";
 
-export function NextYieldCurveScreen() {
+export function NextYieldCurveScreen({ omitShell = false }: { omitShell?: boolean }) {
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
   const queryClient = useQueryClient();
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
@@ -193,23 +193,11 @@ export function NextYieldCurveScreen() {
   /** Uniform tile size for chart rows (header + chart). */
   const rowCardShell = "flex min-h-[360px] flex-col";
 
-  return (
-    <>
-      <NextDashboardShell
-        navItems={NEXT_DASHBOARD_NAV_ITEMS}
-        colors={C}
-        shellThemeVars={shellThemeVars}
-        updatedAt={updatedAt}
-        refreshing={refreshing}
-        refreshResult={refreshResult}
-        progress={progress}
-        onRefresh={handleRefresh}
-        onThemeToggle={toggleTheme}
-      >
+  const mainColumn = (
         <section className="flex flex-col gap-2">
           <QueryErrorBanner colors={C} errors={queryErrors} onRetry={onRetry} />
 
-          <div className="grid grid-cols-1 gap-2 xl:grid-cols-[minmax(0,1.35fr)_336px_minmax(0,0.94fr)] xl:items-stretch">
+          <div className="grid grid-cols-1 gap-2 xl:grid-cols-[minmax(0,1.35fr)_336px_minmax(0,0.94fr)] xl:items-stretch print:grid-cols-[minmax(0,1.35fr)_336px_minmax(0,0.94fr)] print:items-stretch">
             <div className={`min-h-0 min-w-0 overflow-hidden ${ROW1_CARD_H}`} style={panel}>
               <YieldCurveSnapshotCard palette={C} snapshot={curveQ.data} history={curveHistQ.data} height={314} />
             </div>
@@ -236,7 +224,7 @@ export function NextYieldCurveScreen() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4 xl:items-stretch">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4 xl:items-stretch print:grid-cols-4">
             <div className={rowCardShell} style={panel}>
               <YieldCurveStripLineCard
                 title="5Y real yield"
@@ -287,7 +275,7 @@ export function NextYieldCurveScreen() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4 xl:items-stretch">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4 xl:items-stretch print:grid-cols-4">
             <div className={rowCardShell} style={panel}>
               <YieldCurveStripLineCard
                 title="10Y breakeven"
@@ -341,7 +329,27 @@ export function NextYieldCurveScreen() {
             </div>
           </div>
         </section>
-      </NextDashboardShell>
+  );
+
+  return (
+    <>
+      {omitShell ? (
+        mainColumn
+      ) : (
+        <NextDashboardShell
+          navItems={NEXT_DASHBOARD_NAV_ITEMS}
+          colors={C}
+          shellThemeVars={shellThemeVars}
+          updatedAt={updatedAt}
+          refreshing={refreshing}
+          refreshResult={refreshResult}
+          progress={progress}
+          onRefresh={handleRefresh}
+          onThemeToggle={toggleTheme}
+        >
+          {mainColumn}
+        </NextDashboardShell>
+      )}
     </>
   );
 }

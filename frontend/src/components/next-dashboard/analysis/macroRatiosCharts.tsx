@@ -180,13 +180,14 @@ export function DualAxisMacroChart({
               color: spxColor,
             }}
           >
-            {Math.round(last.spx).toLocaleString()}
+            {Math.round(last.spx).toLocaleString("en-US")}
           </div>
         </div>
       ) : null}
-      <div className="min-h-0 w-full flex-1">
+      <div className="min-h-0 min-w-0 max-w-full w-full flex-1 overflow-hidden">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 10, right: 12, left: 4, bottom: 18 }}>
+          {/* Right margin must fit right YAxis (width 44) + ticks; 12px clipped the scale when tiles use overflow-hidden */}
+          <ComposedChart data={data} margin={{ top: 10, right: 80, left: 10, bottom: 20 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
             <XAxis
               dataKey="date"

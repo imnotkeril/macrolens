@@ -20,7 +20,7 @@ import {
 } from "./inflationUtils";
 import { YieldCurveStripLineCard } from "@/components/next-dashboard/yield-curve/YieldCurveStripLineCard";
 
-export function NextInflationScreen() {
+export function NextInflationScreen({ omitShell = false }: { omitShell?: boolean }) {
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
   const queryClient = useQueryClient();
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
@@ -149,22 +149,11 @@ export function NextInflationScreen() {
     return { headline: h, core: c, combo, regime, strength };
   }, [headlineRows, coreRows]);
 
-  return (
-    <NextDashboardShell
-      navItems={NEXT_DASHBOARD_NAV_ITEMS}
-      colors={C}
-      shellThemeVars={shellThemeVars}
-      updatedAt={updatedAt}
-      refreshing={refreshing}
-      refreshResult={refreshResult}
-      progress={progress}
-      onRefresh={handleRefresh}
-      onThemeToggle={toggleTheme}
-    >
+  const mainColumn = (
       <section className="flex flex-col gap-2">
         <QueryErrorBanner colors={C} errors={errors} onRetry={onRetry} />
 
-        <div className="grid grid-cols-1 gap-2 xl:grid-cols-3 xl:items-stretch">
+        <div className="grid grid-cols-1 gap-2 xl:grid-cols-3 xl:items-stretch print:grid-cols-3">
           <div className={`${ROW1_CARD_H} min-w-0 overflow-hidden`} style={panel}>
             <InflationDualChartCard
               title="CPI"
@@ -197,7 +186,7 @@ export function NextInflationScreen() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4 xl:items-stretch">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4 xl:items-stretch print:grid-cols-4">
           <div className={`${rowCardShell} min-w-0`} style={panel}>
             <YieldCurveStripLineCard
               title="STICKY VS HEADLINE"
@@ -256,15 +245,15 @@ export function NextInflationScreen() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 xl:grid-cols-4 xl:items-stretch">
-          <div className={`${rowCardShell} min-w-0 xl:col-span-3`} style={panel}>
+        <div className="grid grid-cols-1 gap-2 xl:grid-cols-4 xl:items-stretch print:grid-cols-4">
+          <div className={`${rowCardShell} min-w-0 xl:col-span-3 print:col-span-3`} style={panel}>
             <InflationComponentsCard
               cpiYoy={inflQ.data?.cpi_yoy}
               cpiCoreYoy={inflQ.data?.cpi_core_yoy}
               pending={inflQ.isPending}
             />
           </div>
-          <div className={`${rowCardShell} min-w-0 xl:col-span-1`} style={panel}>
+          <div className={`${rowCardShell} min-w-0 xl:col-span-1 print:col-span-1`} style={panel}>
             <div className="flex h-full min-h-0 flex-col">
               <div className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-text)" }}>
                 Now vs History
@@ -359,6 +348,23 @@ export function NextInflationScreen() {
           </div>
         </div>
       </section>
+  );
+
+  return omitShell ? (
+    mainColumn
+  ) : (
+    <NextDashboardShell
+      navItems={NEXT_DASHBOARD_NAV_ITEMS}
+      colors={C}
+      shellThemeVars={shellThemeVars}
+      updatedAt={updatedAt}
+      refreshing={refreshing}
+      refreshResult={refreshResult}
+      progress={progress}
+      onRefresh={handleRefresh}
+      onThemeToggle={toggleTheme}
+    >
+      {mainColumn}
     </NextDashboardShell>
   );
 }

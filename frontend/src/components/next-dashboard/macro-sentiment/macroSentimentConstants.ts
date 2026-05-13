@@ -12,7 +12,11 @@ export const SLUG_TO_CATEGORY: Record<string, IndicatorCategory> = {
   housing: "housing",
   "orders-production": "orders",
   orders: "orders",
+  "orders_production": "orders",
+  "orders-and-production": "orders",
   "income-sales": "income_sales",
+  income_sales: "income_sales",
+  "income-and-sales": "income_sales",
   employment: "employment",
   inflation: "inflation",
 };

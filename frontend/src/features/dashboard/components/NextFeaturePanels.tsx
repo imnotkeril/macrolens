@@ -83,7 +83,7 @@ export function FedPolicySinglePanel({
 }) {
   return (
     <Link
-      href="/next/fed-policy"
+      href="/fed-policy"
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden no-underline outline-none focus-visible:ring-2 focus-visible:ring-[var(--nd-border)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nd-panel)]"
       style={panelStyle}
       aria-label="Open full Fed Policy page"

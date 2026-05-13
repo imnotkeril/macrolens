@@ -86,7 +86,8 @@
 .stagger-6 { animation-delay: 0.3s; }
 
 /*
- * Report PDF: Full HD page (1920×1080 @ 96dpi ≈ 20in × 11.25in).
+ * Report PDF: unified canvas 1920×1080 @ 96dpi (20in × 11.25in). Sidebar is hidden in print; <main>
+ * uses the full width (no horizontal padding) so grids match on-screen Full HD layout.
  * Named @page so other routes still print on normal paper sizes.
  *
  * Print zoom: default 1 so PDF typography matches the screen. Lower --nd-report-print-zoom
@@ -113,6 +114,8 @@
     margin: 0 !important;
   }
   .nd-report-shell {
+    --nd-report-canvas-width: 1920px;
+    --nd-report-canvas-height: 1080px;
     --nd-report-print-zoom: 1;
     page: nd-report-page;
     position: static !important;
@@ -159,7 +162,11 @@
     min-height: 0 !important;
     /* zoom on main breaks page-break / gap math in Chrome print PDF */
     zoom: unset !important;
-    padding: 10px 14px 14px !important;
+    width: 100% !important;
+    max-width: var(--nd-report-canvas-width, 1920px) !important;
+    box-sizing: border-box !important;
+    /* Full-bleed content width = 1920px canvas (matches on-screen report area without sidebar) */
+    padding: 0 !important;
   }
   /* Hard-paint Radar desktop grid in print (do not rely on print viewport hitting xl) */
   .nd-report-shell .nd-radar-main-grid {
@@ -225,12 +232,45 @@
     min-height: 260px !important;
   }
   /*
+   * Chromium PDF clips SVG/Recharts under overflow:hidden on dashboard tiles.
+   * IMPORTANT: do NOT set overflow:visible on every .nd-dashboard-panel — Major Indices / report
+   * sections use the same class inside flex columns; that breaks flex height calculation and Recharts
+   * ResponsiveContainer ends up with ~0 height (empty black chart areas in PDF).
+   */
+  .nd-report-shell .nd-dashboard-top-grid .nd-dashboard-panel.overflow-hidden,
+  .nd-report-shell .nd-dashboard-middle-grid .nd-dashboard-panel.overflow-hidden {
+    overflow: visible !important;
+  }
+  /*
+   * Major Indices: four equal columns — Recharts can measure width before flex/grid settles; force
+   * wrapper + surface to span the full cell so plot area matches the card interior.
+   */
+  .nd-report-shell .nd-major-indices-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    width: 100% !important;
+  }
+  .nd-report-shell .nd-major-indices-grid .recharts-responsive-container,
+  .nd-report-shell .nd-major-indices-grid .recharts-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .nd-report-shell .nd-major-indices-grid .recharts-responsive-container {
+    min-height: 420px !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+  .nd-report-shell .nd-dashboard-top-grid,
+  .nd-report-shell .nd-dashboard-middle-grid {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  /*
    * Analysis screens (Market breadth, Macro overview): grid rows use minmax(0,1fr). When @page has a
    * definite height (variable PDF), fr tracks absorb that height and charts look crushed. Use auto rows
    * + minimum tile height so intrinsic layout matches screen before height measurement.
    *
-   * Card wrappers also used overflow-hidden — that clips chart rows in PDF; force visible + min heights
-   * for Recharts (same idea as .macro-navigator-svg-host / .nd-yield-recharts-slot above).
+   * Clip chart SVG to each tile — overflow visible here causes Recharts to paint outside the cell.
    */
   .nd-report-shell .nd-report-dense-chart-grid {
     flex: 0 1 auto !important;
@@ -242,9 +282,12 @@
   }
   .nd-report-shell .nd-report-dense-chart-grid > * {
     min-height: 280px !important;
-    overflow: visible !important;
+    overflow: hidden !important;
+    isolation: isolate;
     height: auto !important;
     max-height: none !important;
+    padding: 0 14px;
+    box-sizing: border-box;
   }
   .nd-report-shell .nd-report-dense-chart-grid .recharts-responsive-container {
     min-height: 240px !important;
@@ -255,8 +298,137 @@
   .nd-report-shell .nd-report-dense-chart-grid > * .min-h-0.flex-1 {
     min-height: 200px !important;
   }
-  .nd-report-shell .nd-report-dense-chart-grid svg {
-    max-height: none !important;
+}
+
+/*
+ * Report preview route only (`.nd-report-shell--screen-print-parity` on shell).
+ * Print @media rules do not apply on screen — without this, `/reports/preview` looks unchanged vs PDF.
+ */
+@media screen {
+  .nd-report-shell.nd-report-shell--screen-print-parity {
+    min-width: 1920px !important;
+  }
+
+  .nd-report-shell--screen-print-parity > .nd-report-shell-inner-grid {
+    min-height: 0 !important;
+    height: auto !important;
+    width: 1920px !important;
+    min-width: 1920px !important;
+    max-width: none !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .nd-report-shell--screen-print-parity > .nd-report-shell-inner-grid > main {
+    height: auto !important;
+    flex-grow: 0 !important;
+    min-height: 0 !important;
+    zoom: unset !important;
+    width: 100% !important;
+    max-width: 1920px !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+  }
+
+  .nd-report-shell--screen-print-parity aside {
+    display: none !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-radar-main-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(270px, 360px) !important;
+    grid-template-rows: auto auto !important;
+    align-items: stretch !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-dashboard-top-grid {
+    grid-template-columns: minmax(0, 600fr) minmax(0, 472fr) minmax(0, 488fr) !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-dashboard-middle-grid {
+    grid-template-columns: minmax(0, 252fr) minmax(0, 410fr) minmax(0, 438fr) minmax(0, 458fr) !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-radar-desktop-layout {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-radar-mobile-layout {
+    display: none !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-dashboard-top-grid .nd-dashboard-panel.overflow-hidden,
+  .nd-report-shell--screen-print-parity .nd-dashboard-middle-grid .nd-dashboard-panel.overflow-hidden {
     overflow: visible !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-major-indices-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    width: 100% !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-major-indices-grid .recharts-responsive-container,
+  .nd-report-shell--screen-print-parity .nd-major-indices-grid .recharts-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-major-indices-grid .recharts-responsive-container {
+    min-height: 420px !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-dashboard-top-grid,
+  .nd-report-shell--screen-print-parity .nd-dashboard-middle-grid {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-report-dense-chart-grid {
+    flex: 0 1 auto !important;
+    height: auto !important;
+    max-height: none !important;
+    grid-template-rows: repeat(3, minmax(280px, auto)) !important;
+    align-content: start !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-report-dense-chart-grid > * {
+    min-height: 280px !important;
+    overflow: hidden !important;
+    isolation: isolate;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 14px;
+    box-sizing: border-box;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-report-dense-chart-grid .recharts-responsive-container {
+    min-height: 240px !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-report-dense-chart-grid > * .min-h-0.flex-1 {
+    min-height: 200px !important;
+  }
+
+  .nd-report-shell--screen-print-parity .macro-navigator-svg-host {
+    min-height: 280px !important;
+  }
+
+  .nd-report-shell--screen-print-parity .macro-navigator-svg-host svg {
+    max-height: none !important;
+    min-height: 260px !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-yield-recharts-slot {
+    min-height: 260px !important;
+  }
+
+  .nd-report-shell--screen-print-parity .nd-dashboard-panel {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 }

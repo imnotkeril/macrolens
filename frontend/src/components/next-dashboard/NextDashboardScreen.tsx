@@ -27,7 +27,6 @@ import {
   MacroCategoryRow,
   MacroNavigatorSvg,
   MacroSentimentSparkBlock,
-  NavigatorYieldCurveMini,
   QuickRow,
   regimeAccent,
   RiskSegmentDonut,
@@ -52,14 +51,17 @@ import {
   DASHBOARD_SECTOR_TICKER_MAP,
 } from "@/features/dashboard/constants/fallbackDashboard";
 import { NEXT_DASHBOARD_QUERY_ROOT } from "@/features/dashboard/queryKeys";
+import { useOptionalReportStack } from "@/components/next-dashboard/nextReportStack";
 
 /** Panel layout: viewport-relative grid; parity with Trading Navigator proportions. */
 
 type NextDashboardScreenProps = {
-  mode?: "dashboard" | "placeholder" | "fed-policy";
+  mode?: "dashboard" | "report" | "placeholder" | "fed-policy" | "not-found";
   placeholderTitle?: string;
   /** Shown on placeholder: link to the same content in the classic (TopNav) app */
   placeholderLegacyHref?: string;
+  /** Render only main column (used inside `/reports/preview` outer shell). */
+  omitShell?: boolean;
 };
 
 type SnapshotDetailState = SnapshotDetailKind | null;
@@ -77,10 +79,13 @@ export function NextDashboardScreen({
   mode = "dashboard",
   placeholderTitle = "Coming soon",
   placeholderLegacyHref,
+  omitShell = false,
 }: NextDashboardScreenProps) {
+  const reportStack = useOptionalReportStack();
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
   const [snapshotDetail, setSnapshotDetail] = useState<SnapshotDetailState>(null);
-  const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
+  const { refreshing, refreshResult, progress, handleRefresh: runDataRefresh } = useDataRefresh();
+  const handleRefresh = mode === "report" ? () => {} : runDataRefresh;
   const queryClient = useQueryClient();
   const {
     queryErrors,
@@ -144,21 +149,37 @@ export function NextDashboardScreen({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [snapshotDetail]);
 
-  return (
-    <>
-      <NextDashboardShell
-        navItems={NEXT_DASHBOARD_NAV_ITEMS}
-        colors={C}
-        shellThemeVars={shellThemeVars}
-        updatedAt={updatedAt}
-        refreshing={refreshing}
-        refreshResult={refreshResult}
-        progress={progress}
-        onRefresh={handleRefresh}
-        onThemeToggle={toggleTheme}
-      >
-        {mode === "dashboard" ? (
+  const showDashboardGrid = mode === "dashboard" || mode === "report";
+  const showReportSnapshotBar = mode === "report" && !reportStack?.compositePreview;
+
+  const mainColumn =
+    showDashboardGrid ? (
           <section style={{ display: "grid", gap: 12 }}>
+            {showReportSnapshotBar ? (
+              <div
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[2px] border px-4 py-3 print:hidden"
+                style={{ borderColor: C.borderSoft, background: C.panelSoft }}
+              >
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-[0.1em]" style={{ color: C.muted }}>
+                    Dashboard snapshot
+                  </div>
+                  <div className="mt-1 text-[12px] leading-snug" style={{ color: C.soft }}>
+                    PDF uses a wide 16∶9 page (same proportions as on screen). Print zoom defaults to <strong>100%</strong> (<code className="text-[11px]">--nd-report-print-zoom: 1</code>) so typography matches the app; lower it in globals.css only if you need to squeeze onto fewer pages.
+                    In the print dialog keep scale at <strong>100%</strong> (do not use “fit to page”). Enable background graphics if colors look faint. In Chrome / Edge, disable{" "}
+                    <strong>Headers and footers</strong> under More settings so the PDF does not include the URL, title, or auto page numbers.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-[2px] border px-4 py-2 text-[11px] uppercase tracking-[0.12em] transition-opacity hover:opacity-90"
+                  style={{ borderColor: C.borderSoft, background: C.panel, color: C.text }}
+                  onClick={() => window.print()}
+                >
+                  Save as PDF
+                </button>
+              </div>
+            ) : null}
             <QueryErrorBanner
               colors={C}
               errors={queryErrors}
@@ -225,7 +246,7 @@ export function NextDashboardScreen({
               MacroCategoryRowComponent={MacroCategoryRow}
               FedPolicyScaleBarComponent={FedPolicyScaleBar}
               FedRateHistorySparkComponent={FedRateHistorySpark}
-              NavigatorYieldCurveMiniComponent={NavigatorYieldCurveMini}
+              yieldPalette={C}
             />
 
             <DashboardRecommendationsSection
@@ -245,9 +266,9 @@ export function NextDashboardScreen({
               dmGeo={dmGeo}
               emGeo={emGeo}
               recs={recs}
-              onOpenFactors={() => setSnapshotDetail("factors")}
-              onOpenSectors={() => setSnapshotDetail("sectors")}
-              onOpenIdeas={() => setSnapshotDetail("ideas")}
+              onOpenFactors={mode === "report" ? () => {} : () => setSnapshotDetail("factors")}
+              onOpenSectors={mode === "report" ? () => {} : () => setSnapshotDetail("sectors")}
+              onOpenIdeas={mode === "report" ? () => {} : () => setSnapshotDetail("ideas")}
             />
           </section>
           ) : mode === "fed-policy" ? (
@@ -269,7 +290,26 @@ export function NextDashboardScreen({
                 FedRateHistorySparkComponent={FedRateHistorySpark}
               />
             </section>
-          ) : (
+        ) : mode === "not-found" ? (
+          <section
+            className="flex min-h-[calc(100vh-80px)] items-center justify-center rounded-[2px] border"
+            style={{ borderColor: C.borderSoft, background: C.panel }}
+          >
+            <div className="text-center">
+              <div className="text-[42px] uppercase tracking-[0.14em]">404</div>
+              <div className="mt-3 text-[14px] uppercase tracking-[0.08em]" style={{ color: C.soft }}>
+                This page does not exist.
+              </div>
+              <Link
+                href="/dashboard"
+                className="mt-8 inline-block text-[11px] uppercase tracking-[0.12em] underline underline-offset-4 transition-opacity hover:opacity-80"
+                style={{ color: C.green }}
+              >
+                Go to dashboard →
+              </Link>
+            </div>
+          </section>
+        ) : (
             <section
               className="flex min-h-[calc(100vh-80px)] items-center justify-center rounded-[2px] border"
               style={{ borderColor: C.borderSoft, background: C.panel }}
@@ -290,8 +330,28 @@ export function NextDashboardScreen({
                 ) : null}
               </div>
             </section>
-        )}
-      </NextDashboardShell>
+        );
+
+  return (
+    <>
+      {omitShell ? (
+        mainColumn
+      ) : (
+        <NextDashboardShell
+          navItems={NEXT_DASHBOARD_NAV_ITEMS}
+          colors={C}
+          shellThemeVars={shellThemeVars}
+          updatedAt={updatedAt}
+          refreshing={mode === "report" ? false : refreshing}
+          refreshResult={mode === "report" ? null : refreshResult}
+          progress={mode === "report" ? null : progress}
+          onRefresh={handleRefresh}
+          onThemeToggle={toggleTheme}
+          reportLayout={mode === "report"}
+        >
+          {mainColumn}
+        </NextDashboardShell>
+      )}
       {snapshotDetail ? (
         <SnapshotDetailModal
           kind={snapshotDetail}

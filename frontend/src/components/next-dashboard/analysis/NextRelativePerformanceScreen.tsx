@@ -69,7 +69,7 @@ const TOP_CARD_H = "h-[740px]";
 /** Macro strips — taller than before so Recharts area stays readable (aligned with strip density on Yield Curve). */
 const MACRO_ROW_H = "h-[120px]";
 
-export function NextRelativePerformanceScreen() {
+export function NextRelativePerformanceScreen({ omitShell = false }: { omitShell?: boolean }) {
   const { shellThemeVars, toggleTheme, colors: C } = useNextShellTheme();
   const queryClient = useQueryClient();
   const { refreshing, refreshResult, progress, handleRefresh } = useDataRefresh();
@@ -310,19 +310,7 @@ export function NextRelativePerformanceScreen() {
     };
   }, [loading, sectorChart, currencyChart, sentimentChart, colDays]);
 
-  return (
-    <>
-      <NextDashboardShell
-        navItems={NEXT_DASHBOARD_NAV_ITEMS}
-        colors={C}
-        shellThemeVars={shellThemeVars}
-        updatedAt={updatedAt}
-        refreshing={refreshing}
-        refreshResult={refreshResult}
-        progress={progress}
-        onRefresh={handleRefresh}
-        onThemeToggle={toggleTheme}
-      >
+  const mainColumn = (
         <section className="flex flex-col gap-2">
           <QueryErrorBanner colors={C} errors={queryErrors} onRetry={onRetry} />
 
@@ -331,7 +319,7 @@ export function NextRelativePerformanceScreen() {
               Loading relative performance…
             </div>
           ) : (
-            <div className="grid gap-2 lg:grid-cols-3 lg:items-stretch">
+            <div className="grid gap-2 lg:grid-cols-3 lg:items-stretch print:grid-cols-3">
               {/* Column 1 — Sectors */}
               <div className="flex min-w-0 flex-col gap-1" style={panel}>
                 <div
@@ -576,7 +564,27 @@ export function NextRelativePerformanceScreen() {
             </div>
           )}
         </section>
-      </NextDashboardShell>
+  );
+
+  return (
+    <>
+      {omitShell ? (
+        mainColumn
+      ) : (
+        <NextDashboardShell
+          navItems={NEXT_DASHBOARD_NAV_ITEMS}
+          colors={C}
+          shellThemeVars={shellThemeVars}
+          updatedAt={updatedAt}
+          refreshing={refreshing}
+          refreshResult={refreshResult}
+          progress={progress}
+          onRefresh={handleRefresh}
+          onThemeToggle={toggleTheme}
+        >
+          {mainColumn}
+        </NextDashboardShell>
+      )}
     </>
   );
 }
@@ -592,7 +600,7 @@ function MacroIndicatorRow({
   showDateAxis = false,
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   data: RatioPoint[];
   format: (v: number) => string;
   lineColor: string;
@@ -625,14 +633,16 @@ function MacroIndicatorRow({
       <div className="shrink-0 text-[8px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
         {title}
       </div>
-      <div className="shrink-0 text-[7px] font-light uppercase tracking-[0.06em]" style={{ color: "var(--nd-muted)" }}>
-        {subtitle}
-      </div>
+      {subtitle ? (
+        <div className="shrink-0 text-[7px] font-light uppercase tracking-[0.06em]" style={{ color: "var(--nd-muted)" }}>
+          {subtitle}
+        </div>
+      ) : null}
       <div className="relative min-h-[48px] w-full flex-1">
         <RelativePerformanceMacroLine
           rows={rows}
           lineColor={lineColor}
-          tooltipLabel={subtitle}
+          tooltipLabel={subtitle ?? title}
           valueFormat={format}
           recessionBands={recessionBands}
           stepped={stepped}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, Home, LineChart, Package, ShoppingCart, TrendingUp, Users } from "lucide-react";
 import type { CategoryScore, CrossAssetSignal, YieldCurveSnapshot } from "@/types";
 import { CATEGORY_LABELS } from "@/lib/utils";
@@ -20,20 +20,17 @@ const C = {
   blue: "var(--nd-blue)",
 };
 
-const YIELD_MATURITY_ORDER = ["3M", "1Y", "2Y", "3Y", "5Y", "7Y", "10Y", "20Y", "30Y"] as const;
-
-const YIELD_CURVE_SERIES_COLORS = {
-  now: "#79ad76",
-  m3: C.red,
-  m6: "#d4b35e",
-  y1: "#6a8ec4",
+/** Literal hex for SVG — browsers often ignore CSS variables on SVG stroke/fill presentation attrs */
+const NAV_SVG = {
+  bg: "#070b10",
+  border: "#2f3842",
+  muted: "#7e7e78",
+  soft: "#b1ada6",
+  green: "#72ad66",
+  red: "#d45d72",
+  yellow: "#d4a93b",
+  blue: "#5d82be",
 } as const;
-
-const YIELD_HISTORY_STYLE = [
-  { key: "m3" as const, opacity: 0.78, dash: [5, 5] as [number, number] },
-  { key: "m6" as const, opacity: 0.76, dash: [4, 4] as [number, number] },
-  { key: "y1" as const, opacity: 0.74, dash: [6, 4] as [number, number] },
-];
 
 const CATEGORY_PHASE: Record<string, string> = {
   housing: "Leading",
@@ -94,28 +91,34 @@ export function MacroNavigatorSvg({
   const redPast = "#c84f63";
   const redPastSoft = "#c88092";
   const greenAheadSoft = "#93c786";
-  const greenAhead = C.green;
+  const greenAhead = NAV_SVG.green;
   const neutralNow = "#cfc8bd";
   const ensemblePurple = "#b99ad8";
 
   return (
-    <svg className="h-full w-full" viewBox="0 0 620 390" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-      <line x1="310" y1="42" x2="310" y2="344" stroke={C.border} strokeWidth="1" />
-      <line x1="118" y1="195" x2="502" y2="195" stroke={C.border} strokeWidth="1" />
-      <line x1="310" y1="42" x2="310" y2="344" stroke={C.muted} strokeWidth="1" strokeDasharray="1 62" opacity="0.5" />
-      <line x1="118" y1="195" x2="502" y2="195" stroke={C.muted} strokeWidth="1" strokeDasharray="28 28" opacity="0.35" />
+    <div className="macro-navigator-svg-host relative flex h-full min-h-[200px] w-full min-w-0 flex-1 flex-col items-center justify-center overflow-hidden print:overflow-visible">
+      <svg
+        className="macro-navigator-svg block h-full w-full max-h-[min(100%,420px)] min-h-[180px]"
+        viewBox="0 0 620 390"
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden="true"
+      >
+      <line x1="310" y1="42" x2="310" y2="344" stroke={NAV_SVG.border} strokeWidth="1" />
+      <line x1="118" y1="195" x2="502" y2="195" stroke={NAV_SVG.border} strokeWidth="1" />
+      <line x1="310" y1="42" x2="310" y2="344" stroke={NAV_SVG.muted} strokeWidth="1" strokeDasharray="1 62" opacity="0.5" />
+      <line x1="118" y1="195" x2="502" y2="195" stroke={NAV_SVG.muted} strokeWidth="1" strokeDasharray="28 28" opacity="0.35" />
 
-      <text x="170" y="102" fill={C.blue} fontSize="18" letterSpacing="1.3">GROWTH</text>
-      <text x="417" y="102" fill={C.green} fontSize="18" letterSpacing="1.3">RISK ON</text>
-      <text x="170" y="314" fill={C.red} fontSize="18" letterSpacing="1.3">RISK OFF</text>
-      <text x="420" y="314" fill={C.yellow} fontSize="18" letterSpacing="1.3">VALUE</text>
+      <text x="170" y="102" fill={NAV_SVG.blue} fontSize="18" letterSpacing="1.3">GROWTH</text>
+      <text x="417" y="102" fill={NAV_SVG.green} fontSize="18" letterSpacing="1.3">RISK ON</text>
+      <text x="170" y="314" fill={NAV_SVG.red} fontSize="18" letterSpacing="1.3">RISK OFF</text>
+      <text x="420" y="314" fill={NAV_SVG.yellow} fontSize="18" letterSpacing="1.3">VALUE</text>
 
-      <text x="310" y="27" fill={C.soft} fontSize="11" textAnchor="middle">FED POLICY (EASY)</text>
-      <text x="310" y="365" fill={C.soft} fontSize="11" textAnchor="middle">FED POLICY (TIGHT)</text>
-      <text x="24" y="199" fill={C.soft} fontSize="11">MACRO</text>
-      <text x="24" y="214" fill={C.soft} fontSize="11">SENTIMENT</text>
-      <text x="554" y="199" fill={C.soft} fontSize="11">MACRO</text>
-      <text x="554" y="214" fill={C.soft} fontSize="11">SENTIMENT</text>
+      <text x="310" y="27" fill={NAV_SVG.soft} fontSize="11" textAnchor="middle">FED POLICY (EASY)</text>
+      <text x="310" y="365" fill={NAV_SVG.soft} fontSize="11" textAnchor="middle">FED POLICY (TIGHT)</text>
+      <text x="24" y="199" fill={NAV_SVG.soft} fontSize="11">MACRO</text>
+      <text x="24" y="214" fill={NAV_SVG.soft} fontSize="11">SENTIMENT</text>
+      <text x="554" y="199" fill={NAV_SVG.soft} fontSize="11">MACRO</text>
+      <text x="554" y="214" fill={NAV_SVG.soft} fontSize="11">SENTIMENT</text>
 
       <line x1="176" y1="250" x2="224" y2="164" stroke={redPast} strokeWidth="1.6" strokeDasharray="5 7" />
       <line x1="224" y1="164" x2={nowX} y2={nowY} stroke={redPastSoft} strokeWidth="1.6" strokeDasharray="5 7" />
@@ -134,10 +137,11 @@ export function MacroNavigatorSvg({
       <circle cx={ensembleX} cy={ensembleY} r="7" fill={ensemblePurple} opacity="0.9" />
       <text x={ensembleX + 10} y={ensembleY - 9} fill={ensemblePurple} fontSize="10">ENSEMBLE</text>
 
-      <circle cx={nowX} cy={nowY} r="8" fill={neutralNow} stroke={C.border} strokeWidth="2" />
-      <rect x={nowX + 16} y={nowY - 13} width="36" height="24" rx="2" fill="#c4beb3" stroke={C.border} />
-      <text x={nowX + 34} y={nowY + 3} fill={C.bg} fontSize="12" fontWeight="600" textAnchor="middle">NOW</text>
-    </svg>
+      <circle cx={nowX} cy={nowY} r="8" fill={neutralNow} stroke={NAV_SVG.border} strokeWidth="2" />
+      <rect x={nowX + 16} y={nowY - 13} width="36" height="24" rx="2" fill="#c4beb3" stroke={NAV_SVG.border} />
+      <text x={nowX + 34} y={nowY + 3} fill={NAV_SVG.bg} fontSize="12" fontWeight="600" textAnchor="middle">NOW</text>
+      </svg>
+    </div>
   );
 }
 
@@ -212,15 +216,15 @@ export function QuickRow({
   const headerGap = compact ? "mb-2" : "mb-4";
   const scaleGap = compact ? "mt-2" : "mt-3";
   return (
-    <div>
-      <div className={`${headerGap} flex items-end justify-between`}>
+    <div className="w-full min-w-0">
+      <div className={`${headerGap} flex items-end justify-between gap-3`}>
         <div>
           <div className={`${titleSize} uppercase tracking-[0.06em]`} style={{ color: C.text }}>{label}</div>
           <div className={`mt-1 ${subSize} uppercase`} style={{ color: C.soft }}>{sub ?? (format === "percent" ? "composite" : "z-score")}</div>
         </div>
         <div className={`${valueSize} leading-none tabular-nums whitespace-nowrap`}>{deltaDisplay} <span style={{ color: deltaColor }}>{deltaArrow}</span></div>
       </div>
-      <div className="relative h-[6px] rounded" style={{ background: C.border }}>
+      <div className="relative h-[6px] w-full max-w-none rounded" style={{ background: C.border }}>
         <div className="h-[6px] rounded" style={{ width: `${ratio * 100}%`, background: gradient ?? C.green }} />
         {secondaryRatio != null ? (
           <div
@@ -235,7 +239,7 @@ export function QuickRow({
         />
         <span className="absolute top-[-5px] h-4 w-px" style={{ left: `${midRatio * 100}%`, background: "#777" }} />
       </div>
-      <div className={`${scaleGap} flex justify-between text-[12px]`} style={{ color: C.soft }}>
+      <div className={`${scaleGap} flex w-full justify-between text-[12px]`} style={{ color: C.soft }}>
         <span>{formatTick(min, format)}</span><span>{formatTick(mid, format)}</span><span>{formatTick(max, format)}</span>
       </div>
     </div>
@@ -271,9 +275,9 @@ export function InflationQuickRow({
   const pointColor = pointColorFromPalette(ratio, ["#6db77a", "#c9b55d", "#c66b74"], true);
 
   return (
-    <div>
-      <div className="mb-2 flex items-end justify-between">
-        <div>
+    <div className="w-full min-w-0">
+      <div className="mb-2 flex items-end justify-between gap-3">
+        <div className="min-w-0">
           <div className="text-[12px] uppercase tracking-[0.06em]" style={{ color: C.text }}>Inflation</div>
           <div className="mt-1 text-[10px] uppercase" style={{ color: C.soft }}>CPI YoY</div>
         </div>
@@ -281,7 +285,7 @@ export function InflationQuickRow({
           {displayDelta.value} <span style={{ color: displayDelta.color }}>{deltaArrow}</span>
         </div>
       </div>
-      <div className="relative h-[6px] rounded" style={{ background: C.border }}>
+      <div className="relative h-[6px] w-full max-w-none rounded" style={{ background: C.border }}>
         <div
           className="h-[6px] rounded"
           style={{
@@ -307,7 +311,7 @@ export function InflationQuickRow({
           title={`Current CPI: ${cpiDisplay} (${displayDelta.value})\nCore CPI: ${coreDisplay} (${coreDeltaDisplay.value})`}
         />
       </div>
-      <div className="relative mt-2 h-4 text-[11px]" style={{ color: C.soft }}>
+      <div className="relative mt-2 h-4 w-full text-[11px]" style={{ color: C.soft }}>
         <span className="absolute left-0 -translate-x-0">0</span>
         <span className="absolute -translate-x-1/2" style={{ left: `${targetRatio * 100}%`, color: "#9f88df" }}>2</span>
         <span className="absolute -translate-x-1/2" style={{ left: `${midRatio * 100}%` }}>3</span>
@@ -328,9 +332,9 @@ export function FedPolicyScaleBar({ value }: { value: number }) {
         <span>0</span>
         <span>+2</span>
       </div>
-      <div className="relative h-[6px] rounded" style={{ background: C.border }}>
+      <div className="relative h-[6px] w-full max-w-none rounded" style={{ background: C.border }}>
         <div
-          className="h-[6px] rounded"
+          className="h-[6px] w-full rounded"
           style={{
             background:
               "linear-gradient(90deg, rgba(96,186,125,0.9) 0%, rgba(184,199,112,0.86) 50%, rgba(201,97,109,0.9) 100%)",
@@ -456,9 +460,8 @@ function Sparkline({
   const svgClass = responsive
     ? (responsiveMode === "fixed-height" ? "block w-full min-w-0" : "block h-full w-full min-w-0")
     : undefined;
-  const preserveAspectRatio = responsive
-    ? (responsiveMode === "fit" ? "xMidYMid meet" : "none")
-    : "xMidYMid meet";
+  const preserveAspectRatio =
+    responsive && responsiveMode === "stretch" ? "none" : "xMidYMid meet";
   return (
     <svg
       width={responsive ? "100%" : width}
@@ -642,240 +645,6 @@ function categoryIcon(cat: string) {
     default:
       return LineChart;
   }
-}
-
-export function NavigatorYieldCurveMini({
-  snapshot,
-  history,
-  fillContainer = false,
-}: {
-  snapshot: YieldCurveSnapshot | null | undefined;
-  history: YieldCurveSnapshot[] | null | undefined;
-  fillContainer?: boolean;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  const chartData = useMemo(() => {
-    if (!snapshot?.points?.length) return [];
-    return YIELD_MATURITY_ORDER.map((m) => {
-      const point = snapshot.points.find((p) => p.maturity === m);
-      const row: { maturity: string; current: number | null; hist: (number | null)[] } = {
-        maturity: m,
-        current: point?.nominal_yield ?? null,
-        hist: [],
-      };
-      history?.forEach((snap) => {
-        const hp = snap.points.find((p) => p.maturity === m);
-        row.hist.push(hp?.nominal_yield ?? null);
-      });
-      return row;
-    }).filter((d) => d.current !== null);
-  }, [snapshot, history]);
-
-  useLayoutEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || chartData.length === 0) return;
-
-    const paint = () => {
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const css = window.getComputedStyle(canvas);
-      const themeText = css.getPropertyValue("--nd-text").trim() || "#d7d0c7";
-      const themeBorder = css.getPropertyValue("--nd-border").trim() || "#2f3842";
-      const themeBorderSoft = css.getPropertyValue("--nd-border-soft").trim() || "#232b33";
-      const themeRed = css.getPropertyValue("--nd-red").trim() || "#d45d72";
-
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const rect = canvas.getBoundingClientRect();
-      const bw = Math.max(1, Math.floor(rect.width * dpr));
-      const bh = Math.max(1, Math.floor(rect.height * dpr));
-      canvas.width = bw;
-      canvas.height = bh;
-      canvas.style.width = `${rect.width}px`;
-      canvas.style.height = `${rect.height}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-
-      const w = rect.width;
-      const h = rect.height;
-      const padL = 42;
-      const padR = 18;
-      const padT = 10;
-      const padB = 30;
-      const plotW = w - padL - padR;
-      const plotH = h - padT - padB;
-
-      let yMin = Infinity;
-      let yMax = -Infinity;
-      for (const d of chartData) {
-        if (d.current != null) {
-          yMin = Math.min(yMin, d.current);
-          yMax = Math.max(yMax, d.current);
-        }
-        for (const v of d.hist) {
-          if (v != null) {
-            yMin = Math.min(yMin, v);
-            yMax = Math.max(yMax, v);
-          }
-        }
-      }
-      const yPad = (yMax - yMin) * 0.14 || 0.35;
-      yMin -= yPad;
-      yMax += yPad;
-
-      const xOf = (i: number) => padL + (i / Math.max(1, chartData.length - 1)) * plotW;
-      const yOf = (v: number) => padT + plotH - ((v - yMin) / (yMax - yMin)) * plotH;
-
-      ctx.clearRect(0, 0, w, h);
-
-      const yTickCount = 5;
-      const yTicks = Array.from({ length: yTickCount }, (_, idx) => {
-        const ratio = idx / Math.max(1, yTickCount - 1);
-        const value = yMax - (yMax - yMin) * ratio;
-        return { value, y: padT + plotH * ratio };
-      });
-
-      ctx.strokeStyle = themeBorderSoft;
-      ctx.globalAlpha = 0.62;
-      ctx.lineWidth = 1;
-      for (const tick of yTicks) {
-        ctx.beginPath();
-        ctx.moveTo(padL, tick.y);
-        ctx.lineTo(w - padR, tick.y);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-
-      ctx.strokeStyle = themeBorder;
-      ctx.globalAlpha = 0.82;
-      ctx.beginPath();
-      ctx.moveTo(padL, padT);
-      ctx.lineTo(padL, h - padB);
-      ctx.lineTo(w - padR, h - padB);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-
-      ctx.fillStyle = themeText;
-      ctx.font = "10px ui-monospace, monospace";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
-      for (const tick of yTicks) {
-        ctx.fillText(`${tick.value.toFixed(1)}%`, padL - 6, tick.y);
-      }
-
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      for (let i = 0; i < chartData.length; i += 1) {
-        const x = Math.min(w - padR - 2, Math.max(padL + 2, xOf(i)));
-        ctx.beginPath();
-        ctx.strokeStyle = themeBorder;
-        ctx.globalAlpha = 0.82;
-        ctx.moveTo(x, h - padB);
-        ctx.lineTo(x, h - padB + 4);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-        ctx.fillText(chartData[i].maturity, x, h - padB + 6);
-      }
-
-      const drawCurve = (
-        values: (number | null)[],
-        color: string,
-        lineW: number,
-        opacity: number,
-        dash: number[],
-        withDots = false,
-      ) => {
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lineW;
-        ctx.globalAlpha = opacity;
-        ctx.setLineDash(dash);
-        ctx.beginPath();
-        let started = false;
-        for (let i = 0; i < values.length; i += 1) {
-          const v = values[i];
-          if (v == null) continue;
-          const x = Math.round(xOf(i) * 10) / 10;
-          const y = Math.round(yOf(v) * 10) / 10;
-          if (!started) {
-            ctx.moveTo(x, y);
-            started = true;
-          } else {
-            ctx.lineTo(x, y);
-          }
-        }
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        if (withDots) {
-          ctx.fillStyle = color;
-          for (let i = 0; i < values.length; i += 1) {
-            const v = values[i];
-            if (v == null) continue;
-            const x = Math.round(xOf(i) * 10) / 10;
-            const y = Math.round(yOf(v) * 10) / 10;
-            ctx.beginPath();
-            ctx.arc(x, y, 2.6, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        ctx.globalAlpha = 1;
-      };
-
-      const histLen = history?.length ?? 0;
-      for (let hi = histLen - 1; hi >= 0; hi -= 1) {
-        const vals = chartData.map((d) => d.hist[hi] ?? null);
-        const style = YIELD_HISTORY_STYLE[hi];
-        if (!style) continue;
-        const stroke = style.key === "m3"
-          ? themeRed
-          : style.key === "m6"
-            ? YIELD_CURVE_SERIES_COLORS.m6
-            : YIELD_CURVE_SERIES_COLORS.y1;
-        drawCurve(vals, stroke, 1.45, style.opacity, [...style.dash]);
-      }
-
-      const currentVals = chartData.map((d) => d.current);
-      drawCurve(currentVals, YIELD_CURVE_SERIES_COLORS.now, 2.35, 1, [], true);
-    };
-
-    paint();
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => paint()) : null;
-    const el = wrapRef.current;
-    if (ro && el) ro.observe(el);
-    return () => ro?.disconnect();
-  }, [chartData, history]);
-
-  if (!snapshot?.points?.length) {
-    return (
-      <div className={`flex items-center justify-center text-[11px] ${fillContainer ? "min-h-[80px] flex-1" : "h-[118px]"}`} style={{ color: C.muted }}>
-        No yield data
-      </div>
-    );
-  }
-
-  const outerCls = fillContainer
-    ? "flex h-full min-h-0 w-full max-w-full min-w-0 flex-1 flex-col overflow-hidden"
-    : "flex w-full max-w-full min-w-0 shrink-0 flex-col";
-  const chartWrapCls = fillContainer
-    ? "min-h-[72px] w-full min-w-0 flex-1 overflow-hidden"
-    : "h-[118px] w-full min-w-0 shrink-0 overflow-hidden";
-
-  return (
-    <div className={outerCls}>
-      <div ref={wrapRef} className={chartWrapCls}>
-        <canvas ref={canvasRef} className="block h-full w-full max-w-full min-w-0" aria-label="Yield curve comparison" />
-      </div>
-      <div className="mt-1 flex shrink-0 flex-wrap justify-center gap-x-4 gap-y-0.5 text-[10px] uppercase tracking-[0.06em]" style={{ color: C.soft }}>
-        <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-3 rounded-full" style={{ background: YIELD_CURVE_SERIES_COLORS.now }} />Now</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-3 rounded-full" style={{ background: C.red }} />3m</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-3 rounded-full" style={{ background: YIELD_CURVE_SERIES_COLORS.m6 }} />6m</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-3 rounded-full" style={{ background: YIELD_CURVE_SERIES_COLORS.y1 }} />1y</span>
-      </div>
-    </div>
-  );
 }
 
 export function formatCurvePatternLabel(pattern: string | null | undefined) {

@@ -81,9 +81,9 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
   const surface = useMemo(() => nextPanelSurfaceStyle(C), [C]);
   const panel = useMemo(() => ({ ...surface, padding: "10px 14px" } as const), [surface]);
   /** Uniform grid cells — equal row/col fractions; inner charts flex-fill */
-  /** overflow-hidden clips Recharts in print/PDF — screen keeps clip, print uses visible + min tile height */
+  /** Clip chart SVG to each tile; print height uses embed/grid min-heights, not overflow:visible (causes bleed). */
   const chartCard =
-    "flex h-full min-h-0 min-w-0 flex-col overflow-hidden print:overflow-visible print:h-auto print:min-h-[280px]";
+    "flex h-full min-h-0 min-w-0 flex-col overflow-hidden print:h-auto print:min-h-[280px]";
 
   const [tfKey, setTfKey] = useState<MarketBreadthTfKey>("2Y");
   const lookbackDays = tfDays(tfKey);

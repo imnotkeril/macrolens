@@ -5,7 +5,8 @@ import { SLUG_TO_CATEGORY } from "@/components/next-dashboard/macro-sentiment/ma
 
 export function slugToCategory(slug: string | undefined): IndicatorCategory {
   if (!slug) return "housing";
-  return SLUG_TO_CATEGORY[slug] ?? "housing";
+  const normalized = slug.trim().toLowerCase().replace(/\s+/g, "-");
+  return SLUG_TO_CATEGORY[normalized] ?? "housing";
 }
 
 export function trendLabel(score: number, trend: TrendDirection): string {

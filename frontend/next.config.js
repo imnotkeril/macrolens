@@ -4,6 +4,35 @@ const backend =
 
 const nextConfig = {
   output: "standalone",
+  async redirects() {
+    return [
+      {
+        source: "/next/calendar-alerts",
+        destination: "/calendar/briefings",
+        permanent: false,
+      },
+      {
+        source: "/next/analysis/macro-ratios",
+        destination: "/analysis/macro-overview",
+        permanent: false,
+      },
+      {
+        source: "/next/analysis/macro-overview/macro-ratios",
+        destination: "/analysis/macro-overview",
+        permanent: false,
+      },
+      {
+        source: "/next",
+        destination: "/dashboard",
+        permanent: false,
+      },
+      {
+        source: "/next/:path*",
+        destination: "/:path*",
+        permanent: false,
+      },
+    ];
+  },
   async rewrites() {
     // Proxy API to FastAPI so the browser uses same-origin `/api/*` (avoids CORS and localhost:8000 mismatches).
     return [

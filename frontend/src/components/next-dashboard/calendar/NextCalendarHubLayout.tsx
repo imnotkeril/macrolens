@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NextDashboardShell } from "@/components/next-dashboard/NextDashboardShell";
 import { NEXT_DASHBOARD_NAV_ITEMS } from "@/components/next-dashboard/nextDashboardConfig";
 import { useNextShellTheme } from "@/components/next-dashboard/nextShellTheme";
@@ -22,7 +22,10 @@ export function NextCalendarHubLayout({ children }: { children: ReactNode }) {
     [C.text, C.muted, C.borderSoft, C.orange],
   );
 
-  const updatedAt = useMemo(() => new Date().toISOString(), []);
+  const [updatedAt, setUpdatedAt] = useState("—");
+  useEffect(() => {
+    setUpdatedAt(new Date().toISOString());
+  }, []);
 
   return (
     <NextDashboardShell

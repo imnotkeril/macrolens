@@ -14,7 +14,7 @@ export function FedPolicyBalanceMetricsColumn({
   bsPending: boolean;
 }) {
   return (
-    <div className="flex min-h-0 flex-col gap-2 xl:col-span-4" style={panelStyle}>
+    <div className="flex min-h-0 flex-col gap-2 xl:col-span-4 print:col-span-4" style={panelStyle}>
       <div className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
         Balance sheet · key metrics
       </div>
