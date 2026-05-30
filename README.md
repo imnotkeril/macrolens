@@ -43,12 +43,6 @@ MacroLens combines economic indicators, Fed policy, yield curve dynamics, inflat
 
 ---
 
-## Screenshots
-
-Add screenshots under each heading after capturing the current UI.
-
-=======
->>>>>>> eea6e851487e6ba2e0faa05ee3e50292993bd3d4
 ### Dashboard
 
 <img width="2269" height="1264" alt="Снимок экрана 2026-05-31 060914" src="https://github.com/user-attachments/assets/3094f32d-4586-47ab-af8a-b51d3307238b" />
