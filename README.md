@@ -10,6 +10,7 @@
   <a href="frontend/ARCHITECTURE.md">Frontend architecture</a>
 </p>
 
+<<<<<<< HEAD
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" alt="FastAPI">
@@ -46,57 +47,53 @@ MacroLens combines economic indicators, Fed policy, yield curve dynamics, inflat
 
 Add screenshots under each heading after capturing the current UI.
 
+=======
+>>>>>>> eea6e851487e6ba2e0faa05ee3e50292993bd3d4
 ### Dashboard
 
-<!-- Add Dashboard screenshot here -->
+<img width="2269" height="1264" alt="Снимок экрана 2026-05-31 060914" src="https://github.com/user-attachments/assets/3094f32d-4586-47ab-af8a-b51d3307238b" />
+
 
 ### Radar
 
-<!-- Add Radar screenshot here -->
+<img width="2291" height="1265" alt="Снимок экрана 2026-05-31 060333" src="https://github.com/user-attachments/assets/5241b1ff-d6e2-4c01-a6d6-3e47f18776cc" />
+
 
 ### Macro Sentiment
 
-<!-- Add Macro Sentiment screenshot here -->
+<img width="2294" height="1262" alt="Снимок экрана 2026-05-31 060350" src="https://github.com/user-attachments/assets/1d7d5498-784a-454f-abf2-7fadf1fbdcd3" />
+
 
 ### Fed Policy
 
-<!-- Add Fed Policy screenshot here -->
+<img width="2267" height="1254" alt="Снимок экрана 2026-05-31 060439" src="https://github.com/user-attachments/assets/c9220f52-aaa5-4c6f-85ca-69f541bf41af" />
+
 
 ### Yield Curve
 
-<!-- Add Yield Curve screenshot here -->
+<img width="2279" height="1257" alt="Снимок экрана 2026-05-31 060500" src="https://github.com/user-attachments/assets/fb7540d7-aa11-4313-b254-47c3d6948db3" />
+
 
 ### Inflation
 
-<!-- Add Inflation screenshot here -->
+<img width="2241" height="1265" alt="Снимок экрана 2026-05-31 060515" src="https://github.com/user-attachments/assets/b605c4ef-7938-4921-b021-ab771117433c" />
+
 
 ### Analysis: Relative Performance
 
-<!-- Add Relative Performance screenshot here -->
+<img width="2266" height="1256" alt="Снимок экрана 2026-05-31 060628" src="https://github.com/user-attachments/assets/fceb089d-d9c1-4f24-8090-a8c162549f8f" />
 
-### Analysis: Major Indices & Bitcoin
-
-<!-- Add Major Indices & Bitcoin screenshot here -->
-
-### Analysis: Market Breadth
-
-<!-- Add Market Breadth screenshot here -->
-
-### Analysis: Macro Overview
-
-<!-- Add Macro Overview screenshot here -->
 
 ### Forecast Lab
 
-<!-- Add Forecast Lab screenshot here -->
+<img width="2270" height="1260" alt="Снимок экрана 2026-05-31 060851" src="https://github.com/user-attachments/assets/3cf81019-6a5c-49b5-be75-dab5d3607c9b" />
+
 
 ### Calendar
 
-<!-- Add Calendar screenshot here -->
+<img width="2269" height="1264" alt="Снимок экрана 2026-05-31 060914" src="https://github.com/user-attachments/assets/0c50014b-510c-44aa-ab7b-3bf68aef7d12" />
+<img width="2276" height="1253" alt="Снимок экрана 2026-05-31 063028" src="https://github.com/user-attachments/assets/3b4f1be6-108d-4e16-8f17-ee30447b866f" />
 
-### Reports
-
-<!-- Add Reports screenshot here -->
 
 ---
 
