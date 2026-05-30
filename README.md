@@ -10,7 +10,6 @@
   <a href="frontend/ARCHITECTURE.md">Frontend architecture</a>
 </p>
 
-<<<<<<< HEAD
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" alt="FastAPI">
