@@ -29,8 +29,8 @@ export type BaseChartReferenceLine = {
 };
 
 export type BaseChartReferenceArea = {
-  y1: number;
-  y2: number;
+  y1?: number;
+  y2?: number;
   fill?: string;
   fillOpacity?: number;
   x1?: string;
@@ -146,7 +146,7 @@ export function BaseTimeSeriesLineChart<T extends AnyRow>({
             }}
             formatter={(value: unknown) => {
               const n = typeof value === "number" ? value : Number(value);
-              return [Number.isFinite(n) ? tooltipValueFormatter(n) : "—", lineName];
+              return [Number.isFinite(n) ? tooltipValueFormatter(n) : "N/A", lineName];
             }}
           />
           {referenceLines?.map((r, i) => (
@@ -173,4 +173,3 @@ export function BaseTimeSeriesLineChart<T extends AnyRow>({
     </div>
   );
 }
-

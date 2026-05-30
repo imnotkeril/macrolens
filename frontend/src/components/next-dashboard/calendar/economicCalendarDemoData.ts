@@ -1,5 +1,6 @@
 import type {
   CalendarDayGroup,
+  CalendarEventItem,
   CalendarRegion,
   CalendarViewMode,
 } from "@/components/next-dashboard/calendar/economicCalendarTypes";
@@ -18,7 +19,7 @@ export const CALENDAR_WEEK_RANGES = [
   { id: "2025-05-11_2025-05-17", label: "May 11 - May 17" },
 ];
 
-function makeEvent(id: string, region: CalendarRegion, event: string, time: string, released = true) {
+function makeEvent(id: string, region: CalendarRegion, event: string, time: string, released = true): CalendarEventItem {
   return {
     id,
     time,
@@ -26,7 +27,7 @@ function makeEvent(id: string, region: CalendarRegion, event: string, time: stri
     currency: region === "EU" ? "EUR" : region === "JP" ? "JPY" : region === "GB" ? "GBP" : region === "CN" ? "CNY" : "USD",
     importance: id.includes("high") ? ("high" as const) : id.includes("low") ? ("low" as const) : ("medium" as const),
     event,
-    actual: released ? "7.40M" : "—",
+    actual: released ? "7.40M" : "N/A",
     forecast: "7.50M",
     previous: "7.56M",
     released,

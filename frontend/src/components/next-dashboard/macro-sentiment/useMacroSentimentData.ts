@@ -52,7 +52,7 @@ export function useMacroSentimentData(activeCategory: IndicatorCategory) {
 
   const regime = regimeQ.data;
 
-  const queryErrors = useMemo(() => {
+  const queryErrors = (() => {
     const rows: { label: string; message: string }[] = [];
     const add = (label: string, q: { isError: boolean; error: unknown }) => {
       if (!q.isError || q.error == null) return;
@@ -69,19 +69,7 @@ export function useMacroSentimentData(activeCategory: IndicatorCategory) {
       add(`Indicators (${activeCategory})`, indicatorsCategoryQ);
     }
     return rows;
-  }, [
-    regimeQ.isError,
-    regimeQ.error,
-    categoriesQ.isError,
-    categoriesQ.error,
-    regimeHistQ.isError,
-    regimeHistQ.error,
-    kpiBundleQ.isError,
-    kpiBundleQ.error,
-    indicatorsCategoryQ.isError,
-    indicatorsCategoryQ.error,
-    activeCategory,
-  ]);
+  })();
 
   const firstIdPerKpi = useMemo(() => {
     const b = kpiBundleQ.data;

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base, async_session
-import app.models  # noqa: F401 — register all ORM tables for create_all
+import app.models  # noqa: F401 - register all ORM tables for create_all
 from app.api import indicators, fed, yield_curve, navigator, alerts, calendar, market, regime, data, calendar_canary
 from app.tasks.scheduler import start_scheduler, shutdown_scheduler
 from app.services.indicator_analyzer import IndicatorAnalyzer

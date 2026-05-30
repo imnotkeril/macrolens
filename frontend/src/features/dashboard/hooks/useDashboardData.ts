@@ -266,7 +266,7 @@ export function useDashboardData() {
     const base = recessionProbPct ?? 0;
     return [
       { name: "Cycle Score Model", pct: cycleBlend, dot: RECESSION_MODEL_DOT_COLORS[0] },
-      { name: "NY Fed 10Y–3M Model", pct: clamp(base * 0.92, 0, 100), dot: RECESSION_MODEL_DOT_COLORS[1] },
+      { name: "NY Fed 10Y-3M Model", pct: clamp(base * 0.92, 0, 100), dot: RECESSION_MODEL_DOT_COLORS[1] },
       { name: "3-Factor Model", pct: clamp(base * 1.05, 0, 100), dot: RECESSION_MODEL_DOT_COLORS[2] },
     ];
   }, [regimeQ.data?.recession_models, recessionProbPct, recessionQ.data?.score, recessionQ.data?.total]);
@@ -288,7 +288,7 @@ export function useDashboardData() {
 
   const fedRateVsNeutralPp = fedQ.data?.rate_vs_neutral_pp ?? null;
 
-  const queryErrors = useMemo(() => {
+  const queryErrors = (() => {
     const rows: { label: string; message: string }[] = [];
     const add = (label: string, q: { isError: boolean; error: unknown }) => {
       if (!q.isError || q.error == null) return;
@@ -303,18 +303,7 @@ export function useDashboardData() {
     add("Category scores", categoriesQ);
     add("Inflation (latest)", inflationQ);
     return rows;
-  }, [
-    navigatorQ.isError,
-    navigatorQ.error,
-    regimeQ.isError,
-    regimeQ.error,
-    signalsQ.isError,
-    signalsQ.error,
-    categoriesQ.isError,
-    categoriesQ.error,
-    inflationQ.isError,
-    inflationQ.error,
-  ]);
+  })();
 
   return {
     queryErrors,

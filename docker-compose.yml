@@ -37,9 +37,9 @@ services:
       DATABASE_URL: postgresql+asyncpg://macrolens:macrolens_secret@db:5432/macrolens
       REDIS_URL: redis://redis:6379/0
       FRED_API_KEY: ${FRED_API_KEY:-}
-      # Optional CoinGecko Pro — enables long market_chart history (days=max); without key, capped at 365 days.
+      # Optional CoinGecko Pro: enables long market_chart history (days=max); without key, capped at 365 days.
       COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
-      # Years of history for FRED/Yahoo bulk loads (e.g. 26 ≈ since ~2000 from 2026). See .env.example.
+      # Years of history for FRED/Yahoo bulk loads (for example, 26 starts around 2000 from 2026). See .env.example.
       HISTORICAL_YEARS: ${HISTORICAL_YEARS:-10}
       # Forecast Lab training window start (ISO date).
       FORECAST_LAB_DATE_FROM: ${FORECAST_LAB_DATE_FROM:-2008-01-01}
@@ -82,7 +82,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Next rewrites /api → backend (browser uses same-origin; do not rely on localhost:8000 in the client).
+      # Next rewrites /api to backend (browser uses same-origin; do not rely on localhost:8000 in the client).
       BACKEND_INTERNAL_URL: http://backend:8000
     depends_on:
       - backend

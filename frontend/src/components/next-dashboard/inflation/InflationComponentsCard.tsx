@@ -183,7 +183,7 @@ export function InflationComponentsCard({
   const yDomain = useMemo(() => {
     // Fixed working range for this decomposition card.
     return [-1, 4] as [number, number];
-  }, [displayRows]);
+  }, []);
 
   if (pending && !displayRows.length) {
     return (
@@ -251,7 +251,7 @@ export function InflationComponentsCard({
                 formatter={(value: unknown, name) => {
                   const n = typeof value === "number" ? value : Number(value);
                   const label = typeof name === "string" ? name : "Value";
-                  return [Number.isFinite(n) ? `${n.toFixed(2)}%` : "—", label];
+                  return [Number.isFinite(n) ? `${n.toFixed(2)}%` : "N/A", label];
                 }}
               />
               {COMPONENT_ORDER.map((key) => (
@@ -300,7 +300,7 @@ export function InflationComponentsCard({
                 ))}
               </Pie>
               <text x="50%" y="44%" textAnchor="middle" dominantBaseline="middle" fill="var(--nd-text)" fontSize={24} fontWeight={500}>
-                {latest ? `${latest.total.toFixed(1)}%` : "—"}
+                {latest ? `${latest.total.toFixed(1)}%` : "N/A"}
               </text>
             </PieChart>
           </ResponsiveContainer>
@@ -322,4 +322,3 @@ export function InflationComponentsCard({
     </div>
   );
 }
-

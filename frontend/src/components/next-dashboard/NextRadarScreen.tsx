@@ -82,7 +82,7 @@ export function NextRadarScreen({ omitShell = false }: { omitShell?: boolean }) 
 
   const loadingShell = regimeQ.isPending && !regime;
 
-  const secondaryErrors = useMemo(() => {
+  const secondaryErrors = (() => {
     const rows: { label: string; message: string }[] = [];
     const add = (label: string, q: { isError: boolean; error: unknown }) => {
       if (!q.isError || q.error == null) return;
@@ -95,21 +95,14 @@ export function NextRadarScreen({ omitShell = false }: { omitShell?: boolean }) 
     add("Recession bands", recessionBandsQ);
     add("Recession checklist", recessionQ);
     return rows;
-  }, [
-    historyQ.isError,
-    historyQ.error,
-    recessionBandsQ.isError,
-    recessionBandsQ.error,
-    recessionQ.isError,
-    recessionQ.error,
-  ]);
+  })();
 
   const mainColumn = loadingShell ? (
           <div
             className="flex min-h-[40vh] items-center justify-center text-[13px]"
             style={{ color: C.muted }}
           >
-            Loading cycle radar…
+            Loading cycle radar...
           </div>
         ) : regime ? (
           <section className="nd-report-print-flow flex flex-col gap-3">
