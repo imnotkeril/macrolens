@@ -1,4 +1,4 @@
-<img width="2276" height="1253" alt="Снимок экрана 2026-05-31 063028" src="https://github.com/user-attachments/assets/75b0459b-c19a-410f-980a-90aa9a579e5e" /><img width="2291" height="1265" alt="Снимок экрана 2026-05-31 060333" src="https://github.com/user-attachments/assets/6df9cbd2-4323-4e27-8fe9-22bd761c2b99" /><img width="2291" height="1265" alt="Снимок экрана 2026-05-31 060333" src="https://github.com/user-attachments/assets/3f3b3262-f20a-48b1-8709-765ed54a4d2d" /># MacroLens
+# MacroLens
 
 MacroLens is a production-oriented macro trading dashboard built with FastAPI, PostgreSQL, Redis, Next.js, TypeScript, Tailwind, React Query, Recharts, and lightweight-charts.
 
