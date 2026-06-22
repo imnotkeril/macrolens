@@ -3,7 +3,7 @@
 **Professional macro trading terminal** for regime analysis, Fed policy, yield curves, inflation, cross-asset confirmation, Forecast Lab diagnostics, and report-ready market intelligence.
 
 <p align="center">
-  <a href="https://frontend-olive-two-44.vercel.app/"><strong>Live app</strong></a>
+  <a href="https://macrolens-terminal.vercel.app/"><strong>Live app</strong></a>
   &nbsp;·&nbsp;
   <a href="DEPLOY.md">Deploy</a>
   &nbsp;·&nbsp;
@@ -14,7 +14,7 @@
 
 <p align="center">
   <strong>Production:</strong>
-  web <a href="https://frontend-olive-two-44.vercel.app/">Vercel</a>
+  web <a href="https://macrolens-terminal.vercel.app/">Vercel</a>
   · API <a href="https://imnotkeril-macrolens-api.hf.space/docs">Hugging Face Spaces</a>
   · DB Supabase Postgres
 </p>
