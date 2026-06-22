@@ -8,8 +8,6 @@
   <a href="DEPLOY.md">Deploy</a>
   &nbsp;·&nbsp;
   <a href="USER_GUIDE.md">User guide</a>
-  &nbsp;·&nbsp;
-  <a href="frontend/ARCHITECTURE.md">Frontend architecture</a>
 </p>
 
 <p align="center">
@@ -229,7 +227,7 @@ macrolens/
     package.json
 
   USER_GUIDE.md        End-user workflows and page guide
-  DESIGN.md            Design tokens and visual system
+  DEPLOY.md            Production deployment runbook
   docker-compose.yml   PostgreSQL + Redis + backend + frontend
 ```
 
