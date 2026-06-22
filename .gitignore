@@ -28,6 +28,16 @@ backend/*.db
 backend/*.sqlite3
 *.log
 
+# ML runtime state & artifacts (only the active forecast_lab bundle is committed)
+backend/data/*_train_progress.json
+backend/data/forecast_lab_artifacts/_building_*/
+backend/data/forecast_lab_artifacts/*/
+!backend/data/forecast_lab_artifacts/fa382c0b5bc876c3/
+backend/data/ml_artifacts/
+backend/data/*.parquet
+backend/.session
+*.session
+
 # Node / Frontend
 node_modules/
 frontend/node_modules/
@@ -77,3 +87,6 @@ docs/
 
 # Cursor / IDE plans
 .cursor/
+
+# Agent run scratch
+.codex-pet-runs/

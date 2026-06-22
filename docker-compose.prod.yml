@@ -1,0 +1,34 @@
+# Production overlay for self-hosting the full stack on one box (VPS / Oracle Cloud / etc).
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Differences from the dev compose: no source bind mounts, no --reload, restart policies,
+# the frontend runs the production standalone server, and the backend listens on 8000.
+# (For Hugging Face Spaces the backend deploys on its own — see DEPLOY.md. There Postgres
+#  and Redis are external managed services, not these containers.)
+services:
+  db:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  backend:
+    restart: unless-stopped
+    # Drop the dev bind mount + --reload from the base file.
+    volumes: []
+    environment:
+      PORT: 8000
+      DEBUG_LOG_PATH: ""
+    command: sh -c "alembic upgrade head || true; exec uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  frontend:
+    restart: unless-stopped
+    build:
+      context: ${PROJECT_ROOT:-.}/frontend
+      dockerfile: Dockerfile.prod
+    # Production standalone server replaces the dev volumes + npm run dev.
+    volumes: []
+    environment:
+      NODE_ENV: production
+      BACKEND_INTERNAL_URL: http://backend:8000
+    command: node server.js

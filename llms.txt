@@ -1,0 +1,34 @@
+# MacroLens
+
+> Macro-trading terminal: regime analysis, Fed policy, yield curves, inflation,
+> cross-asset confirmation, Forecast Lab (HMM + XGBoost) diagnostics, economic
+> calendar, and LLM-backed market intelligence. FastAPI backend + Next.js frontend.
+
+The HTTP API is served by the FastAPI backend under the `/api` prefix. Interactive,
+always-current docs: `/docs` (Swagger UI) and `/openapi.json` (machine-readable schema).
+Health: `GET /api/health`.
+
+## API surface
+
+- [Indicators](/api/indicators): macro indicators, z-scores, trends
+- [Fed Policy](/api/fed): rate path, FedWatch, SEP, dashboard
+- [Yield Curve](/api/yield-curve): curve snapshots, spreads, inversions
+- [Navigator](/api/navigator): regime navigator, phase confidence, cross-asset confirmation
+- [Regime](/api/regime): macro regime / quadrant state and history
+- [Forecast Lab](/api/forecast-lab): HMM + GBDT forecasts, ensembles, training, snapshots
+- [ML Regime](/api/ml): ML regime prediction, backtest, metrics, training
+- [Market](/api/market): market data, prices, breadth, relative performance
+- [Calendar](/api/calendar): economic calendar, events, briefings, FOMC
+- [Calendar Canary](/api/calendar-canary): forward calendar data-quality canary
+- [Alerts](/api/alerts): user alerts and notifications
+- [Agents](/api/agents): LLM intelligence agents (Fed / News / Macro / Master)
+- [Memory](/api/memory): embedding-based memory retrieval
+
+## Deployment
+
+- [DEPLOY.md](/DEPLOY.md): Vercel (frontend) + Hugging Face Spaces (backend) + managed Postgres/Redis
+
+## Notes
+
+- The backend is always-on (APScheduler refresh jobs + ML training); it is not serverless.
+- LLM agents and embeddings are optional; without API keys the system uses rule-based fallbacks.

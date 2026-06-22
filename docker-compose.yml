@@ -50,7 +50,8 @@ services:
       FORECAST_LAB_AUXILIARY_ASSET_WEIGHT: ${FORECAST_LAB_AUXILIARY_ASSET_WEIGHT:-0.35}
       FORECAST_LAB_ENSEMBLE_INCLUDE_CYCLE: ${FORECAST_LAB_ENSEMBLE_INCLUDE_CYCLE:-true}
       FORECAST_LAB_TRAIN_RECESSION_MODEL: ${FORECAST_LAB_TRAIN_RECESSION_MODEL:-true}
-      DEBUG_LOG_PATH: /app/debug-7f91af.log
+      # Optional dev-only NDJSON debug sink; leave unset in production.
+      DEBUG_LOG_PATH: ${DEBUG_LOG_PATH:-}
       # Agents / memory (optional; see .env.example in repo root)
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}

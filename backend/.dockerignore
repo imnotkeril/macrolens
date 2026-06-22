@@ -1,0 +1,22 @@
+# Keep the build context small and free of secrets / local state.
+.env
+.env.*
+*.log
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+*.session
+
+# Local ML scratch — ship only the active forecast_lab bundle (see .gitignore).
+data/*_train_progress.json
+data/ml_artifacts/
+data/*.parquet
+data/forecast_lab_artifacts/_building_*/
+
+# Docs / tests are not needed in the runtime image.
+tests/
+debug-*.log

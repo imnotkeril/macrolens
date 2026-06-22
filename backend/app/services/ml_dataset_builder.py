@@ -38,16 +38,11 @@ def _debug_log(message: str, data: dict, hypothesis_id: str, run_id: str = "run1
         "data": data,
     }
     logger.info("DEBUG_NDJSON %s", json.dumps(payload, ensure_ascii=False))
+    # File sink is opt-in via DEBUG_LOG_PATH (dev only); unset in production.
+    log_path = os.environ.get("DEBUG_LOG_PATH")
+    if not log_path:
+        return
     try:
-        log_path = os.environ.get("DEBUG_LOG_PATH")
-        if not log_path:
-            _p = Path(__file__).resolve()
-            for _ in range(5):
-                _p = _p.parent
-            _log = _p / "debug-7f91af.log"
-            if _p.root == str(_p) or not _p.exists():
-                _log = Path.cwd() / "debug-7f91af.log"
-            log_path = str(_log)
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps({**payload, "timestamp": __import__("time").time() * 1000}, ensure_ascii=False) + "\n")
     except Exception:

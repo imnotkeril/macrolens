@@ -1,0 +1,28 @@
+# MacroLens frontend — production image (self-host / docker-compose.prod parity).
+# Vercel builds the app itself and ignores this file; it exists so the full stack
+# can run anywhere via Docker. Uses Next.js standalone output (next.config.js).
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --prefer-offline || npm install
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+# BACKEND_URL is read at runtime by next.config rewrites; build does not need it.
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+# Standalone output bundles a minimal server + only the deps it needs.
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+USER nextjs
+EXPOSE 3000
+CMD ["node", "server.js"]

@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 
@@ -6,6 +6,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://macrolens:macrolens_secret@localhost:5432/macrolens"
     redis_url: str = "redis://localhost:6379/0"
     fred_api_key: str = ""
+
+    # CORS: comma-separated allowed origins. Dev default = localhost; prod must set the
+    # frontend origin (e.g. https://macrolens.vercel.app). "*" allows all (disables credentials).
+    cors_allow_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://0.0.0.0:3000"
     calendar_canary_enabled: bool = True
     calendar_canary_days_ahead: int = 45
 
@@ -84,9 +88,11 @@ class Settings(BaseSettings):
     # CoinGecko Pro: optional `x-cg-pro-api-key` for long history (`days=max`) on market_chart.
     coingecko_api_key: str = ""
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 @lru_cache

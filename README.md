@@ -283,6 +283,32 @@ Open <http://localhost:3000>. The frontend proxies `/api/*` requests to the back
 
 ---
 
+## Production Deployment
+
+MacroLens deploys as two pieces, because the backend is **always-on** (a background
+scheduler refreshes data and ML models train in-process) and therefore is not serverless:
+
+| Component | Host (free tier) |
+|-----------|------------------|
+| Frontend (Next.js) | **Vercel** |
+| Backend (FastAPI) | **Hugging Face Spaces** (Docker) |
+| Postgres | **Supabase** / **Neon** |
+| Redis | **Upstash** |
+
+The Next.js frontend proxies `/api/*` to the backend (`BACKEND_URL`), so the browser stays
+same-origin and CORS is a non-issue on the happy path. For prod, set `CORS_ALLOW_ORIGINS`
+on the backend to your Vercel URL as defense-in-depth.
+
+Full step-by-step runbook (including the all-in-one self-hosted Docker option) is in
+**[DEPLOY.md](DEPLOY.md)**.
+
+```powershell
+# Self-host the whole stack on one box:
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+---
+
 ## Configuration
 
 Main configuration is copied from `.env.example` into `.env`.
@@ -290,6 +316,7 @@ Main configuration is copied from `.env.example` into `.env`.
 | Variable | Purpose |
 |----------|---------|
 | `FRED_API_KEY` | FRED macro data access |
+| `CORS_ALLOW_ORIGINS` | Comma-separated allowed origins (set to the frontend URL in prod) |
 | `HISTORICAL_YEARS` | Rolling FRED/Yahoo history window |
 | `FORECAST_LAB_DATE_FROM` | First month-end included in Forecast Lab training features |
 | `FORECAST_LAB_LABEL_MODE` | Forecast Lab target mode: `rule_v1` or `asset_implied_v1` |
@@ -366,18 +393,20 @@ Known warning: backend tests currently emit one Pydantic v2 deprecation warning 
 - Backend pytest coverage for Forecast Lab, schema, LLM JSON extraction, retrieval, and navigator confidence logic
 - Frontend lint, typecheck, and production build gates passing
 - README, user guide, and frontend architecture guide refreshed for the current product
+- GitHub Actions CI (backend pytest + frontend lint/typecheck/build)
+- Production deployment profile: prod Dockerfiles, `docker-compose.prod.yml`, and a Vercel + Hugging Face Spaces runbook ([DEPLOY.md](DEPLOY.md))
+- Pydantic settings modernized to `SettingsConfigDict` (Pydantic v2/v3-safe)
+- Env-driven CORS and baseline security headers on the API
 
 ### In Progress
 
 - Calendar ingestion maturity and replacement of remaining demo-backed calendar screens
 - Forecast Lab artifact lifecycle polish and active-bundle management
 - Broader automated frontend coverage for route smoke tests and visual regressions
-- Pydantic settings cleanup before Pydantic v3
 
 ### Planned
 
-- More robust CI with backend tests, frontend lint/typecheck/build, and coverage reporting
-- Production deployment profile with non-reload backend/frontend commands
+- Coverage reporting in CI
 - Report export polish and screenshot-driven documentation updates
 - Stronger data freshness monitoring and source-level observability
 
@@ -389,7 +418,14 @@ Known warning: backend tests currently emit one Pydantic v2 deprecation warning 
 - Generated Forecast Lab artifacts can be large and should be handled deliberately.
 - Calendar pages include a mix of backend-backed and demo-backed views while ingestion matures.
 - `/next/*` routes are preserved as compatibility redirects to production routes.
-- No public license file is currently included in this repository.
+
+---
+
+## License
+
+Proprietary — Copyright (c) 2026 imnotkeril. All rights reserved. The source is publicly
+viewable for reference only; use, copying, modification, or redistribution is not permitted
+without written permission. See [LICENSE](LICENSE).
 
 ---
 

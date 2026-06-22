@@ -2,9 +2,10 @@ import logging
 import sys
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import get_settings
 from app.database import engine, Base, async_session
 import app.models  # noqa: F401 - register all ORM tables for create_all
 from app.api import indicators, fed, yield_curve, navigator, alerts, calendar, market, regime, data, calendar_canary
@@ -84,18 +85,27 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Allow frontend from localhost and 127.0.0.1 (browser Origin varies by how user opens the app)
+# CORS origins are env-driven (CORS_ALLOW_ORIGINS, comma-separated). In production the
+# Next.js frontend proxies /api same-origin, so this mainly guards direct browser calls.
+_cors_origins = [o.strip() for o in get_settings().cors_allow_origins.split(",") if o.strip()]
+_allow_all = _cors_origins == ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://0.0.0.0:3000",
-    ],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    # Credentials cannot be combined with a wildcard origin per the CORS spec.
+    allow_credentials=not _allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return response
 
 app.include_router(indicators.router, prefix="/api/indicators", tags=["Indicators"])
 app.include_router(fed.router, prefix="/api/fed", tags=["Fed Policy"])
