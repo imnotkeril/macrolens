@@ -2,7 +2,15 @@ import enum
 from datetime import date, datetime
 
 from sqlalchemy import (
-    String, Float, Integer, Date, DateTime, Enum, ForeignKey, UniqueConstraint, Index,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -56,7 +64,9 @@ class Indicator(Base):
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
-    values: Mapped[list["IndicatorValue"]] = relationship(back_populates="indicator", cascade="all, delete-orphan")
+    values: Mapped[list["IndicatorValue"]] = relationship(
+        back_populates="indicator", cascade="all, delete-orphan"
+    )
 
 
 class IndicatorValue(Base):

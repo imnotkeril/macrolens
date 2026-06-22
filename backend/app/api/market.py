@@ -15,7 +15,9 @@ async def get_series(symbol: str, days: int = Query(365), db: AsyncSession = Dep
 
 @router.get("/ratios")
 async def get_ratios(
-    a: str = Query(...), b: str = Query(...), days: int = Query(365),
+    a: str = Query(...),
+    b: str = Query(...),
+    days: int = Query(365),
     db: AsyncSession = Depends(get_db),
 ):
     svc = MarketService(db)

@@ -5,13 +5,24 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import get_settings
-from app.database import engine, Base, async_session
 import app.models  # noqa: F401 - register all ORM tables for create_all
-from app.api import indicators, fed, yield_curve, navigator, alerts, calendar, market, regime, data, calendar_canary
-from app.tasks.scheduler import start_scheduler, shutdown_scheduler
+from app.api import (
+    alerts,
+    calendar,
+    calendar_canary,
+    data,
+    fed,
+    indicators,
+    market,
+    navigator,
+    regime,
+    yield_curve,
+)
+from app.config import get_settings
+from app.database import Base, async_session, engine
 from app.services.indicator_analyzer import IndicatorAnalyzer
 from app.services.memory_bootstrap import bootstrap_memory_schemas
+from app.tasks.scheduler import shutdown_scheduler, start_scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +36,7 @@ logging.basicConfig(
 
 try:
     from app.api import ml
+
     _ml_available = True
 except Exception as e:
     logger.warning("ML API (/api/ml) not loaded: %s.", e)
@@ -33,6 +45,7 @@ except Exception as e:
 
 try:
     from app.api import forecast_lab
+
     _forecast_lab_available = True
 except Exception as e:
     logger.warning("Forecast Lab API not loaded: %s", e)
@@ -40,7 +53,8 @@ except Exception as e:
     _forecast_lab_available = False
 
 try:
-    from app.api import ml2, agents, memory
+    from app.api import agents, memory, ml2
+
     _intelligence_available = True
 except Exception as e:
     logger.warning("Intelligence APIs not loaded: %s.", e)
@@ -106,6 +120,7 @@ async def security_headers(request: Request, call_next):
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     return response
+
 
 app.include_router(indicators.router, prefix="/api/indicators", tags=["Indicators"])
 app.include_router(fed.router, prefix="/api/fed", tags=["Fed Policy"])

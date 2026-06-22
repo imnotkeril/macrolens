@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -34,7 +34,7 @@ def _cme_meta_headers(token: str | None) -> dict[str, str]:
     h = {
         **CME_HEADERS_BASE,
         "CME-Request-ID": str(uuid.uuid4()),
-        "CME-Transact-Time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "CME-Transact-Time": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     if token:
         h["Authorization"] = f"Bearer {token}"
@@ -66,7 +66,12 @@ def _format_fomc_label(meeting_dt: str) -> str:
 
 
 def cme_element_to_meeting_row(el: dict[str, Any], current_mid: float) -> dict[str, Any] | None:
-    mdt = el.get("meetingDt") or el.get("meetingDate") or el.get("fomcMeetingDate") or el.get("meeting_dt")
+    mdt = (
+        el.get("meetingDt")
+        or el.get("meetingDate")
+        or el.get("fomcMeetingDate")
+        or el.get("meeting_dt")
+    )
     if not mdt:
         return None
     ranges = el.get("rateRange") or el.get("rateRanges") or []

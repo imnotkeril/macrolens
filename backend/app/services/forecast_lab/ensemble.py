@@ -50,11 +50,7 @@ def ensemble_probs(
     w_gbdt: float,
 ) -> list[float]:
     w = normalize_weights([w_rule, w_hmm, w_gbdt])
-    e = (
-        w[0] * np.array(p_rule)
-        + w[1] * np.array(p_hmm)
-        + w[2] * np.array(p_gbdt)
-    )
+    e = w[0] * np.array(p_rule) + w[1] * np.array(p_hmm) + w[2] * np.array(p_gbdt)
     s = e.sum()
     if s <= 0:
         return [0.25, 0.25, 0.25, 0.25]

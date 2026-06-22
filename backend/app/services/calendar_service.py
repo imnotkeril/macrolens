@@ -7,15 +7,16 @@ Generates calendar events from:
 3. FOMC meeting schedule (static, publicly available)
 4. Market reaction computation (S&P 500 change around events)
 """
+
 import logging
 from datetime import date, timedelta
 
-from sqlalchemy import select, desc, asc, and_
+from sqlalchemy import and_, asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.economic_calendar import EconomicCalendarEvent
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.market_data import MarketData
-from app.models.economic_calendar import EconomicCalendarEvent
 from app.schemas.calendar import CalendarEvent, CalendarSummary, EventImpact
 
 logger = logging.getLogger(__name__)
@@ -75,53 +76,90 @@ class CalendarService:
 
             surprise_pct = None
             if latest.previous and latest.previous != 0:
-                surprise_pct = round(((latest.value - latest.previous) / abs(latest.previous)) * 100, 2)
+                surprise_pct = round(
+                    ((latest.value - latest.previous) / abs(latest.previous)) * 100, 2
+                )
 
             if latest.date >= today - timedelta(days=recent_days):
-                recent.append(CalendarEvent(
-                    date=latest.date,
-                    name=ind.name,
-                    event_type="indicator_release",
-                    importance=ind.importance.value if hasattr(ind.importance, "value") else int(ind.importance),
-                    category=ind.category.value if hasattr(ind.category, "value") else str(ind.category),
-                    frequency=ind.frequency.value if hasattr(ind.frequency, "value") else str(ind.frequency),
-                    actual=round(latest.value, 2),
-                    previous=round(prev.value, 2) if prev else None,
-                    surprise_pct=surprise_pct,
-                    market_reaction_1d=reaction,
-                    is_upcoming=False,
-                ))
+                recent.append(
+                    CalendarEvent(
+                        date=latest.date,
+                        name=ind.name,
+                        event_type="indicator_release",
+                        importance=(
+                            ind.importance.value
+                            if hasattr(ind.importance, "value")
+                            else int(ind.importance)
+                        ),
+                        category=(
+                            ind.category.value
+                            if hasattr(ind.category, "value")
+                            else str(ind.category)
+                        ),
+                        frequency=(
+                            ind.frequency.value
+                            if hasattr(ind.frequency, "value")
+                            else str(ind.frequency)
+                        ),
+                        actual=round(latest.value, 2),
+                        previous=round(prev.value, 2) if prev else None,
+                        surprise_pct=surprise_pct,
+                        market_reaction_1d=reaction,
+                        is_upcoming=False,
+                    )
+                )
 
-            next_date = self._estimate_next_release(latest.date, ind.frequency.value if hasattr(ind.frequency, "value") else str(ind.frequency))
+            next_date = self._estimate_next_release(
+                latest.date,
+                ind.frequency.value if hasattr(ind.frequency, "value") else str(ind.frequency),
+            )
             if next_date and today <= next_date <= today + timedelta(days=upcoming_days):
-                upcoming.append(CalendarEvent(
-                    date=next_date,
-                    name=ind.name,
-                    event_type="indicator_release",
-                    importance=ind.importance.value if hasattr(ind.importance, "value") else int(ind.importance),
-                    category=ind.category.value if hasattr(ind.category, "value") else str(ind.category),
-                    frequency=ind.frequency.value if hasattr(ind.frequency, "value") else str(ind.frequency),
-                    previous=round(latest.value, 2),
-                    is_upcoming=True,
-                ))
+                upcoming.append(
+                    CalendarEvent(
+                        date=next_date,
+                        name=ind.name,
+                        event_type="indicator_release",
+                        importance=(
+                            ind.importance.value
+                            if hasattr(ind.importance, "value")
+                            else int(ind.importance)
+                        ),
+                        category=(
+                            ind.category.value
+                            if hasattr(ind.category, "value")
+                            else str(ind.category)
+                        ),
+                        frequency=(
+                            ind.frequency.value
+                            if hasattr(ind.frequency, "value")
+                            else str(ind.frequency)
+                        ),
+                        previous=round(latest.value, 2),
+                        is_upcoming=True,
+                    )
+                )
 
         for fd in ALL_FOMC_DATES:
             if today <= fd <= today + timedelta(days=upcoming_days):
-                upcoming.append(CalendarEvent(
-                    date=fd,
-                    name="FOMC Rate Decision",
-                    event_type="fomc_decision",
-                    importance=3,
-                    is_upcoming=True,
-                ))
+                upcoming.append(
+                    CalendarEvent(
+                        date=fd,
+                        name="FOMC Rate Decision",
+                        event_type="fomc_decision",
+                        importance=3,
+                        is_upcoming=True,
+                    )
+                )
             elif today - timedelta(days=recent_days) <= fd < today:
-                recent.append(CalendarEvent(
-                    date=fd,
-                    name="FOMC Rate Decision",
-                    event_type="fomc_decision",
-                    importance=3,
-                    is_upcoming=False,
-                ))
+                recent.append(
+                    CalendarEvent(
+                        date=fd,
+                        name="FOMC Rate Decision",
+                        event_type="fomc_decision",
+                        importance=3,
+                        is_upcoming=False,
+                    )
+                )
 
         canary_events_q = (
             select(EconomicCalendarEvent)
@@ -134,18 +172,20 @@ class CalendarService:
         )
         canary_events = (await self.db.execute(canary_events_q)).scalars().all()
         for ev in canary_events:
-            upcoming.append(CalendarEvent(
-                date=ev.event_date,
-                name=ev.event_name,
-                event_type="external_calendar",
-                importance=ev.importance or 2,
-                category=ev.country,
-                frequency=ev.frequency,
-                actual=ev.actual,
-                previous=ev.previous,
-                forecast=ev.forecast,
-                is_upcoming=True,
-            ))
+            upcoming.append(
+                CalendarEvent(
+                    date=ev.event_date,
+                    name=ev.event_name,
+                    event_type="external_calendar",
+                    importance=ev.importance or 2,
+                    category=ev.country,
+                    frequency=ev.frequency,
+                    actual=ev.actual,
+                    previous=ev.previous,
+                    forecast=ev.forecast,
+                    is_upcoming=True,
+                )
+            )
 
         upcoming.sort(key=lambda e: e.date)
         recent.sort(key=lambda e: e.date, reverse=True)
@@ -203,18 +243,26 @@ class CalendarService:
             if reaction is not None:
                 reactions.append(reaction)
 
-            events.append(CalendarEvent(
-                date=val.date,
-                name=ind.name,
-                event_type="indicator_release",
-                importance=ind.importance.value if hasattr(ind.importance, "value") else int(ind.importance),
-                category=ind.category.value if hasattr(ind.category, "value") else str(ind.category),
-                actual=round(val.value, 2),
-                previous=round(val.previous, 2) if val.previous else None,
-                surprise_pct=surprise_pct,
-                market_reaction_1d=reaction,
-                is_upcoming=False,
-            ))
+            events.append(
+                CalendarEvent(
+                    date=val.date,
+                    name=ind.name,
+                    event_type="indicator_release",
+                    importance=(
+                        ind.importance.value
+                        if hasattr(ind.importance, "value")
+                        else int(ind.importance)
+                    ),
+                    category=(
+                        ind.category.value if hasattr(ind.category, "value") else str(ind.category)
+                    ),
+                    actual=round(val.value, 2),
+                    previous=round(val.previous, 2) if val.previous else None,
+                    surprise_pct=surprise_pct,
+                    market_reaction_1d=reaction,
+                    is_upcoming=False,
+                )
+            )
 
         return EventImpact(
             indicator_name=ind.name,
@@ -252,11 +300,13 @@ class CalendarService:
         )
         after_q = (
             select(MarketData.value)
-            .where(and_(
-                MarketData.symbol == "SP500",
-                MarketData.date > event_date,
-                MarketData.date <= event_date + timedelta(days=5),
-            ))
+            .where(
+                and_(
+                    MarketData.symbol == "SP500",
+                    MarketData.date > event_date,
+                    MarketData.date <= event_date + timedelta(days=5),
+                )
+            )
             .order_by(asc(MarketData.date))
             .limit(1)
         )

@@ -1,4 +1,5 @@
 """Structured JSON outputs validated after Claude responses."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -64,4 +65,6 @@ class MasterAgentLLMOutput(BaseModel):
     regime_comment: str | None = None
     factor_tilt_notes: list[str] = Field(default_factory=list)
     monitoring: list[str] = Field(default_factory=list)
-    citations_used: list[str] = Field(default_factory=list, description="doc_keys only from context")
+    citations_used: list[str] = Field(
+        default_factory=list, description="doc_keys only from context"
+    )

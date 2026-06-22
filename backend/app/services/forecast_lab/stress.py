@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 import numpy as np
-from sqlalchemy import select, desc
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.market_data import MarketData
@@ -51,7 +51,6 @@ async def _monthly_returns(
         return None
 
     # Align on month-end buckets: take last price per calendar month
-    from collections import defaultdict
 
     def monthly_last(prices: list[tuple[date, float]]) -> list[float]:
         by_m: dict[tuple[int, int], float] = {}

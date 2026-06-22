@@ -6,17 +6,18 @@ Components:
 2. Rate direction — hiking (+), paused (0), cutting (-)
 3. Balance sheet direction — QE (-), stable (0), QT (+)
 """
+
 from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.models.fed_policy import FedRate, BalanceSheet
-from app.models.market_data import MarketData
+from app.models.fed_policy import BalanceSheet, FedRate
 from app.models.intelligence import AgentSignal
+from app.models.market_data import MarketData
 from app.schemas.fed import FedPolicyStatus
 from app.services.fed_rate_schema import apply_fed_rate_load_columns
 
@@ -122,11 +123,7 @@ class FedTracker:
         return "paused"
 
     async def _get_balance_sheet_direction(self) -> str:
-        query = (
-            select(BalanceSheet)
-            .order_by(desc(BalanceSheet.date))
-            .limit(13)
-        )
+        query = select(BalanceSheet).order_by(desc(BalanceSheet.date)).limit(13)
         result = await self.db.execute(query)
         rows = result.scalars().all()
 
@@ -196,10 +193,7 @@ class FedTracker:
         """Compute policy score at a historical date (simplified; uses static neutral fallback)."""
         neutral = float(get_settings().neutral_rate_fallback)
         query = await self._fed_stmt(
-            select(FedRate)
-            .where(FedRate.date <= target)
-            .order_by(desc(FedRate.date))
-            .limit(1),
+            select(FedRate).where(FedRate.date <= target).order_by(desc(FedRate.date)).limit(1),
         )
         result = await self.db.execute(query)
         rate = result.scalar_one_or_none()

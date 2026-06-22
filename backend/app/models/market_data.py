@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Float, Integer, Date, DateTime, String, UniqueConstraint, Index
+from sqlalchemy import Date, DateTime, Float, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -8,6 +8,7 @@ from app.database import Base
 
 class YieldData(Base):
     """Treasury yield curve data points."""
+
     __tablename__ = "yield_data"
     __table_args__ = (
         UniqueConstraint("date", "maturity", name="uq_yield_date_maturity"),
@@ -25,6 +26,7 @@ class YieldData(Base):
 
 class MarketData(Base):
     """Cross-asset market data (DXY, Gold, Copper, VIX, etc.)."""
+
     __tablename__ = "market_data"
     __table_args__ = (
         UniqueConstraint("date", "symbol", name="uq_market_date_symbol"),

@@ -4,6 +4,7 @@ ML Inference Service: load trained artifacts and return current regime predict +
 Uses Rule + Markov + XGBoost ensemble. No DB dependency for inference; features
 for "now" must be provided by the caller (from Navigator + Regime/Market APIs).
 """
+
 from __future__ import annotations
 
 import json
@@ -17,22 +18,23 @@ import xgboost as xgb
 
 from app.config import get_settings
 from app.services.ml_dataset_builder import (
-    QUADRANT_TO_ID,
-    ID_TO_QUADRANT,
     FEATURE_COLUMNS,
+    ID_TO_QUADRANT,
+    QUADRANT_TO_ID,
     _determine_quadrant,
 )
 from app.services.ml_regime_models import (
     N_CLASSES,
-    rule_predict,
     MarkovModel,
-    XGBoostModel,
+    rule_predict,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def _load_artifacts(artifacts_dir: str | None = None) -> tuple[dict, np.ndarray, xgb.XGBClassifier | None]:
+def _load_artifacts(
+    artifacts_dir: str | None = None,
+) -> tuple[dict, np.ndarray, xgb.XGBClassifier | None]:
     settings = get_settings()
     art_path = Path(artifacts_dir or settings.ml_artifacts_dir)
     meta_path = art_path / "meta.json"
@@ -76,9 +78,27 @@ def predict_current(
             "p_q3": probs_rule[2],
             "p_q4": probs_rule[3],
             "by_model": {
-                "rule": {"quadrant": q_rule, "p_q1": probs_rule[0], "p_q2": probs_rule[1], "p_q3": probs_rule[2], "p_q4": probs_rule[3]},
-                "markov": {"quadrant": None, "p_q1": None, "p_q2": None, "p_q3": None, "p_q4": None},
-                "xgboost": {"quadrant": None, "p_q1": None, "p_q2": None, "p_q3": None, "p_q4": None},
+                "rule": {
+                    "quadrant": q_rule,
+                    "p_q1": probs_rule[0],
+                    "p_q2": probs_rule[1],
+                    "p_q3": probs_rule[2],
+                    "p_q4": probs_rule[3],
+                },
+                "markov": {
+                    "quadrant": None,
+                    "p_q1": None,
+                    "p_q2": None,
+                    "p_q3": None,
+                    "p_q4": None,
+                },
+                "xgboost": {
+                    "quadrant": None,
+                    "p_q1": None,
+                    "p_q2": None,
+                    "p_q3": None,
+                    "p_q4": None,
+                },
             },
             "trained": False,
         }
@@ -122,9 +142,27 @@ def predict_current(
         "p_q3": p_ens[2],
         "p_q4": p_ens[3],
         "by_model": {
-            "rule": {"quadrant": q_rule, "p_q1": probs_rule[0], "p_q2": probs_rule[1], "p_q3": probs_rule[2], "p_q4": probs_rule[3]},
-            "markov": {"quadrant": ID_TO_QUADRANT[int(np.argmax(probs_markov))], "p_q1": probs_markov[0], "p_q2": probs_markov[1], "p_q3": probs_markov[2], "p_q4": probs_markov[3]},
-            "xgboost": {"quadrant": ID_TO_QUADRANT[int(np.argmax(probs_xgb))], "p_q1": probs_xgb[0], "p_q2": probs_xgb[1], "p_q3": probs_xgb[2], "p_q4": probs_xgb[3]},
+            "rule": {
+                "quadrant": q_rule,
+                "p_q1": probs_rule[0],
+                "p_q2": probs_rule[1],
+                "p_q3": probs_rule[2],
+                "p_q4": probs_rule[3],
+            },
+            "markov": {
+                "quadrant": ID_TO_QUADRANT[int(np.argmax(probs_markov))],
+                "p_q1": probs_markov[0],
+                "p_q2": probs_markov[1],
+                "p_q3": probs_markov[2],
+                "p_q4": probs_markov[3],
+            },
+            "xgboost": {
+                "quadrant": ID_TO_QUADRANT[int(np.argmax(probs_xgb))],
+                "p_q1": probs_xgb[0],
+                "p_q2": probs_xgb[1],
+                "p_q3": probs_xgb[2],
+                "p_q4": probs_xgb[3],
+            },
         },
         "trained": True,
     }

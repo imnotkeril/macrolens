@@ -9,13 +9,14 @@ Alert types:
 - VIX spike (>30)
 - Fed rate change
 """
+
 import logging
 from datetime import date
 
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.alert import Alert, AlertType, AlertSeverity
+from app.models.alert import Alert, AlertSeverity, AlertType
 from app.models.market_data import MarketData
 from app.services.navigator_engine import NavigatorEngine
 from app.services.yield_analyzer import YieldAnalyzer
@@ -110,7 +111,11 @@ class AlertService:
         )
 
     async def _create_alert_if_new(
-        self, alert_type: AlertType, severity: AlertSeverity, title: str, message: str,
+        self,
+        alert_type: AlertType,
+        severity: AlertSeverity,
+        title: str,
+        message: str,
     ):
         """Avoid duplicate alerts within same day."""
         existing = await self.db.execute(

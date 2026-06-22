@@ -3,12 +3,13 @@ Fed FOMC dashboard — CME FedWatch (when available) + SEP dot path from FRED + 
 
 Falls back to legacy ZQ heuristic for meeting probabilities if CME is unreachable.
 """
+
 from __future__ import annotations
 
 import logging
 from datetime import date
 
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -21,14 +22,26 @@ from app.services.fed_sep_fred import build_sep_rate_path_from_fred
 logger = logging.getLogger(__name__)
 
 # FOMC meeting schedule fallback (calendar_service alignment) when CME does not return dates
-FOMC_DATES = sorted([
-    date(2025, 1, 29), date(2025, 3, 19), date(2025, 5, 7),
-    date(2025, 6, 18), date(2025, 7, 30), date(2025, 9, 17),
-    date(2025, 10, 29), date(2025, 12, 10),
-    date(2026, 1, 28), date(2026, 3, 18), date(2026, 4, 29),
-    date(2026, 6, 17), date(2026, 7, 29), date(2026, 9, 16),
-    date(2026, 10, 28), date(2026, 12, 9),
-])
+FOMC_DATES = sorted(
+    [
+        date(2025, 1, 29),
+        date(2025, 3, 19),
+        date(2025, 5, 7),
+        date(2025, 6, 18),
+        date(2025, 7, 30),
+        date(2025, 9, 17),
+        date(2025, 10, 29),
+        date(2025, 12, 10),
+        date(2026, 1, 28),
+        date(2026, 3, 18),
+        date(2026, 4, 29),
+        date(2026, 6, 17),
+        date(2026, 7, 29),
+        date(2026, 9, 16),
+        date(2026, 10, 28),
+        date(2026, 12, 9),
+    ]
+)
 
 
 def _get_upcoming_fomc(today: date, limit: int = 5) -> list[date]:
@@ -40,7 +53,9 @@ def _format_date(d: date) -> str:
     return f"{months[d.month - 1]} {d.day}, {d.year}"
 
 
-def _heuristic_meetings(upcoming: list[date], current_mid: float, forward_rate: float | None) -> list[dict]:
+def _heuristic_meetings(
+    upcoming: list[date], current_mid: float, forward_rate: float | None
+) -> list[dict]:
     meetings = []
     if forward_rate is not None and current_mid > 0:
         bp_diff = (current_mid - forward_rate) * 100
@@ -61,26 +76,30 @@ def _heuristic_meetings(upcoming: list[date], current_mid: float, forward_rate: 
             else:
                 outcome, outcome_type = "Hold?", "hold"
 
-            meetings.append({
-                "date": _format_date(fomc_date),
-                "hold_pct": hold_pct,
-                "cut25_pct": cut_pct,
-                "cut50_pct": 0,
-                "hike_pct": 0,
-                "outcome": outcome,
-                "outcome_type": outcome_type,
-            })
+            meetings.append(
+                {
+                    "date": _format_date(fomc_date),
+                    "hold_pct": hold_pct,
+                    "cut25_pct": cut_pct,
+                    "cut50_pct": 0,
+                    "hike_pct": 0,
+                    "outcome": outcome,
+                    "outcome_type": outcome_type,
+                }
+            )
     else:
         for fomc_date in upcoming:
-            meetings.append({
-                "date": _format_date(fomc_date),
-                "hold_pct": 0,
-                "cut25_pct": 0,
-                "cut50_pct": 0,
-                "hike_pct": 0,
-                "outcome": "—",
-                "outcome_type": "hold",
-            })
+            meetings.append(
+                {
+                    "date": _format_date(fomc_date),
+                    "hold_pct": 0,
+                    "cut25_pct": 0,
+                    "cut50_pct": 0,
+                    "hike_pct": 0,
+                    "outcome": "—",
+                    "outcome_type": "hold",
+                }
+            )
     return meetings
 
 

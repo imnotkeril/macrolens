@@ -7,11 +7,12 @@ Patterns:
 - Bear Flattening: all rates UP, short end rises MORE → Fed hiking, slowing growth ahead
 - Bull Flattening: all rates DOWN, long end falls MORE → flight to safety, recession fears
 """
+
 import logging
 from datetime import date, timedelta
 
 import numpy as np
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.market_data import YieldData
@@ -51,11 +52,7 @@ class YieldAnalyzer:
         if not latest_date:
             return YieldCurveSnapshot(date=date.today(), points=[], spreads=[])
 
-        query = (
-            select(YieldData)
-            .where(YieldData.date == latest_date)
-            .order_by(YieldData.maturity)
-        )
+        query = select(YieldData).where(YieldData.date == latest_date).order_by(YieldData.maturity)
         result = await self.db.execute(query)
         rows = result.scalars().all()
 
@@ -120,35 +117,39 @@ class YieldAnalyzer:
             if short_m in rows and long_m in rows:
                 value = (rows[long_m] - rows[short_m]) * 100  # convert to basis points
                 percentile = await self._compute_spread_percentile(short_m, long_m, value)
-                spreads.append(YieldSpread(
-                    name=spread_name,
-                    value=round(value, 1),
-                    historical_percentile=percentile,
-                    is_inverted=value < 0,
-                ))
+                spreads.append(
+                    YieldSpread(
+                        name=spread_name,
+                        value=round(value, 1),
+                        historical_percentile=percentile,
+                        is_inverted=value < 0,
+                    )
+                )
 
         # 10Y TIPS real yield (already in percent, not bp)
-        tips_q = select(YieldData).where(
-            YieldData.date == latest_date, YieldData.maturity == "10Y"
-        )
+        tips_q = select(YieldData).where(YieldData.date == latest_date, YieldData.maturity == "10Y")
         tips_result = await self.db.execute(tips_q)
         tips_row = tips_result.scalar_one_or_none()
         if tips_row and tips_row.tips_yield is not None:
-            spreads.append(YieldSpread(
-                name="10Y_REAL_YIELD",
-                value=round(tips_row.tips_yield, 2),
-                historical_percentile=None,
-                is_inverted=tips_row.tips_yield < 0,
-            ))
+            spreads.append(
+                YieldSpread(
+                    name="10Y_REAL_YIELD",
+                    value=round(tips_row.tips_yield, 2),
+                    historical_percentile=None,
+                    is_inverted=tips_row.tips_yield < 0,
+                )
+            )
 
         # 10Y Breakeven (already in percent, not bp)
         if tips_row and tips_row.breakeven is not None:
-            spreads.append(YieldSpread(
-                name="10Y_BREAKEVEN",
-                value=round(tips_row.breakeven, 2),
-                historical_percentile=None,
-                is_inverted=False,
-            ))
+            spreads.append(
+                YieldSpread(
+                    name="10Y_BREAKEVEN",
+                    value=round(tips_row.breakeven, 2),
+                    historical_percentile=None,
+                    is_inverted=False,
+                )
+            )
 
         return spreads
 
@@ -195,13 +196,11 @@ class YieldAnalyzer:
         short_m, long_m = mapping[spread_name]
         cutoff = date.today() - timedelta(days=days)
 
-        short_q = (
-            select(YieldData.date, YieldData.nominal_yield)
-            .where(YieldData.maturity == short_m, YieldData.date >= cutoff)
+        short_q = select(YieldData.date, YieldData.nominal_yield).where(
+            YieldData.maturity == short_m, YieldData.date >= cutoff
         )
-        long_q = (
-            select(YieldData.date, YieldData.nominal_yield)
-            .where(YieldData.maturity == long_m, YieldData.date >= cutoff)
+        long_q = select(YieldData.date, YieldData.nominal_yield).where(
+            YieldData.maturity == long_m, YieldData.date >= cutoff
         )
         short_map = {r[0]: r[1] for r in (await self.db.execute(short_q)).all()}
         long_map = {r[0]: r[1] for r in (await self.db.execute(long_q)).all()}
@@ -272,18 +271,12 @@ class YieldAnalyzer:
             )
         return out
 
-    async def _daily_spread_series_bp(
-        self, short_m: str, long_m: str
-    ) -> list[tuple[date, float]]:
+    async def _daily_spread_series_bp(self, short_m: str, long_m: str) -> list[tuple[date, float]]:
         """Aligned daily Treasury spreads in basis points (full history in DB)."""
-        short_q = (
-            select(YieldData.date, YieldData.nominal_yield)
-            .where(YieldData.maturity == short_m)
+        short_q = select(YieldData.date, YieldData.nominal_yield).where(
+            YieldData.maturity == short_m
         )
-        long_q = (
-            select(YieldData.date, YieldData.nominal_yield)
-            .where(YieldData.maturity == long_m)
-        )
+        long_q = select(YieldData.date, YieldData.nominal_yield).where(YieldData.maturity == long_m)
         short_map = {r[0]: r[1] for r in (await self.db.execute(short_q)).all()}
         long_map = {r[0]: r[1] for r in (await self.db.execute(long_q)).all()}
         common = sorted(set(short_map.keys()) & set(long_map.keys()))
@@ -326,9 +319,7 @@ class YieldAnalyzer:
         latest_date = await self._get_latest_date()
         if not latest_date:
             return None
-        query = select(YieldData).where(
-            YieldData.date == latest_date, YieldData.maturity == "10Y"
-        )
+        query = select(YieldData).where(YieldData.date == latest_date, YieldData.maturity == "10Y")
         result = await self.db.execute(query)
         row = result.scalar_one_or_none()
         return row.tips_yield if row else None
@@ -367,17 +358,17 @@ class YieldAnalyzer:
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
-    async def _compute_spread_percentile(self, short_m: str, long_m: str, current_value: float) -> float | None:
+    async def _compute_spread_percentile(
+        self, short_m: str, long_m: str, current_value: float
+    ) -> float | None:
         """Historical percentile of the spread over last 5 years."""
         five_years_ago = date.today() - timedelta(days=365 * 5)
 
-        short_q = (
-            select(YieldData.date, YieldData.nominal_yield)
-            .where(YieldData.maturity == short_m, YieldData.date >= five_years_ago)
+        short_q = select(YieldData.date, YieldData.nominal_yield).where(
+            YieldData.maturity == short_m, YieldData.date >= five_years_ago
         )
-        long_q = (
-            select(YieldData.date, YieldData.nominal_yield)
-            .where(YieldData.maturity == long_m, YieldData.date >= five_years_ago)
+        long_q = select(YieldData.date, YieldData.nominal_yield).where(
+            YieldData.maturity == long_m, YieldData.date >= five_years_ago
         )
 
         short_result = await self.db.execute(short_q)
@@ -402,13 +393,22 @@ class YieldAnalyzer:
         both_down = short_change < -0.001 and long_change < -0.001
 
         if both_up and long_change > short_change:
-            return "bear_steepening", "Growth + inflation expectations rising. Sell long bonds, buy commodities."
+            return (
+                "bear_steepening",
+                "Growth + inflation expectations rising. Sell long bonds, buy commodities.",
+            )
         if both_down and short_change < long_change:
-            return "bull_steepening", "Fed cutting, economy weak, recovery expected. Buy long bonds, buy risk assets."
+            return (
+                "bull_steepening",
+                "Fed cutting, economy weak, recovery expected. Buy long bonds, buy risk assets.",
+            )
         if both_up and short_change > long_change:
             return "bear_flattening", "Fed hiking, slowing growth ahead. Defensive positioning."
         if both_down and long_change < short_change:
-            return "bull_flattening", "Flight to safety, recession fears. Buy long-duration bonds, sell risk."
+            return (
+                "bull_flattening",
+                "Flight to safety, recession fears. Buy long-duration bonds, sell risk.",
+            )
 
         if abs(short_change) < 0.001 and abs(long_change) < 0.001:
             return "stable", "Curve is stable — no significant directional move."

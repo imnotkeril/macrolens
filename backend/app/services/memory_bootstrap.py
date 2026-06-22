@@ -5,15 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.models.intelligence import (
     SCHEMA_CORE,
-    SCHEMA_MACRO,
-    SCHEMA_REGIMES,
-    SCHEMA_FED,
-    SCHEMA_YIELD,
-    SCHEMA_NAV,
     SCHEMA_DECISIONS,
+    SCHEMA_FED,
+    SCHEMA_MACRO,
     SCHEMA_ML,
+    SCHEMA_NAV,
     SCHEMA_NEWS,
     SCHEMA_OBS,
+    SCHEMA_REGIMES,
+    SCHEMA_YIELD,
 )
 
 MEMORY_SCHEMAS = [

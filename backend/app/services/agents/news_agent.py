@@ -7,14 +7,18 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.market_data import MarketData
 from app.models.intelligence import AgentSignal
-from app.services.agent_persistence import get_or_create_agent_run, upsert_agent_signal, upsert_daily_brief
+from app.models.market_data import MarketData
+from app.schemas.agent_outputs import NewsAgentLLMOutput
+from app.services.agent_persistence import (
+    get_or_create_agent_run,
+    upsert_agent_signal,
+    upsert_daily_brief,
+)
 from app.services.llm.claude_client import ClaudeClient
 from app.services.llm.json_extract import extract_json_object
 from app.services.memory_service import MemoryService
 from app.services.telegram_news_ingestion import ingest_telegram_whitelist
-from app.schemas.agent_outputs import NewsAgentLLMOutput
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +30,21 @@ class NewsAgent:
         run = await get_or_create_agent_run(db, agent_name="news_agent", run_key=as_of.isoformat())
 
         try:
-            await ingest_telegram_whitelist(db, as_of=as_of, max_messages_per_channel=40, source_version="telegram-inline")
+            await ingest_telegram_whitelist(
+                db, as_of=as_of, max_messages_per_channel=40, source_version="telegram-inline"
+            )
         except Exception as e:
             logger.debug("Inline Telegram ingest skipped: %s", e)
 
-        ctx = await memory.search(db, query="macro news geopolitics central bank risk", top_k=8, domain="news")
+        ctx = await memory.search(
+            db, query="macro news geopolitics central bank risk", top_k=8, domain="news"
+        )
 
-        q = select(MarketData).where(MarketData.symbol.in_(["VIXCLS", "DTWEXBGS"])).order_by(MarketData.date.desc())
+        q = (
+            select(MarketData)
+            .where(MarketData.symbol.in_(["VIXCLS", "DTWEXBGS"]))
+            .order_by(MarketData.date.desc())
+        )
         rows = (await db.execute(q)).scalars().all()
         vix = next((r.value for r in rows if r.symbol == "VIXCLS"), None)
         dxy = next((r.value for r in rows if r.symbol == "DTWEXBGS"), None)

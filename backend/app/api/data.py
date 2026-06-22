@@ -1,18 +1,18 @@
-import logging
 import asyncio
+import logging
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 
 from app.config import get_settings
 from app.database import async_session
-from app.models.indicator import Indicator
 from app.models.economic_calendar import SourceHealthMetric
+from app.models.indicator import Indicator
 from app.services.data_collector import DataCollector
 from app.services.progress_store import (
+    get_refresh_progress,
     init_refresh_progress,
     set_refresh_progress,
-    get_refresh_progress,
 )
 from app.tasks.scheduler import run_alert_checks
 
@@ -268,11 +268,7 @@ async def refresh_all_data():
 async def source_health(limit: int = Query(default=50, ge=1, le=500)):
     """Recent source health snapshots for ingestion quality monitoring."""
     async with async_session() as db:
-        q = (
-            select(SourceHealthMetric)
-            .order_by(SourceHealthMetric.measured_at.desc())
-            .limit(limit)
-        )
+        q = select(SourceHealthMetric).order_by(SourceHealthMetric.measured_at.desc()).limit(limit)
         rows = (await db.execute(q)).scalars().all()
     return [
         {

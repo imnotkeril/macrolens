@@ -7,10 +7,11 @@ Loads: breadth, regime/cycle FRED (ISM, LEI, SLOOS, REAL_GDP, HY_SPREAD),
 macro ETF, macro FRED series, and inflation indicators.
 See macrolens/DATA_SOURCES.md for data source map and N/A fixes.
 """
+
 import asyncio
 import logging
 
-from app.database import engine, Base
+from app.database import Base, engine
 from app.seed import seed_indicators
 from app.services.data_collector import DataCollector
 
@@ -33,7 +34,9 @@ async def main():
     logger.info("=== Step 2: Loading breadth data (incl. NYMO, NYSI) ===")
     await collector._load_historical_breadth_data()
 
-    logger.info("=== Step 2b: Loading regime/cycle FRED data (ISM New Orders, LEI, SLOOS, REAL_GDP, HY_SPREAD) ===")
+    logger.info(
+        "=== Step 2b: Loading regime/cycle FRED data (ISM New Orders, LEI, SLOOS, REAL_GDP, HY_SPREAD) ==="
+    )
     await collector._load_historical_regime_data()
 
     logger.info("=== Step 3: Loading macro ETF data (incl. HYG, IEI, LQD, HG=F, KOSPI, TAIEX) ===")

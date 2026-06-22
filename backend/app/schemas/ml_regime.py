@@ -1,4 +1,5 @@
 """Pydantic schemas for ML regime prediction API."""
+
 from pydantic import BaseModel
 
 

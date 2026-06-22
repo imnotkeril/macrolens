@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.forecast_lab import ForecastLabPredictionLog, RegimeHistoryMonthly
 from app.services.forecast_lab import features_pit
-from app.services.forecast_lab.asset_implied_labels import load_price_series, symbols_from_asset_expectations
+from app.services.forecast_lab.asset_implied_labels import (
+    load_price_series,
+    symbols_from_asset_expectations,
+)
 from app.services.forecast_lab.asset_implied_labels_core import (
     forward_pair_hit_rate_for_quadrant,
     pick_quadrant,
@@ -63,7 +67,13 @@ async def materialize_regime_history_monthly(
 
     month_ends = iter_month_ends(date_from, date_to)
     if not month_ends:
-        return {"rows": 0, "batch_id": batch_id, "horizon_months": h, "message": "no month ends in range", "errors": 0}
+        return {
+            "rows": 0,
+            "batch_id": batch_id,
+            "horizon_months": h,
+            "message": "no month ends in range",
+            "errors": 0,
+        }
 
     date_min_global = add_months(min(month_ends), -(h + 3))
     date_max_global = add_months(max(month_ends), h)
@@ -89,7 +99,9 @@ async def materialize_regime_history_monthly(
             qid, fb = pick_quadrant(sc, rule_id)
             asset_quad = ID_TO_QUADRANT[qid]
             conf_score = float(sc.get(asset_quad, -1.0))
-            confirmed_lookback = conf_score >= asset_confirm_threshold if conf_score >= 0.0 else False
+            confirmed_lookback = (
+                conf_score >= asset_confirm_threshold if conf_score >= 0.0 else False
+            )
 
             d_fwd = add_months(d, h)
             fw_score = -1.0
@@ -121,11 +133,15 @@ async def materialize_regime_history_monthly(
                 "yield_curve_pattern": dyn.pattern,
                 "yield_curve_short_chg_1m_bp": float(dyn.short_end_change_1m),
                 "yield_curve_long_chg_1m_bp": float(dyn.long_end_change_1m),
-                "navigator_curve_matches_expectation": curve_pattern_matches_quadrant(nq, dyn.pattern),
-                "fl_rule_curve_matches_expectation": curve_pattern_matches_quadrant(fl_rule, dyn.pattern),
+                "navigator_curve_matches_expectation": curve_pattern_matches_quadrant(
+                    nq, dyn.pattern
+                ),
+                "fl_rule_curve_matches_expectation": curve_pattern_matches_quadrant(
+                    fl_rule, dyn.pattern
+                ),
                 "fl_curve_pattern_embed": float(row.curve_pattern_embed),
                 "materialization_batch_id": batch_id,
-                "materialized_at": datetime.now(timezone.utc).replace(tzinfo=None),
+                "materialized_at": datetime.now(UTC).replace(tzinfo=None),
             }
             await _upsert_regime_history_row(db, values)
             n_ok += 1
@@ -146,7 +162,13 @@ async def materialize_regime_history_monthly(
         msg = first_err or "all months failed; check backend logs"
     elif n_err:
         msg = f"{n_err} month(s) skipped; first_error={first_err}"
-    return {"rows": n_ok, "batch_id": batch_id, "horizon_months": h, "message": msg, "errors": n_err}
+    return {
+        "rows": n_ok,
+        "batch_id": batch_id,
+        "horizon_months": h,
+        "message": msg,
+        "errors": n_err,
+    }
 
 
 async def latest_ensemble_phase_by_obs_dates(
@@ -169,7 +191,8 @@ async def latest_ensemble_phase_by_obs_dates(
     ).subquery()
     q = select(ForecastLabPredictionLog).join(
         subq,
-        (ForecastLabPredictionLog.as_of_date == subq.c.d) & (ForecastLabPredictionLog.id == subq.c.mx),
+        (ForecastLabPredictionLog.as_of_date == subq.c.d)
+        & (ForecastLabPredictionLog.id == subq.c.mx),
     )
     res = await db.execute(q)
     out: dict[date, str | None] = {}

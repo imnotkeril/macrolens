@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import xgboost as xgb
@@ -38,7 +37,7 @@ async def predict_macro_panel(
     series_defs = cfg.get("series") or []
     horizons = [int(h) for h in cfg.get("horizons", [1, 3, 6])]
 
-    from datetime import date, timedelta
+    from datetime import timedelta
 
     if hasattr(as_of, "date"):
         as_of_d = as_of.date() if callable(getattr(as_of, "date", None)) else as_of

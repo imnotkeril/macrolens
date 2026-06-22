@@ -6,24 +6,25 @@ fed_policy_score, quadrant (ground truth) and cycle/feature values known at that
 Uses a fresh DB session per month to avoid connection drops on long runs.
 Saves to Parquet for reproducibility. No future data leakage.
 """
+
 import json
 import logging
 import os
 from datetime import date, timedelta
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import async_session
-from app.services.navigator_engine import NavigatorEngine, CATEGORY_WEIGHTS
-from app.services.fed_tracker import FedTracker
-from app.services.cycle_engine import CycleEngine
-from app.services.progress_store import set_train_progress
 from app.models.indicator import Indicator, IndicatorValue
-from sqlalchemy import select, desc
-import numpy as np
+from app.services.cycle_engine import CycleEngine
+from app.services.fed_tracker import FedTracker
+from app.services.navigator_engine import CATEGORY_WEIGHTS
+from app.services.progress_store import set_train_progress
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,12 @@ def _debug_log(message: str, data: dict, hypothesis_id: str, run_id: str = "run1
         return
     try:
         with open(log_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps({**payload, "timestamp": __import__("time").time() * 1000}, ensure_ascii=False) + "\n")
+            f.write(
+                json.dumps(
+                    {**payload, "timestamp": __import__("time").time() * 1000}, ensure_ascii=False
+                )
+                + "\n"
+            )
     except Exception:
         pass
 
@@ -154,9 +160,7 @@ async def _build_row_for_month(db: AsyncSession, month_end: date) -> dict | None
         quadrant = _determine_quadrant(growth, fed)
         cycle_engine = CycleEngine(db)
         # 2y lookback for z-score: faster than 10y, enough for ML
-        cycle_features = await cycle_engine.get_features_at_date(
-            month_end, lookback_days=730
-        )
+        cycle_features = await cycle_engine.get_features_at_date(month_end, lookback_days=730)
     except Exception as e:
         logger.warning("Skip date %s: %s", month_end, e)
         return None
@@ -254,10 +258,10 @@ async def build_dataset_single_indicator(
     settings = get_settings()
     out_path = output_path or settings.ml_dataset_path
     end = date.today()
-    last_me = (end.replace(day=1) - timedelta(days=1))
+    last_me = end.replace(day=1) - timedelta(days=1)
     start_me = last_me
     for _ in range(max_months - 1):
-        start_me = (start_me.replace(day=1) - timedelta(days=1))
+        start_me = start_me.replace(day=1) - timedelta(days=1)
     months = _month_end_range(start_me, last_me)
     if not months:
         return pd.DataFrame()
@@ -384,7 +388,11 @@ async def build_dataset(
 
     _debug_log(
         "build_dataset after loop",
-        {"len_rows": len(rows), "total_months": total, "first_month": str(months[0]) if months else None},
+        {
+            "len_rows": len(rows),
+            "total_months": total,
+            "first_month": str(months[0]) if months else None,
+        },
         "H1",
     )
     if not rows and months:
@@ -414,7 +422,9 @@ async def build_dataset(
     df = pd.DataFrame(rows)
     if df.empty:
         logger.warning("Dataset is empty")
-        _debug_log("build_dataset returning empty df (no parquet written)", {"out_path": out_path}, "H5")
+        _debug_log(
+            "build_dataset returning empty df (no parquet written)", {"out_path": out_path}, "H5"
+        )
         return df
 
     # Fill NaN features with 0 for model compatibility
@@ -434,6 +444,12 @@ async def build_dataset(
         "H4",
     )
     df.to_parquet(path, index=False)
-    logger.info("Saved ML dataset to %s: %d rows from %s to %s", path, len(df), df["date"].min(), df["date"].max())
+    logger.info(
+        "Saved ML dataset to %s: %d rows from %s to %s",
+        path,
+        len(df),
+        df["date"].min(),
+        df["date"].max(),
+    )
 
     return df

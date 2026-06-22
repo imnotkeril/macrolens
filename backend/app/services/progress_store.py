@@ -3,6 +3,7 @@ In-memory progress store for long-running tasks: data refresh and ML train.
 Single runner per task (refresh/train), so one active progress per key.
 When ML_TRAIN_PROGRESS_FILE is set (worker process), train progress is also written to that file.
 """
+
 from __future__ import annotations
 
 import json
@@ -108,7 +109,9 @@ def set_train_progress(
                     "error": _train.get("error"),
                 }
                 Path(progress_file).parent.mkdir(parents=True, exist_ok=True)
-                Path(progress_file).write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+                Path(progress_file).write_text(
+                    json.dumps(out, ensure_ascii=False), encoding="utf-8"
+                )
             except Exception:
                 pass
 

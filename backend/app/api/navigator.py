@@ -3,7 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.schemas.navigator import (
-    NavigatorRecommendation, CrossAssetSignal, RecessionCheck,
+    CrossAssetSignal,
+    NavigatorRecommendation,
+    RecessionCheck,
 )
 from app.services.navigator_engine import NavigatorEngine
 

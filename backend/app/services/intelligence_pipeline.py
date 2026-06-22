@@ -3,6 +3,7 @@ Single entry point for daily intelligence: agents, ML1 regime, ML2, Master synth
 
 Used by both the HTTP API and the APScheduler job to avoid drift.
 """
+
 from __future__ import annotations
 
 import logging
@@ -12,15 +13,15 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.services.ml_dataset_builder import get_latest_ml_feature_row
-from app.services.ml_inference_service import predict_current
-from app.services.ml2_dataset_builder import build_ml2_dataset
-from app.services.ml2_factor_timing import ML2FactorTimingService
-from app.services.ml2_anomaly import ML2AnomalyService
 from app.services.agents.fed_cb_agent import FedCBAgent
-from app.services.agents.news_agent import NewsAgent
 from app.services.agents.macro_data_agent import MacroDataAgent
 from app.services.agents.master_agent import MasterAgent
+from app.services.agents.news_agent import NewsAgent
+from app.services.ml2_anomaly import ML2AnomalyService
+from app.services.ml2_dataset_builder import build_ml2_dataset
+from app.services.ml2_factor_timing import ML2FactorTimingService
+from app.services.ml_dataset_builder import get_latest_ml_feature_row
+from app.services.ml_inference_service import predict_current
 
 logger = logging.getLogger(__name__)
 

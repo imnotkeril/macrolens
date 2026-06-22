@@ -12,37 +12,38 @@ PIT as-of matches the Macro Dashboard Forecast Lab card: month-end on or before 
 (same as frontend getForecastLabSummary({ alignMonthEnd: true })), so ensemble caption and FL widget
 share one snapshot date and probabilities.
 """
+
 import logging
 from datetime import date, timedelta
 
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.indicator import IndicatorCategory
-from app.models.market_data import MarketData, YieldData
-from app.services.indicator_analyzer import IndicatorAnalyzer
-from app.services.fed_tracker import FedTracker
-from app.services.yield_analyzer import YieldAnalyzer
+from app.models.market_data import MarketData
 from app.schemas.navigator import (
-    NavigatorPosition,
-    NavigatorRecommendation,
-    NavigatorPhaseContext,
-    NavigatorEnsembleOverlay,
-    TradingState,
-    FactorAllocation,
-    SectorAllocation,
     AssetAllocation,
     CrossAssetSignal,
+    FactorAllocation,
+    NavigatorEnsembleOverlay,
+    NavigatorPhaseContext,
+    NavigatorPosition,
+    NavigatorRecommendation,
     RecessionCheck,
     RecessionCheckItem,
+    SectorAllocation,
     TradingRecommendation,
+    TradingState,
 )
+from app.services.fed_tracker import FedTracker
+from app.services.indicator_analyzer import IndicatorAnalyzer
+from app.services.navigator_cross_asset_expectations import confidence_from_cross_asset_signals
 from app.services.navigator_yield_expectations import (
     curve_pattern_matches_quadrant,
     expected_curve_patterns_for_quadrant,
 )
-from app.services.navigator_cross_asset_expectations import confidence_from_cross_asset_signals
 from app.services.trading_state_engine import build_trading_state
+from app.services.yield_analyzer import YieldAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ def _dashboard_fl_pit_as_of() -> date:
     from app.services.forecast_lab.inference import _effective_as_of
 
     return _effective_as_of(date.today(), True)
+
 
 # Factor -> representative ETFs/tickers for factor rotation
 FACTOR_TICKERS: dict[str, list[str]] = {
@@ -71,7 +73,12 @@ FACTOR_TICKERS: dict[str, list[str]] = {
 # Trading ideas (spreads, pairs) by quadrant
 TRADING_RECOMMENDATIONS_BY_QUADRANT: dict[str, list[tuple[str, str, str, str]]] = {
     "Q1_GOLDILOCKS": [
-        ("Cyclicals vs Defensives", "pair", "Long XLY / Short XLP", "Cyclicals outperform in Risk ON; spread widens."),
+        (
+            "Cyclicals vs Defensives",
+            "pair",
+            "Long XLY / Short XLP",
+            "Cyclicals outperform in Risk ON; spread widens.",
+        ),
         ("Small vs Large Cap", "pair", "Long IWM / Short SPY", "Small cap leverage to recovery."),
         ("High Beta vs Low Vol", "spread", "Long SPHB / Short SPLV", "Risk appetite expansion."),
         ("EM vs DM", "pair", "Long EEM / Short EFA", "EM benefits from weak dollar, risk-on."),
@@ -79,16 +86,41 @@ TRADING_RECOMMENDATIONS_BY_QUADRANT: dict[str, list[tuple[str, str, str, str]]] 
     "Q2_REFLATION": [
         ("Long duration bonds", "directional", "Long TLT, IEF", "Easy Fed supports long bonds."),
         ("Gold", "directional", "Long GLD, IAU", "Recession hedge, weak dollar."),
-        ("Defensives overweight", "directional", "XLP, XLV, XLU", "Quality and defensives in weak growth."),
+        (
+            "Defensives overweight",
+            "directional",
+            "XLP, XLV, XLU",
+            "Quality and defensives in weak growth.",
+        ),
     ],
     "Q3_OVERHEATING": [
-        ("Value vs Growth", "pair", "Long VTV / Short VUG", "Value outperforms in tight Fed, rising rates."),
-        ("2Y-10Y steepener", "curve", "Long 10Y / Short 2Y (or steepener ETF)", "Curve steepens on growth + inflation."),
-        ("XLB+XLF vs SPY", "pair", "Long (XLB+XLF)/2 / Short SPY", "Value/cyclical tilt per strategy."),
+        (
+            "Value vs Growth",
+            "pair",
+            "Long VTV / Short VUG",
+            "Value outperforms in tight Fed, rising rates.",
+        ),
+        (
+            "2Y-10Y steepener",
+            "curve",
+            "Long 10Y / Short 2Y (or steepener ETF)",
+            "Curve steepens on growth + inflation.",
+        ),
+        (
+            "XLB+XLF vs SPY",
+            "pair",
+            "Long (XLB+XLF)/2 / Short SPY",
+            "Value/cyclical tilt per strategy.",
+        ),
         ("Energy", "directional", "XLE, VDE", "Inflation beneficiary."),
     ],
     "Q4_STAGFLATION": [
-        ("Flattener (curve)", "curve", "Long 2Y / Short 10Y (flattener)", "Fed hiking, short end up more."),
+        (
+            "Flattener (curve)",
+            "curve",
+            "Long 2Y / Short 10Y (flattener)",
+            "Fed hiking, short end up more.",
+        ),
         ("Defensives", "directional", "XLP, XLV, XLU", "Only sectors that hold up."),
         ("Short cyclicals", "pair", "Short XLY / Long XLP", "Risk OFF, defensives outperform."),
         ("DXY long", "directional", "Long UUP", "Flight to safety, dollar strength."),
@@ -109,103 +141,273 @@ QUADRANT_CONFIG = {
     "Q1_GOLDILOCKS": {
         "label": "Risk ON (Easy Fed + Positive Macro Sentiment)",
         "factors": [
-            FactorAllocation(factor="Growth", weight="overweight", description="Tech, innovation — low rates support high-duration equities"),
-            FactorAllocation(factor="Small Cap", weight="overweight", description="Domestic economy exposure, higher beta, 2x market moves"),
-            FactorAllocation(factor="High Beta", weight="overweight", description="Amplified market participation in risk-on"),
-            FactorAllocation(factor="Cyclicals", weight="overweight", description="Max exposure — recovery beneficiaries"),
-            FactorAllocation(factor="Value", weight="neutral", description="Balanced — not rate-driven yet"),
-            FactorAllocation(factor="Quality", weight="underweight", description="Too defensive for this environment"),
-            FactorAllocation(factor="Defensives", weight="underweight", description="Minimize — no need for safety"),
-            FactorAllocation(factor="Low Vol", weight="underweight", description="Underperforms in bull markets"),
+            FactorAllocation(
+                factor="Growth",
+                weight="overweight",
+                description="Tech, innovation — low rates support high-duration equities",
+            ),
+            FactorAllocation(
+                factor="Small Cap",
+                weight="overweight",
+                description="Domestic economy exposure, higher beta, 2x market moves",
+            ),
+            FactorAllocation(
+                factor="High Beta",
+                weight="overweight",
+                description="Amplified market participation in risk-on",
+            ),
+            FactorAllocation(
+                factor="Cyclicals",
+                weight="overweight",
+                description="Max exposure — recovery beneficiaries",
+            ),
+            FactorAllocation(
+                factor="Value", weight="neutral", description="Balanced — not rate-driven yet"
+            ),
+            FactorAllocation(
+                factor="Quality",
+                weight="underweight",
+                description="Too defensive for this environment",
+            ),
+            FactorAllocation(
+                factor="Defensives",
+                weight="underweight",
+                description="Minimize — no need for safety",
+            ),
+            FactorAllocation(
+                factor="Low Vol", weight="underweight", description="Underperforms in bull markets"
+            ),
         ],
         "sectors": [
-            SectorAllocation(sector="Technology", weight="overweight", rationale="Innovation cycle, low rates"),
-            SectorAllocation(sector="Consumer Discretionary", weight="overweight", rationale="Strong consumer spending"),
-            SectorAllocation(sector="Industrials", weight="overweight", rationale="Manufacturing recovery"),
-            SectorAllocation(sector="Financials", weight="overweight", rationale="Credit growth, steepening curve"),
-            SectorAllocation(sector="Materials", weight="overweight", rationale="Commodity rebound"),
+            SectorAllocation(
+                sector="Technology", weight="overweight", rationale="Innovation cycle, low rates"
+            ),
+            SectorAllocation(
+                sector="Consumer Discretionary",
+                weight="overweight",
+                rationale="Strong consumer spending",
+            ),
+            SectorAllocation(
+                sector="Industrials", weight="overweight", rationale="Manufacturing recovery"
+            ),
+            SectorAllocation(
+                sector="Financials",
+                weight="overweight",
+                rationale="Credit growth, steepening curve",
+            ),
+            SectorAllocation(
+                sector="Materials", weight="overweight", rationale="Commodity rebound"
+            ),
             SectorAllocation(sector="Healthcare", weight="neutral", rationale="Defensive growth"),
-            SectorAllocation(sector="Consumer Staples", weight="underweight", rationale="Defensive — not needed"),
-            SectorAllocation(sector="Utilities", weight="underweight", rationale="Bond proxy — rates may rise"),
+            SectorAllocation(
+                sector="Consumer Staples", weight="underweight", rationale="Defensive — not needed"
+            ),
+            SectorAllocation(
+                sector="Utilities", weight="underweight", rationale="Bond proxy — rates may rise"
+            ),
         ],
-        "allocation": AssetAllocation(equities_pct=70, bonds_pct=15, commodities_pct=10, cash_pct=5, gold_pct=0),
+        "allocation": AssetAllocation(
+            equities_pct=70, bonds_pct=15, commodities_pct=10, cash_pct=5, gold_pct=0
+        ),
         "geographic": {"DM": "neutral", "EM": "overweight"},
     },
     "Q2_REFLATION": {
         "label": "GROWTH (Easy Fed + Negative Macro Sentiment)",
         "factors": [
-            FactorAllocation(factor="Quality", weight="overweight", description="Safety + stability in weak growth"),
-            FactorAllocation(factor="Large Cap", weight="overweight", description="Defensive positioning, global exposure"),
-            FactorAllocation(factor="Low Vol", weight="overweight", description="Dampened market moves"),
-            FactorAllocation(factor="Defensives", weight="overweight", description="Staples, healthcare, utilities"),
-            FactorAllocation(factor="Growth", weight="neutral", description="Low rates help but weak growth hurts"),
-            FactorAllocation(factor="Small Cap", weight="underweight", description="Economically sensitive — risky"),
-            FactorAllocation(factor="High Beta", weight="underweight", description="Amplifies weakness"),
-            FactorAllocation(factor="Cyclicals", weight="underweight", description="No growth to leverage"),
+            FactorAllocation(
+                factor="Quality",
+                weight="overweight",
+                description="Safety + stability in weak growth",
+            ),
+            FactorAllocation(
+                factor="Large Cap",
+                weight="overweight",
+                description="Defensive positioning, global exposure",
+            ),
+            FactorAllocation(
+                factor="Low Vol", weight="overweight", description="Dampened market moves"
+            ),
+            FactorAllocation(
+                factor="Defensives",
+                weight="overweight",
+                description="Staples, healthcare, utilities",
+            ),
+            FactorAllocation(
+                factor="Growth",
+                weight="neutral",
+                description="Low rates help but weak growth hurts",
+            ),
+            FactorAllocation(
+                factor="Small Cap",
+                weight="underweight",
+                description="Economically sensitive — risky",
+            ),
+            FactorAllocation(
+                factor="High Beta", weight="underweight", description="Amplifies weakness"
+            ),
+            FactorAllocation(
+                factor="Cyclicals", weight="underweight", description="No growth to leverage"
+            ),
         ],
         "sectors": [
-            SectorAllocation(sector="Healthcare", weight="overweight", rationale="Recession-resistant, pricing power"),
-            SectorAllocation(sector="Consumer Staples", weight="overweight", rationale="Recession-resistant demand"),
-            SectorAllocation(sector="Utilities", weight="overweight", rationale="Bond proxy, high dividends"),
-            SectorAllocation(sector="Technology", weight="neutral", rationale="Low rates help but weak demand"),
-            SectorAllocation(sector="Financials", weight="underweight", rationale="Credit risk, flat curve"),
+            SectorAllocation(
+                sector="Healthcare",
+                weight="overweight",
+                rationale="Recession-resistant, pricing power",
+            ),
+            SectorAllocation(
+                sector="Consumer Staples",
+                weight="overweight",
+                rationale="Recession-resistant demand",
+            ),
+            SectorAllocation(
+                sector="Utilities", weight="overweight", rationale="Bond proxy, high dividends"
+            ),
+            SectorAllocation(
+                sector="Technology", weight="neutral", rationale="Low rates help but weak demand"
+            ),
+            SectorAllocation(
+                sector="Financials", weight="underweight", rationale="Credit risk, flat curve"
+            ),
             SectorAllocation(sector="Energy", weight="underweight", rationale="Weak demand"),
-            SectorAllocation(sector="Consumer Discretionary", weight="underweight", rationale="Weak consumer"),
-            SectorAllocation(sector="Materials", weight="underweight", rationale="Commodity weakness"),
+            SectorAllocation(
+                sector="Consumer Discretionary", weight="underweight", rationale="Weak consumer"
+            ),
+            SectorAllocation(
+                sector="Materials", weight="underweight", rationale="Commodity weakness"
+            ),
         ],
-        "allocation": AssetAllocation(equities_pct=45, bonds_pct=30, commodities_pct=5, cash_pct=10, gold_pct=10),
+        "allocation": AssetAllocation(
+            equities_pct=45, bonds_pct=30, commodities_pct=5, cash_pct=10, gold_pct=10
+        ),
         "geographic": {"DM": "overweight", "EM": "underweight"},
     },
     "Q3_OVERHEATING": {
         "label": "VALUE (Tight Fed + Positive Macro Sentiment)",
         "factors": [
-            FactorAllocation(factor="Value", weight="overweight", description="Rising rates help financials, energy"),
-            FactorAllocation(factor="Cyclicals", weight="overweight", description="Strong economy supports earnings"),
+            FactorAllocation(
+                factor="Value",
+                weight="overweight",
+                description="Rising rates help financials, energy",
+            ),
+            FactorAllocation(
+                factor="Cyclicals",
+                weight="overweight",
+                description="Strong economy supports earnings",
+            ),
             FactorAllocation(factor="Large Cap", weight="neutral", description="Benchmark weight"),
             FactorAllocation(factor="Quality", weight="neutral", description="Balanced approach"),
-            FactorAllocation(factor="Growth", weight="underweight", description="Hurt by high rates — long duration"),
-            FactorAllocation(factor="High Beta", weight="underweight", description="Fed tightening creates volatility"),
-            FactorAllocation(factor="Small Cap", weight="underweight", description="Rate-sensitive, more leveraged"),
+            FactorAllocation(
+                factor="Growth",
+                weight="underweight",
+                description="Hurt by high rates — long duration",
+            ),
+            FactorAllocation(
+                factor="High Beta",
+                weight="underweight",
+                description="Fed tightening creates volatility",
+            ),
+            FactorAllocation(
+                factor="Small Cap",
+                weight="underweight",
+                description="Rate-sensitive, more leveraged",
+            ),
             FactorAllocation(factor="Low Vol", weight="neutral", description="Moderate protection"),
         ],
         "sectors": [
-            SectorAllocation(sector="Financials", weight="overweight", rationale="Steepening curve, credit growth"),
-            SectorAllocation(sector="Energy", weight="overweight", rationale="Inflation beneficiary"),
+            SectorAllocation(
+                sector="Financials",
+                weight="overweight",
+                rationale="Steepening curve, credit growth",
+            ),
+            SectorAllocation(
+                sector="Energy", weight="overweight", rationale="Inflation beneficiary"
+            ),
             SectorAllocation(sector="Industrials", weight="overweight", rationale="Strong demand"),
             SectorAllocation(sector="Materials", weight="overweight", rationale="Commodity demand"),
             SectorAllocation(sector="Healthcare", weight="neutral", rationale="Defensive growth"),
-            SectorAllocation(sector="Technology", weight="underweight", rationale="Rate-sensitive, high valuation"),
-            SectorAllocation(sector="Utilities", weight="underweight", rationale="Hurt by rising rates"),
-            SectorAllocation(sector="Consumer Discretionary", weight="neutral", rationale="Strong consumer but rate pressure"),
+            SectorAllocation(
+                sector="Technology",
+                weight="underweight",
+                rationale="Rate-sensitive, high valuation",
+            ),
+            SectorAllocation(
+                sector="Utilities", weight="underweight", rationale="Hurt by rising rates"
+            ),
+            SectorAllocation(
+                sector="Consumer Discretionary",
+                weight="neutral",
+                rationale="Strong consumer but rate pressure",
+            ),
         ],
-        "allocation": AssetAllocation(equities_pct=60, bonds_pct=15, commodities_pct=15, cash_pct=5, gold_pct=5),
+        "allocation": AssetAllocation(
+            equities_pct=60, bonds_pct=15, commodities_pct=15, cash_pct=5, gold_pct=5
+        ),
         "geographic": {"DM": "neutral", "EM": "neutral"},
     },
     "Q4_STAGFLATION": {
         "label": "Risk OFF (Tight Fed + Negative Macro Sentiment)",
         "factors": [
-            FactorAllocation(factor="Quality", weight="overweight", description="Survival mode — strong balance sheets"),
-            FactorAllocation(factor="Defensives", weight="overweight", description="Only sectors that stay green"),
-            FactorAllocation(factor="Low Vol", weight="overweight", description="Essential dampening"),
-            FactorAllocation(factor="Large Cap", weight="overweight", description="Flight to safety and liquidity"),
+            FactorAllocation(
+                factor="Quality",
+                weight="overweight",
+                description="Survival mode — strong balance sheets",
+            ),
+            FactorAllocation(
+                factor="Defensives", weight="overweight", description="Only sectors that stay green"
+            ),
+            FactorAllocation(
+                factor="Low Vol", weight="overweight", description="Essential dampening"
+            ),
+            FactorAllocation(
+                factor="Large Cap",
+                weight="overweight",
+                description="Flight to safety and liquidity",
+            ),
             FactorAllocation(factor="Value", weight="underweight", description="Earnings collapse"),
-            FactorAllocation(factor="Growth", weight="underweight", description="High rates + weak growth"),
-            FactorAllocation(factor="Small Cap", weight="underweight", description="High risk, low liquidity"),
-            FactorAllocation(factor="High Beta", weight="underweight", description="Amplifies losses"),
-            FactorAllocation(factor="Cyclicals", weight="underweight", description="Earnings collapse"),
+            FactorAllocation(
+                factor="Growth", weight="underweight", description="High rates + weak growth"
+            ),
+            FactorAllocation(
+                factor="Small Cap", weight="underweight", description="High risk, low liquidity"
+            ),
+            FactorAllocation(
+                factor="High Beta", weight="underweight", description="Amplifies losses"
+            ),
+            FactorAllocation(
+                factor="Cyclicals", weight="underweight", description="Earnings collapse"
+            ),
         ],
         "sectors": [
-            SectorAllocation(sector="Healthcare", weight="overweight", rationale="Recession-resistant"),
-            SectorAllocation(sector="Consumer Staples", weight="overweight", rationale="Recession-resistant"),
-            SectorAllocation(sector="Utilities", weight="overweight", rationale="Defensive, dividend"),
-            SectorAllocation(sector="Technology", weight="underweight", rationale="Rate + growth headwind"),
-            SectorAllocation(sector="Consumer Discretionary", weight="underweight", rationale="Consumer weakness"),
-            SectorAllocation(sector="Financials", weight="underweight", rationale="Credit defaults"),
-            SectorAllocation(sector="Industrials", weight="underweight", rationale="Manufacturing contraction"),
+            SectorAllocation(
+                sector="Healthcare", weight="overweight", rationale="Recession-resistant"
+            ),
+            SectorAllocation(
+                sector="Consumer Staples", weight="overweight", rationale="Recession-resistant"
+            ),
+            SectorAllocation(
+                sector="Utilities", weight="overweight", rationale="Defensive, dividend"
+            ),
+            SectorAllocation(
+                sector="Technology", weight="underweight", rationale="Rate + growth headwind"
+            ),
+            SectorAllocation(
+                sector="Consumer Discretionary", weight="underweight", rationale="Consumer weakness"
+            ),
+            SectorAllocation(
+                sector="Financials", weight="underweight", rationale="Credit defaults"
+            ),
+            SectorAllocation(
+                sector="Industrials", weight="underweight", rationale="Manufacturing contraction"
+            ),
             SectorAllocation(sector="Energy", weight="underweight", rationale="Demand destruction"),
-            SectorAllocation(sector="Materials", weight="underweight", rationale="Commodity weakness"),
+            SectorAllocation(
+                sector="Materials", weight="underweight", rationale="Commodity weakness"
+            ),
         ],
-        "allocation": AssetAllocation(equities_pct=35, bonds_pct=30, commodities_pct=5, cash_pct=20, gold_pct=10),
+        "allocation": AssetAllocation(
+            equities_pct=35, bonds_pct=30, commodities_pct=5, cash_pct=20, gold_pct=10
+        ),
         "geographic": {"DM": "overweight", "EM": "underweight"},
     },
 }
@@ -258,7 +460,10 @@ class NavigatorEngine:
         fed_6m_fwd = max(-2.0, min(2.0, 2.0 * f_now - f_6m))
         fed_1y_fwd = max(-2.0, min(2.0, 3.0 * f_now - 2.0 * f_1y))
         positions = []
-        for g, f, label in [(growth_6m_fwd, fed_6m_fwd, "6m forward"), (growth_1y_fwd, fed_1y_fwd, "1y forward")]:
+        for g, f, label in [
+            (growth_6m_fwd, fed_6m_fwd, "6m forward"),
+            (growth_1y_fwd, fed_1y_fwd, "1y forward"),
+        ]:
             q = determine_quadrant(g, f)
             positions.append(
                 NavigatorPosition(
@@ -300,8 +505,9 @@ class NavigatorEngine:
 
     async def _compute_historical_growth(self, target: date) -> float:
         """Simplified growth score at a historical date using indicator z-scores."""
-        from app.models.indicator import Indicator, IndicatorValue
         import numpy as np
+
+        from app.models.indicator import Indicator, IndicatorValue
 
         total = 0.0
         for category, weight in CATEGORY_WEIGHTS.items():
@@ -339,7 +545,11 @@ class NavigatorEngine:
 
     async def get_recommendation(self) -> NavigatorRecommendation:
         from app.services.forecast_lab import features_pit
-        from app.services.forecast_lab.rule_phase import determine_quadrant, scores_from_phase_probs, scores_modal_phase
+        from app.services.forecast_lab.rule_phase import (
+            determine_quadrant,
+            scores_from_phase_probs,
+            scores_modal_phase,
+        )
 
         as_of = _dashboard_fl_pit_as_of()
         direction = await self._compute_direction()
@@ -393,7 +603,9 @@ class NavigatorEngine:
             date=as_of,
             matrix_quadrant=None,
             ensemble_growth_score=ensemble_overlay.growth_score if ensemble_overlay else None,
-            ensemble_fed_policy_score=ensemble_overlay.fed_policy_score if ensemble_overlay else None,
+            ensemble_fed_policy_score=(
+                ensemble_overlay.fed_policy_score if ensemble_overlay else None
+            ),
         )
 
         factors_with_tickers = [
@@ -406,7 +618,9 @@ class NavigatorEngine:
             for f in config["factors"]
         ]
         trading_recs = [
-            TradingRecommendation(name=name, trade_type=ttype, legs=legs, description=desc, rationale=desc)
+            TradingRecommendation(
+                name=name, trade_type=ttype, legs=legs, description=desc, rationale=desc
+            )
             for name, ttype, legs, desc in TRADING_RECOMMENDATIONS_BY_QUADRANT.get(quadrant, [])
         ]
         expected = expected_curve_patterns_for_quadrant(quadrant)
@@ -443,9 +657,7 @@ class NavigatorEngine:
         """Cross-asset alignment vs quadrant expectations + optional yield-curve methodology blend (TZ)."""
         if signals is None:
             signals = await self.get_cross_asset_signals()
-        return confidence_from_cross_asset_signals(
-            quadrant, signals, curve_match=curve_match
-        )
+        return confidence_from_cross_asset_signals(quadrant, signals, curve_match=curve_match)
 
     async def get_cross_asset_signals(self) -> list[CrossAssetSignal]:
         """Cross-asset signals from spec Part 8.3."""
@@ -457,11 +669,15 @@ class NavigatorEngine:
         if gold and gold_prev:
             change = ((gold - gold_prev) / gold_prev) * 100
             signal = "bullish" if change > 2 else ("bearish" if change < -2 else "neutral")
-            signals.append(CrossAssetSignal(
-                name="Gold", signal=signal, value=round(change, 1),
-                description=f"Gold {'rising' if change > 0 else 'falling'} {abs(change):.1f}% (30d) — "
-                           f"{'easy Fed signal' if change > 0 else 'tight Fed signal'}",
-            ))
+            signals.append(
+                CrossAssetSignal(
+                    name="Gold",
+                    signal=signal,
+                    value=round(change, 1),
+                    description=f"Gold {'rising' if change > 0 else 'falling'} {abs(change):.1f}% (30d) — "
+                    f"{'easy Fed signal' if change > 0 else 'tight Fed signal'}",
+                )
+            )
 
         # Dollar signal
         dxy = await self._get_latest_market("DXY")
@@ -469,10 +685,14 @@ class NavigatorEngine:
         if dxy and dxy_prev:
             change = ((dxy - dxy_prev) / dxy_prev) * 100
             signal = "bearish" if change > 2 else ("bullish" if change < -2 else "neutral")
-            signals.append(CrossAssetSignal(
-                name="Dollar (DXY)", signal=signal, value=round(change, 1),
-                description=f"DXY {'strengthening' if change > 0 else 'weakening'} {abs(change):.1f}% (30d)",
-            ))
+            signals.append(
+                CrossAssetSignal(
+                    name="Dollar (DXY)",
+                    signal=signal,
+                    value=round(change, 1),
+                    description=f"DXY {'strengthening' if change > 0 else 'weakening'} {abs(change):.1f}% (30d)",
+                )
+            )
 
         # Copper signal (growth proxy)
         copper = await self._get_latest_market("COPPER")
@@ -480,42 +700,56 @@ class NavigatorEngine:
         if copper and copper_prev:
             change = ((copper - copper_prev) / copper_prev) * 100
             signal = "bullish" if change > 3 else ("bearish" if change < -3 else "neutral")
-            signals.append(CrossAssetSignal(
-                name="Copper", signal=signal, value=round(change, 1),
-                description=f"Dr. Copper {'rising' if change > 0 else 'falling'} — "
-                           f"{'strong industrial demand' if change > 0 else 'weak demand'}",
-            ))
+            signals.append(
+                CrossAssetSignal(
+                    name="Copper",
+                    signal=signal,
+                    value=round(change, 1),
+                    description=f"Dr. Copper {'rising' if change > 0 else 'falling'} — "
+                    f"{'strong industrial demand' if change > 0 else 'weak demand'}",
+                )
+            )
 
         # VIX signal
         vix = await self._get_latest_market("VIX")
         if vix:
             signal = "bullish" if vix < 15 else ("bearish" if vix > 30 else "neutral")
-            signals.append(CrossAssetSignal(
-                name="VIX", signal=signal, value=round(vix, 1),
-                description=f"VIX at {vix:.1f} — "
-                           f"{'complacency' if vix < 15 else 'fear' if vix > 30 else 'normal range'}",
-            ))
+            signals.append(
+                CrossAssetSignal(
+                    name="VIX",
+                    signal=signal,
+                    value=round(vix, 1),
+                    description=f"VIX at {vix:.1f} — "
+                    f"{'complacency' if vix < 15 else 'fear' if vix > 30 else 'normal range'}",
+                )
+            )
 
         # Yield curve signal
         is_inverted = await self.yield_analyzer.is_inverted()
-        signals.append(CrossAssetSignal(
-            name="Yield Curve (2Y10Y)",
-            signal="bearish" if is_inverted else "bullish",
-            value=None,
-            description="INVERTED — recession signal" if is_inverted else "Normal — no recession signal",
-        ))
+        signals.append(
+            CrossAssetSignal(
+                name="Yield Curve (2Y10Y)",
+                signal="bearish" if is_inverted else "bullish",
+                value=None,
+                description=(
+                    "INVERTED — recession signal" if is_inverted else "Normal — no recession signal"
+                ),
+            )
+        )
 
         # Real yields signal
         real_yield = await self.yield_analyzer.get_10y_real_yield()
         if real_yield is not None:
             signal = "bearish" if real_yield > 1.5 else ("bullish" if real_yield < 0 else "neutral")
-            signals.append(CrossAssetSignal(
-                name="10Y Real Yield",
-                signal=signal,
-                value=round(real_yield, 2),
-                description=f"Real yield at {real_yield:.2f}% — "
-                           f"{'tight conditions' if real_yield > 1.5 else 'financial repression' if real_yield < 0 else 'moderate'}",
-            ))
+            signals.append(
+                CrossAssetSignal(
+                    name="10Y Real Yield",
+                    signal=signal,
+                    value=round(real_yield, 2),
+                    description=f"Real yield at {real_yield:.2f}% — "
+                    f"{'tight conditions' if real_yield > 1.5 else 'financial repression' if real_yield < 0 else 'moderate'}",
+                )
+            )
 
         return signals
 
@@ -656,7 +890,9 @@ class NavigatorEngine:
 
         # 7. Retail sales YoY
         retail, retail_d = await self._indicator_latest_row("Retail Sales")
-        retail_prev = await self._indicator_value_at("Retail Sales", date.today() - timedelta(days=365))
+        retail_prev = await self._indicator_value_at(
+            "Retail Sales", date.today() - timedelta(days=365)
+        )
         retail_trig = False
         retail_str = "N/A"
         if retail is not None and retail_prev is not None and retail_prev != 0:
@@ -676,7 +912,9 @@ class NavigatorEngine:
 
         # 8. Building permits MoM
         permits, permits_d = await self._indicator_latest_row("Building Permits")
-        permits_prev = await self._indicator_value_at("Building Permits", date.today() - timedelta(days=35))
+        permits_prev = await self._indicator_value_at(
+            "Building Permits", date.today() - timedelta(days=35)
+        )
         permits_trig = False
         permits_str = "N/A"
         if permits is not None and permits_prev is not None and permits_prev != 0:

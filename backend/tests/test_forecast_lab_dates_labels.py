@@ -8,8 +8,8 @@ from app.services.forecast_lab.asset_implied_labels_core import (
     pick_quadrant,
     quadrant_scores_from_prices,
 )
-from app.services.forecast_lab.dates_util import latest_month_end_on_or_before
 from app.services.forecast_lab.curve_pattern_features import curve_pattern_to_embed
+from app.services.forecast_lab.dates_util import latest_month_end_on_or_before
 from app.services.forecast_lab.rule_phase import QUADRANT_TO_ID
 
 

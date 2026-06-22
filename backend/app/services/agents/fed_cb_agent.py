@@ -9,13 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.fed_policy import FedRate
 from app.models.intelligence import AgentSignal
-from app.services.fed_rate_schema import apply_fed_rate_load_columns
+from app.schemas.agent_outputs import FedCBAgentLLMOutput
 from app.services.agent_persistence import get_or_create_agent_run, upsert_agent_signal
 from app.services.fed_press_ingestion import ingest_fed_press_rss
+from app.services.fed_rate_schema import apply_fed_rate_load_columns
 from app.services.llm.claude_client import ClaudeClient
 from app.services.llm.json_extract import extract_json_object
 from app.services.memory_service import MemoryService
-from app.schemas.agent_outputs import FedCBAgentLLMOutput
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +24,20 @@ class FedCBAgent:
     async def run(self, db: AsyncSession, as_of: date | None = None) -> AgentSignal:
         memory = MemoryService()
         as_of = as_of or date.today()
-        run = await get_or_create_agent_run(db, agent_name="fed_cb_agent", run_key=as_of.isoformat())
+        run = await get_or_create_agent_run(
+            db, agent_name="fed_cb_agent", run_key=as_of.isoformat()
+        )
 
         try:
-            await ingest_fed_press_rss(db, as_of=as_of, max_items=20, source_version="fed-rss-inline")
+            await ingest_fed_press_rss(
+                db, as_of=as_of, max_items=20, source_version="fed-rss-inline"
+            )
         except Exception as e:
             logger.debug("Inline Fed RSS skipped: %s", e)
 
-        ctx = await memory.search(db, query="fed policy stance fomc inflation labor", top_k=6, domain="fed_cb")
+        ctx = await memory.search(
+            db, query="fed policy stance fomc inflation labor", top_k=6, domain="fed_cb"
+        )
 
         q = await apply_fed_rate_load_columns(
             db, select(FedRate).order_by(FedRate.date.desc()).limit(2)

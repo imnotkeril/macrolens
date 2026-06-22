@@ -50,21 +50,25 @@ class CalendarCanaryService:
                 continue
 
             for event_day in dates:
-                stmt = pg_insert(EconomicCalendarEvent).values(
-                    source=self.SOURCE,
-                    event_name=release_name,
-                    event_date=event_day,
-                    country="US",
-                    frequency="event",
-                    importance=2,
-                    quality_status="ok",
-                    published_at=now,
-                ).on_conflict_do_update(
-                    constraint="uq_economic_calendar_event",
-                    set_={
-                        "quality_status": "ok",
-                        "published_at": now,
-                    },
+                stmt = (
+                    pg_insert(EconomicCalendarEvent)
+                    .values(
+                        source=self.SOURCE,
+                        event_name=release_name,
+                        event_date=event_day,
+                        country="US",
+                        frequency="event",
+                        importance=2,
+                        quality_status="ok",
+                        published_at=now,
+                    )
+                    .on_conflict_do_update(
+                        constraint="uq_economic_calendar_event",
+                        set_={
+                            "quality_status": "ok",
+                            "published_at": now,
+                        },
+                    )
                 )
                 result = await db.execute(stmt)
                 if result.rowcount and result.rowcount > 0:
@@ -92,7 +96,9 @@ class CalendarCanaryService:
                 EconomicCalendarEvent.event_date >= date.today(),
                 EconomicCalendarEvent.event_date <= end_day,
             )
-            .order_by(EconomicCalendarEvent.event_date.asc(), EconomicCalendarEvent.event_name.asc())
+            .order_by(
+                EconomicCalendarEvent.event_date.asc(), EconomicCalendarEvent.event_name.asc()
+            )
             .limit(500)
         )
         res = await db.execute(q)

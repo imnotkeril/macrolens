@@ -31,7 +31,9 @@ class YahooAdapter(ProviderAdapter):
         try:
             test = self.client.get_series("SPY")
             if test.empty:
-                return SourceHealth(source=self.source_name, status="degraded", note="SPY returned empty series")
+                return SourceHealth(
+                    source=self.source_name, status="degraded", note="SPY returned empty series"
+                )
             return SourceHealth(source=self.source_name, status="ok")
         except Exception as exc:
             return SourceHealth(source=self.source_name, status="down", note=str(exc))

@@ -7,17 +7,16 @@ import json
 import logging
 import shutil
 import time
-from datetime import date, datetime, timezone
-from pathlib import Path
+from datetime import UTC, date, datetime
 from typing import Any
 
 import joblib
 import numpy as np
 import pandas as pd
+import xgboost as xgb
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sqlalchemy.ext.asyncio import AsyncSession
-import xgboost as xgb
 
 from app.config import get_settings
 from app.services.forecast_lab import features_pit
@@ -27,10 +26,7 @@ from app.services.forecast_lab.artifacts import (
     set_active_bundle,
 )
 from app.services.forecast_lab.asset_implied_labels import build_training_labels
-from app.services.forecast_lab.progress import set_progress
-from app.services.forecast_lab.rule_phase import N_CLASSES
 from app.services.forecast_lab.cycle_phase_probs import cycle_quadrant_probs_at_date
-from app.services.forecast_lab.recession_labels import build_recession_forward_labels
 from app.services.forecast_lab.ensemble import (
     align_multiclass_proba_row,
     ensemble_probs,
@@ -42,11 +38,16 @@ from app.services.forecast_lab.hmm_infer import hmm_probs_at_end
 from app.services.forecast_lab.macro_config import load_macro_panel_config
 from app.services.forecast_lab.macro_data import build_macro_frame
 from app.services.forecast_lab.macro_train import fit_and_save_macro
+from app.services.forecast_lab.progress import set_progress
+from app.services.forecast_lab.recession_labels import build_recession_forward_labels
+from app.services.forecast_lab.rule_phase import N_CLASSES
 
 logger = logging.getLogger("forecast_lab.train")
 
 
-def _fit_hmm(X: np.ndarray, random_state: int, hmm_n_states: int) -> tuple[Any, np.ndarray] | tuple[None, None]:
+def _fit_hmm(
+    X: np.ndarray, random_state: int, hmm_n_states: int
+) -> tuple[Any, np.ndarray] | tuple[None, None]:
     try:
         from hmmlearn.hmm import GaussianHMM
     except ImportError:
@@ -153,9 +154,7 @@ async def run_training(db: AsyncSession) -> dict[str, Any]:
     )
     state_to_quad: list[int] = [0, 1, 2, 3]
     if hmm_model is not None and train_states is not None:
-        state_to_quad = _state_to_quadrant_map(
-            train_states, y_train, hmm_model.n_components
-        )
+        state_to_quad = _state_to_quadrant_map(train_states, y_train, hmm_model.n_components)
 
     set_progress(55.0, "XGBoost…", "[55%] GBDT", done=False)
     clf = xgb.XGBClassifier(
@@ -223,16 +222,18 @@ async def run_training(db: AsyncSession) -> dict[str, Any]:
             ph = [0.25] * N_CLASSES
         if inc_cycle and test_cycle is not None:
             pc = test_cycle[i]
-            test_probs.append(
-                ensemble_probs_four(pr, ph, pg, pc, w_rule, w_hmm, w_gbdt, w_cycle)
-            )
+            test_probs.append(ensemble_probs_four(pr, ph, pg, pc, w_rule, w_hmm, w_gbdt, w_cycle))
         else:
             test_probs.append(ensemble_probs(pr, ph, pg, w_rule, w_hmm, w_gbdt))
 
     pred = [int(np.argmax(p)) for p in test_probs]
     acc = float(np.mean(np.array(pred) == y_test)) if len(y_test) else 0.0
 
-    cm_sk = confusion_matrix(y_test, np.array(pred), labels=[0, 1, 2, 3]).tolist() if len(y_test) else []
+    cm_sk = (
+        confusion_matrix(y_test, np.array(pred), labels=[0, 1, 2, 3]).tolist()
+        if len(y_test)
+        else []
+    )
     cm_total = int(sum(sum(row) for row in cm_sk)) if cm_sk else 0
     cm_trace = int(sum(cm_sk[i][i] for i in range(4))) if cm_sk and len(cm_sk) == 4 else 0
     confusion_accuracy = float(cm_trace / cm_total) if cm_total > 0 else None
@@ -241,7 +242,11 @@ async def run_training(db: AsyncSession) -> dict[str, Any]:
     fi_pairs = sorted(zip(feat_names, clf.feature_importances_.tolist()), key=lambda x: -x[1])[:5]
     feature_importance_top = [{"name": str(a), "importance": float(b)} for a, b in fi_pairs]
 
-    max_conf = np.array([float(np.max(p)) for p in test_probs], dtype=float) if test_probs else np.array([])
+    max_conf = (
+        np.array([float(np.max(p)) for p in test_probs], dtype=float)
+        if test_probs
+        else np.array([])
+    )
     correct = (np.array(pred) == np.array(y_test)).astype(float) if len(y_test) else np.array([])
     calibration_bins: list[dict[str, Any]] = []
     if len(max_conf) > 0:
@@ -352,7 +357,7 @@ async def run_training(db: AsyncSession) -> dict[str, Any]:
     mdf = await build_macro_frame(db, date_from, date_to, cfg_macro.get("series", []))
 
     meta_core = {
-        "trained_at": datetime.now(timezone.utc).isoformat(),
+        "trained_at": datetime.now(UTC).isoformat(),
         "train_rows": int(len(X_train)),
         "val_rows": int(len(X_val)),
         "test_rows": int(len(X_test)),
@@ -413,7 +418,9 @@ async def run_training(db: AsyncSession) -> dict[str, Any]:
     set_progress(100.0, f"Done bundle {bundle_id}", "[100%] saved", done=True)
     logger.info("Forecast Lab trained bundle_id=%s", bundle_id)
     try:
-        from app.services.forecast_lab.regime_history_materialize import materialize_regime_history_monthly
+        from app.services.forecast_lab.regime_history_materialize import (
+            materialize_regime_history_monthly,
+        )
 
         rh = await materialize_regime_history_monthly(db, date_from, date_to)
         logger.info("Regime history table after train: %s rows", rh.get("rows"))

@@ -40,7 +40,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _regime_orm_to_schema(row: RegimeHistoryMonthly, *, fl_ensemble_quadrant: str | None = None) -> RegimeHistoryRow:
+def _regime_orm_to_schema(
+    row: RegimeHistoryMonthly, *, fl_ensemble_quadrant: str | None = None
+) -> RegimeHistoryRow:
     """ORM → Pydantic; coerce non-finite floats so response JSON never carries NaN (breaks clients / validation)."""
 
     def sf(v: object, default: float = 0.0) -> float:
@@ -109,7 +111,9 @@ async def get_bundle():
     bundle_path = active_bundle_dir()
     meta = load_meta(bundle_path)
     if not meta:
-        return BundleInfoResponse(bundle_id="untrained", trained=False, label_mode=None, label_stats=None)
+        return BundleInfoResponse(
+            bundle_id="untrained", trained=False, label_mode=None, label_stats=None
+        )
     return BundleInfoResponse(
         bundle_id=meta.get("bundle_id", "unknown"),
         trained=True,

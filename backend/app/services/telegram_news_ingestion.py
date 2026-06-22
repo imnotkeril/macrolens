@@ -1,10 +1,11 @@
 """Fetch recent messages from whitelisted Telegram channels into memory_news (memory_core source=news)."""
+
 from __future__ import annotations
 
 import hashlib
 import logging
 import re
-from datetime import date, datetime, timezone
+from datetime import UTC, date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,7 +53,9 @@ async def ingest_telegram_whitelist(
         if settings.telegram_bot_token:
             await client.start(bot_token=settings.telegram_bot_token)
         else:
-            logger.warning("Telegram client not authorized; provide session file or TELEGRAM_BOT_TOKEN")
+            logger.warning(
+                "Telegram client not authorized; provide session file or TELEGRAM_BOT_TOKEN"
+            )
             await client.disconnect()
             return 0
 
@@ -73,12 +76,16 @@ async def ingest_telegram_whitelist(
                 if message.date:
                     msg_dt = message.date
                     if msg_dt.tzinfo is None:
-                        msg_dt = msg_dt.replace(tzinfo=timezone.utc)
+                        msg_dt = msg_dt.replace(tzinfo=UTC)
                     if msg_dt.date() > as_of:
                         continue
                 cid = getattr(entity, "id", None) or hash(ch) % 10_000_000
                 doc_key = f"telegram:{cid}:{message.id}"
-                title = (text[:120].replace("\n", " ") + "…") if len(text) > 120 else text.replace("\n", " ")
+                title = (
+                    (text[:120].replace("\n", " ") + "…")
+                    if len(text) > 120
+                    else text.replace("\n", " ")
+                )
                 safe = re.sub(r"\s+", " ", text)[:8000]
                 h = hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
                 await memory.upsert_document(

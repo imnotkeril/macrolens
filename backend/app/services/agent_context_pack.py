@@ -1,4 +1,5 @@
 """Assemble agent outputs for UI (context pack, Fed history, macro tab strips)."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -8,7 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.intelligence import AgentSignal, Recommendation
 from app.schemas.agent_outputs import ANALYSIS_TAB_KEYS
-from app.schemas.intelligence import AgentSignalItem, ML2FactorItem, RecommendationResponse, RiskOverlay
+from app.schemas.intelligence import (
+    AgentSignalItem,
+    ML2FactorItem,
+    RecommendationResponse,
+    RiskOverlay,
+)
 
 
 def _signal_digest(row: AgentSignal) -> dict:
@@ -108,7 +114,9 @@ async def fed_rhetoric_history(
                 "score": r.score,
                 "summary": r.summary,
                 "stance": stance,
-                "hawk_dovish_index": None if r.score is None else round((float(r.score) + 1.0) * 50.0, 1),
+                "hawk_dovish_index": (
+                    None if r.score is None else round((float(r.score) + 1.0) * 50.0, 1)
+                ),
             }
         )
     return out
@@ -125,5 +133,15 @@ def macro_tab_summary_from_signal(macro_row: AgentSignal | None, tab: str) -> di
     tabs = llm.get("tab_summaries") if isinstance(llm.get("tab_summaries"), dict) else {}
     text = tabs.get(tab)
     if not text:
-        return {"tab": tab, "summary": None, "available": False, "hint": "run_agents_with_claude_for_tab_summaries"}
-    return {"tab": tab, "summary": text, "available": True, "as_of_date": macro_row.signal_date.isoformat()}
+        return {
+            "tab": tab,
+            "summary": None,
+            "available": False,
+            "hint": "run_agents_with_claude_for_tab_summaries",
+        }
+    return {
+        "tab": tab,
+        "summary": text,
+        "available": True,
+        "as_of_date": macro_row.signal_date.isoformat(),
+    }

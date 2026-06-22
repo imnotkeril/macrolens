@@ -1,10 +1,11 @@
 """Ingest Federal Reserve press releases from the public RSS feed into memory_core (fed_cb domain)."""
+
 from __future__ import annotations
 
 import hashlib
 import logging
 import re
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from email.utils import parsedate_to_datetime
 from typing import Any
 from xml.etree import ElementTree as ET
@@ -41,7 +42,7 @@ def _parse_pub_date(s: str) -> datetime | None:
     try:
         dt = parsedate_to_datetime(s)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
         return dt
     except (TypeError, ValueError, OverflowError):
         pass
@@ -49,7 +50,7 @@ def _parse_pub_date(s: str) -> datetime | None:
         try:
             dt = datetime.strptime(s[:32], fmt)
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
+                dt = dt.replace(tzinfo=UTC)
             return dt
         except ValueError:
             continue
@@ -68,7 +69,7 @@ async def ingest_fed_press_rss(
     Returns number of documents written/updated.
     """
     memory = MemoryService()
-    as_of_end = datetime.combine(as_of, time(23, 59, 59), tzinfo=timezone.utc)
+    as_of_end = datetime.combine(as_of, time(23, 59, 59), tzinfo=UTC)
     headers = {"User-Agent": "MacroLens/1.0 (+https://github.com) research bot"}
     try:
         async with httpx.AsyncClient(timeout=45.0, follow_redirects=True) as client:

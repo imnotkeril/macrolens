@@ -1,4 +1,5 @@
 from datetime import date
+
 from pydantic import BaseModel
 
 from app.schemas.forecast_lab import ExpertPhaseBreakdown, PhaseProbabilities
@@ -9,7 +10,9 @@ class NavigatorPosition(BaseModel):
     fed_policy_score: float  # -2 to +2
     quadrant: str  # Q1_GOLDILOCKS, Q2_REFLATION, Q3_OVERHEATING, Q4_STAGFLATION
     quadrant_label: str
-    matrix_quadrant: str | None = None  # axes-only quadrant; canonical `quadrant` = FL phase when trained
+    matrix_quadrant: str | None = (
+        None  # axes-only quadrant; canonical `quadrant` = FL phase when trained
+    )
     confidence: float  # 0-1 based on cross-asset confirmation
     direction: str  # direction of travel
     date: date
@@ -41,6 +44,7 @@ class FactorAllocation(BaseModel):
 
 class TradingRecommendation(BaseModel):
     """Single trading idea (spread, pair, directional)."""
+
     name: str
     trade_type: str  # "spread", "pair", "directional", "curve"
     legs: str  # e.g. "Long XLY / Short XLP", "Long 2Y / Short 10Y"

@@ -8,10 +8,10 @@ from datetime import date
 from typing import Any
 
 import numpy as np
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.indicator import Indicator, IndicatorValue, IndicatorCategory, Importance
+from app.models.indicator import Importance, Indicator, IndicatorCategory, IndicatorValue
 from app.models.market_data import MarketData, YieldData
 from app.services.fed_tracker import FedTracker
 from app.services.forecast_lab.curve_pattern_features import (

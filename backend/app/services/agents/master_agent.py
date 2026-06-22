@@ -9,12 +9,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.intelligence import AgentSignal, Recommendation
+from app.schemas.agent_outputs import MasterAgentLLMOutput
 from app.services.agent_persistence import upsert_recommendation
 from app.services.llm.claude_client import ClaudeClient
 from app.services.llm.json_extract import extract_json_object
 from app.services.memory_service import MemoryService
 from app.services.risk_overlay import build_risk_overlay
-from app.schemas.agent_outputs import MasterAgentLLMOutput
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,9 @@ class MasterAgent:
         ml2_conf = max((float(x.get("confidence", 0.4)) for x in factor_tilts[:3]), default=0.4)
         risk = build_risk_overlay(regime_confidence, ml2_conf, anomaly_score, anomaly_threshold)
 
-        top_signal_text = "; ".join([s.summary for s in signals[:4]]) if signals else "No agent signals."
+        top_signal_text = (
+            "; ".join([s.summary for s in signals[:4]]) if signals else "No agent signals."
+        )
         mem_hits = await self.memory.search(db, f"{regime} {top_signal_text}", top_k=5)
         analogs = [f"{h['title']} ({h['score']:.2f})" for h in mem_hits]
 
@@ -79,7 +81,12 @@ class MasterAgent:
                     "anomaly_threshold": anomaly_threshold,
                     "risk_overlay": risk,
                     "agent_signals": [
-                        {"agent": s.agent_name, "type": s.signal_type, "score": s.score, "summary": s.summary}
+                        {
+                            "agent": s.agent_name,
+                            "type": s.signal_type,
+                            "score": s.score,
+                            "summary": s.summary,
+                        }
                         for s in signals[:10]
                     ],
                     "memory_hits": mem_hits,
@@ -106,7 +113,12 @@ class MasterAgent:
             "regime": regime,
             "factor_tilts": factor_tilts[:8],
             "top_signals": [
-                {"agent_name": s.agent_name, "signal_type": s.signal_type, "score": s.score, "summary": s.summary}
+                {
+                    "agent_name": s.agent_name,
+                    "signal_type": s.signal_type,
+                    "score": s.score,
+                    "summary": s.summary,
+                }
                 for s in signals[:8]
             ],
             "historical_analogs": analogs,

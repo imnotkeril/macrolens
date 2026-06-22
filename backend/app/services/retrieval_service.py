@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import time
+from datetime import UTC, datetime
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.intelligence import MemoryChunk, MemoryDocument, MemoryEmbedding, RetrievalTrace
@@ -17,7 +17,7 @@ class RetrievalService:
     def _recency_weight(self, created_at: datetime | None) -> float:
         if created_at is None:
             return 0.7
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         age_days = max(0.0, (now - created_at).total_seconds() / 86400.0)
         return 1.0 / (1.0 + age_days / 30.0)
 
@@ -95,4 +95,9 @@ class RetrievalService:
         chunks = (await db.execute(select(func.count(MemoryChunk.id)))).scalar() or 0
         emb = (await db.execute(select(func.count(MemoryEmbedding.id)))).scalar() or 0
         traces = (await db.execute(select(func.count(RetrievalTrace.id)))).scalar() or 0
-        return {"documents": int(docs), "chunks": int(chunks), "embeddings": int(emb), "retrieval_traces": int(traces)}
+        return {
+            "documents": int(docs),
+            "chunks": int(chunks),
+            "embeddings": int(emb),
+            "retrieval_traces": int(traces),
+        }

@@ -8,18 +8,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.factor import FactorReturn
 
-
 FACTOR_NAMES = ["VALUE", "GROWTH", "QUALITY", "SIZE", "MOMENTUM", "LOW_VOL"]
 HORIZONS = [1, 3, 6]
 
 
 async def build_ml2_dataset(db: AsyncSession) -> pd.DataFrame:
-    q = select(FactorReturn.date, FactorReturn.factor_name, FactorReturn.value).order_by(FactorReturn.date.asc())
+    q = select(FactorReturn.date, FactorReturn.factor_name, FactorReturn.value).order_by(
+        FactorReturn.date.asc()
+    )
     rows = (await db.execute(q)).all()
     if not rows:
         return pd.DataFrame()
     raw = pd.DataFrame(rows, columns=["date", "factor_name", "value"])
-    pivot = raw.pivot_table(index="date", columns="factor_name", values="value", aggfunc="last").sort_index()
+    pivot = raw.pivot_table(
+        index="date", columns="factor_name", values="value", aggfunc="last"
+    ).sort_index()
     if pivot.empty:
         return pd.DataFrame()
 
@@ -47,4 +50,3 @@ def latest_available_date(df: pd.DataFrame) -> date | None:
     if df.empty or "date" not in df.columns:
         return None
     return max(df["date"])
-

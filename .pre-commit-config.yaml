@@ -1,0 +1,25 @@
+# Install: pip install pre-commit && pre-commit install
+# Hooks operate on the backend/ Python sources.
+repos:
+  # Use system Python — avoids Windows AppLocker blocking black.exe in the pre-commit cache.
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        entry: python -m black
+        language: system
+        types: [python]
+        files: ^backend/
+
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        files: ^backend/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/

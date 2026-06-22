@@ -1,0 +1,15 @@
+# Development dependencies — install with: pip install -r requirements-dev.txt
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+httpx>=0.27  # starlette TestClient
+
+# Type checking
+mypy>=1.5.0
+
+# Linting and formatting
+ruff>=0.8.0
+black>=24.0.0
+isort>=5.13.0
+pre-commit>=3.6.0

@@ -63,12 +63,16 @@ async def get_spread_history(name: str, days: int = Query(730), db: AsyncSession
 
 
 @router.get("/real-yield-history/{maturity}")
-async def get_real_yield_history(maturity: str, days: int = Query(730), db: AsyncSession = Depends(get_db)):
+async def get_real_yield_history(
+    maturity: str, days: int = Query(730), db: AsyncSession = Depends(get_db)
+):
     analyzer = YieldAnalyzer(db)
     return await analyzer.get_real_yield_history(maturity, days)
 
 
 @router.get("/breakeven-history/{maturity}")
-async def get_breakeven_history(maturity: str, days: int = Query(730), db: AsyncSession = Depends(get_db)):
+async def get_breakeven_history(
+    maturity: str, days: int = Query(730), db: AsyncSession = Depends(get_db)
+):
     analyzer = YieldAnalyzer(db)
     return await analyzer.get_breakeven_history(maturity, days)

@@ -1,14 +1,14 @@
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 import numpy as np
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.models.market_data import MarketData, YieldData
-from app.models.fed_policy import BalanceSheet
 from app.models.factor import FactorReturn, SectorPerformance
+from app.models.fed_policy import BalanceSheet
+from app.models.market_data import MarketData, YieldData
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,9 @@ class MarketService:
             .order_by(MarketData.date)
         )
         rows = (await self.db.execute(q)).all()
-        return [{"date": r.date.isoformat(), "value": r.value, "change_pct": r.change_pct} for r in rows]
+        return [
+            {"date": r.date.isoformat(), "value": r.value, "change_pct": r.change_pct} for r in rows
+        ]
 
     async def get_ratio_series(self, symbol_a: str, symbol_b: str, days: int = 365) -> list[dict]:
         cutoff = date.today() - timedelta(days=days)
@@ -85,13 +87,15 @@ class MarketService:
             if d in rrp_rows:
                 last_rrp = rrp_rows[d]
             net = bs_rows[d] - last_tga - last_rrp
-            result.append({
-                "date": d.isoformat(),
-                "value": round(net, 2),
-                "fed_bs": round(bs_rows[d], 2),
-                "tga": round(last_tga, 2),
-                "rrp": round(last_rrp, 2),
-            })
+            result.append(
+                {
+                    "date": d.isoformat(),
+                    "value": round(net, 2),
+                    "fed_bs": round(bs_rows[d], 2),
+                    "tga": round(last_tga, 2),
+                    "rrp": round(last_rrp, 2),
+                }
+            )
         return result
 
     async def get_recession_bands(self) -> list[dict]:
@@ -124,7 +128,7 @@ class MarketService:
         )
         rows = (await self.db.execute(q)).all()
 
-        from app.services.yahoo_client import SECTOR_LABELS, SECTOR_GROUPS
+        from app.services.yahoo_client import SECTOR_GROUPS, SECTOR_LABELS
 
         symbol_to_group: dict[str, str] = {}
         for group_name, symbols in SECTOR_GROUPS.items():
@@ -142,23 +146,27 @@ class MarketService:
             base = points[0][1]
             series = [
                 {"date": p[0].isoformat(), "value": round(((p[1] / base) - 1) * 100, 2)}
-                for p in points if base != 0
+                for p in points
+                if base != 0
             ]
             total_return = round(((points[-1][1] / base) - 1) * 100, 2) if base != 0 else 0
-            result.append({
-                "symbol": sector,
-                "label": SECTOR_LABELS.get(sector, sector),
-                "group": symbol_to_group.get(sector, "Other"),
-                "series": series,
-                "total_return": total_return,
-                "latest_value": points[-1][1],
-            })
+            result.append(
+                {
+                    "symbol": sector,
+                    "label": SECTOR_LABELS.get(sector, sector),
+                    "group": symbol_to_group.get(sector, "Other"),
+                    "series": series,
+                    "total_return": total_return,
+                    "latest_value": points[-1][1],
+                }
+            )
         result.sort(key=lambda x: x["total_return"], reverse=True)
         return result
 
     async def get_sector_groups(self, period_days: int = 180) -> list[dict]:
         """Aggregate sectors into 4 groups, return averaged rebased series."""
         from app.services.yahoo_client import SECTOR_GROUPS
+
         sector_data = await self.get_sector_performance(period_days)
         sector_map = {s["symbol"]: s["series"] for s in sector_data}
 
@@ -172,7 +180,8 @@ class MarketService:
 
             avg_series = [
                 {"date": d, "value": round(sum(vals) / len(vals), 2)}
-                for d, vals in sorted(all_series.items()) if vals
+                for d, vals in sorted(all_series.items())
+                if vals
             ]
             total = avg_series[-1]["value"] if avg_series else 0
             result.append({"group": group_name, "series": avg_series, "total_return": total})
@@ -203,7 +212,9 @@ class MarketService:
             series = []
             for d in common:
                 if grouped[b][d] != 0:
-                    series.append({"date": d.isoformat(), "value": round(grouped[a][d] / grouped[b][d], 4)})
+                    series.append(
+                        {"date": d.isoformat(), "value": round(grouped[a][d] / grouped[b][d], 4)}
+                    )
             result.append({"label": label, "series": series})
         return result
 
@@ -224,23 +235,34 @@ class MarketService:
             values = [r.value for r in rows]
             current = values[0]
             dma_200 = float(np.mean(values[:200])) if len(values) >= 200 else float(np.mean(values))
-            result.append({
-                "symbol": sym,
-                "price": round(current, 2),
-                "dma_200": round(dma_200, 2),
-                "above_200dma": current > dma_200,
-                "distance_pct": round(((current / dma_200) - 1) * 100, 2) if dma_200 else 0,
-                "date": rows[0].date.isoformat(),
-            })
+            result.append(
+                {
+                    "symbol": sym,
+                    "price": round(current, 2),
+                    "dma_200": round(dma_200, 2),
+                    "above_200dma": current > dma_200,
+                    "distance_pct": round(((current / dma_200) - 1) * 100, 2) if dma_200 else 0,
+                    "date": rows[0].date.isoformat(),
+                }
+            )
         return result
 
     async def get_breadth_dashboard(self, days: int = 365 * 5) -> dict:
         """Return all series needed for the Market Breadth Dashboard (TradingView-style)."""
         symbols = [
-            "SP500", "MMTW", "MMFI", "MMTH",
-            "NAA200", "NAA50",
-            "VIX", "PCC",
-            "NYHGH", "NYLOW", "NYMO", "NYSI", "TVOL.US",
+            "SP500",
+            "MMTW",
+            "MMFI",
+            "MMTH",
+            "NAA200",
+            "NAA50",
+            "VIX",
+            "PCC",
+            "NYHGH",
+            "NYLOW",
+            "NYMO",
+            "NYSI",
+            "TVOL.US",
         ]
         result = {}
         for sym in symbols:
@@ -252,9 +274,7 @@ class MarketService:
     # Macro Overview helpers
     # ------------------------------------------------------------------
 
-    async def _raw_market(
-        self, symbol: str, cutoff: date
-    ) -> dict[date, float]:
+    async def _raw_market(self, symbol: str, cutoff: date) -> dict[date, float]:
         q = (
             select(MarketData.date, MarketData.value)
             .where(MarketData.symbol == symbol, MarketData.date >= cutoff)
@@ -262,31 +282,23 @@ class MarketService:
         )
         return {r.date: r.value for r in (await self.db.execute(q)).all()}
 
-    async def _raw_sector(
-        self, symbol: str, cutoff: date
-    ) -> dict[date, float]:
+    async def _raw_sector(self, symbol: str, cutoff: date) -> dict[date, float]:
         q = (
             select(SectorPerformance.date, SectorPerformance.value)
-            .where(SectorPerformance.sector == symbol,
-                   SectorPerformance.date >= cutoff)
+            .where(SectorPerformance.sector == symbol, SectorPerformance.date >= cutoff)
             .order_by(SectorPerformance.date)
         )
         return {r.date: r.value for r in (await self.db.execute(q)).all()}
 
-    async def _raw_factor(
-        self, symbol: str, cutoff: date
-    ) -> dict[date, float]:
+    async def _raw_factor(self, symbol: str, cutoff: date) -> dict[date, float]:
         q = (
             select(FactorReturn.date, FactorReturn.value)
-            .where(FactorReturn.factor_name == symbol,
-                   FactorReturn.date >= cutoff)
+            .where(FactorReturn.factor_name == symbol, FactorReturn.date >= cutoff)
             .order_by(FactorReturn.date)
         )
         return {r.date: r.value for r in (await self.db.execute(q)).all()}
 
-    async def _raw_any(
-        self, symbol: str, cutoff: date
-    ) -> dict[date, float]:
+    async def _raw_any(self, symbol: str, cutoff: date) -> dict[date, float]:
         """Try MarketData → SectorPerformance → FactorReturn."""
         data = await self._raw_market(symbol, cutoff)
         if data:
@@ -296,65 +308,46 @@ class MarketService:
             return data
         return await self._raw_factor(symbol, cutoff)
 
-    def _ratio(
-        self, a: dict[date, float], b: dict[date, float]
-    ) -> list[dict]:
+    def _ratio(self, a: dict[date, float], b: dict[date, float]) -> list[dict]:
         common = sorted(set(a) & set(b))
         return [
-            {"date": d.isoformat(),
-             "value": round(a[d] / b[d], 6)}
-            for d in common if b[d] != 0
+            {"date": d.isoformat(), "value": round(a[d] / b[d], 6)} for d in common if b[d] != 0
         ]
 
     def _to_list(self, data: dict[date, float]) -> list[dict]:
-        return [
-            {"date": d.isoformat(), "value": v}
-            for d, v in sorted(data.items())
-        ]
+        return [{"date": d.isoformat(), "value": v} for d, v in sorted(data.items())]
 
-    async def _yield_series(
-        self, maturity: str, cutoff: date
-    ) -> dict[date, float]:
+    async def _yield_series(self, maturity: str, cutoff: date) -> dict[date, float]:
         q = (
             select(YieldData.date, YieldData.nominal_yield)
-            .where(YieldData.maturity == maturity,
-                   YieldData.date >= cutoff)
+            .where(YieldData.maturity == maturity, YieldData.date >= cutoff)
             .order_by(YieldData.date)
         )
-        return {
-            r.date: r.nominal_yield
-            for r in (await self.db.execute(q)).all()
-        }
+        return {r.date: r.nominal_yield for r in (await self.db.execute(q)).all()}
 
-    async def _tips_yield_series(
-        self, maturity: str, cutoff: date
-    ) -> dict[date, float]:
+    async def _tips_yield_series(self, maturity: str, cutoff: date) -> dict[date, float]:
         q = (
             select(YieldData.date, YieldData.tips_yield)
-            .where(YieldData.maturity == maturity,
-                   YieldData.date >= cutoff,
-                   YieldData.tips_yield.isnot(None))
+            .where(
+                YieldData.maturity == maturity,
+                YieldData.date >= cutoff,
+                YieldData.tips_yield.isnot(None),
+            )
             .order_by(YieldData.date)
         )
-        return {
-            r.date: r.tips_yield
-            for r in (await self.db.execute(q)).all()
-        }
+        return {r.date: r.tips_yield for r in (await self.db.execute(q)).all()}
 
-    async def _breakeven_series(
-        self, maturity: str, cutoff: date
-    ) -> dict[date, float]:
+    async def _breakeven_series(self, maturity: str, cutoff: date) -> dict[date, float]:
         q = (
             select(YieldData.date, YieldData.breakeven)
-            .where(YieldData.maturity == maturity,
-                   YieldData.date >= cutoff,
-                   YieldData.breakeven.isnot(None))
+            .where(
+                YieldData.maturity == maturity,
+                YieldData.date >= cutoff,
+                YieldData.breakeven.isnot(None),
+            )
             .order_by(YieldData.date)
         )
-        return {
-            r.date: r.breakeven
-            for r in (await self.db.execute(q)).all()
-        }
+        return {r.date: r.breakeven for r in (await self.db.execute(q)).all()}
 
     async def get_macro_overview(self, days: int = 365 * 5) -> dict:
         """All series for the Macro Overview dashboard (3 pages)."""
@@ -373,27 +366,32 @@ class MarketService:
         be5 = await self._breakeven_series("5Y", cutoff)
         real_yields = []
         for d in sorted(set(nom5) & set(be5)):
-            real_yields.append({
-                "date": d.isoformat(),
-                "value": round(nom5[d] - be5[d], 4),
-            })
+            real_yields.append(
+                {
+                    "date": d.isoformat(),
+                    "value": round(nom5[d] - be5[d], 4),
+                }
+            )
 
         # 10Y-2Y spread
         y10 = await self._yield_series("10Y", cutoff)
         y2 = await self._yield_series("2Y", cutoff)
         spread_10y2y = []
         for d in sorted(set(y10) & set(y2)):
-            spread_10y2y.append({
-                "date": d.isoformat(),
-                "value": round(y10[d] - y2[d], 4),
-            })
+            spread_10y2y.append(
+                {
+                    "date": d.isoformat(),
+                    "value": round(y10[d] - y2[d], 4),
+                }
+            )
 
         # Forward Fed Funds Rate (100 - ZQ futures price)
         zq = await self._raw_market("ZQ", cutoff)
-        fwd_rate = [
-            {"date": d.isoformat(), "value": round(100 - v, 4)}
-            for d, v in sorted(zq.items())
-        ] if zq else []
+        fwd_rate = (
+            [{"date": d.isoformat(), "value": round(100 - v, 4)} for d, v in sorted(zq.items())]
+            if zq
+            else []
+        )
 
         # US Liquidity = Fed BS - RRP
         bs_q = (
@@ -401,20 +399,19 @@ class MarketService:
             .where(BalanceSheet.date >= cutoff)
             .order_by(BalanceSheet.date)
         )
-        bs_rows = {
-            r.date: r.total_assets
-            for r in (await self.db.execute(bs_q)).all()
-        }
+        bs_rows = {r.date: r.total_assets for r in (await self.db.execute(bs_q)).all()}
         rrp_data = await self._raw_market("RRP", cutoff)
         us_liquidity = []
         last_rrp = 0.0
         for d in sorted(bs_rows):
             if d in rrp_data:
                 last_rrp = rrp_data[d]
-            us_liquidity.append({
-                "date": d.isoformat(),
-                "value": round(bs_rows[d] - last_rrp, 2),
-            })
+            us_liquidity.append(
+                {
+                    "date": d.isoformat(),
+                    "value": round(bs_rows[d] - last_rrp, 2),
+                }
+            )
 
         # Central bank BS (only what we have: US + ECB)
         ecb = await self._raw_market("ECBBS", cutoff)
@@ -424,10 +421,12 @@ class MarketService:
         for d in sorted(bs_rows):
             if d in ecb:
                 last_ecb = ecb[d]
-            central_bank_bs.append({
-                "date": d.isoformat(),
-                "value": round(bs_rows[d] + last_ecb, 2),
-            })
+            central_bank_bs.append(
+                {
+                    "date": d.isoformat(),
+                    "value": round(bs_rows[d] + last_ecb, 2),
+                }
+            )
 
         move_data = await self._raw_market("MOVE", cutoff)
         rrp_series = await self._raw_market("RRP", cutoff)
@@ -440,10 +439,12 @@ class MarketService:
         effr = await self._raw_market("EFFR_DAILY", cutoff)
         sofr_ff_spread = []
         for d in sorted(set(sofr) & set(effr)):
-            sofr_ff_spread.append({
-                "date": d.isoformat(),
-                "value": round(sofr[d] - effr[d], 4),
-            })
+            sofr_ff_spread.append(
+                {
+                    "date": d.isoformat(),
+                    "value": round(sofr[d] - effr[d], 4),
+                }
+            )
 
         # ── Page 2: Commodities & Global Activity ─────────
         gold = await self._raw_market("GOLD", cutoff)
@@ -530,9 +531,7 @@ class MarketService:
             return None
         return float(series[-1]["value"])
 
-    def _pct_change_over_period(
-        self, series: list[dict], days_back: int
-    ) -> float | None:
+    def _pct_change_over_period(self, series: list[dict], days_back: int) -> float | None:
         """Approximate % change: last vs point ~days_back ago (by date)."""
         if not series or len(series) < 2:
             return None
@@ -558,6 +557,7 @@ class MarketService:
         if past_val == 0:
             return None
         return round(((last_val - past_val) / past_val) * 100, 2)
+
     def _signal_from_change(self, change: float | None, up_good: bool) -> str:
         if change is None:
             return "neutral"
@@ -584,7 +584,11 @@ class MarketService:
             if common:
                 d = common[-1]
                 spread_bps = round((y10[d] - y2[d]) * 100, 1)
-        sig = "bullish" if (spread_bps is not None and spread_bps > 0) else ("bearish" if (spread_bps is not None and spread_bps < 0) else "neutral")
+        sig = (
+            "bullish"
+            if (spread_bps is not None and spread_bps > 0)
+            else ("bearish" if (spread_bps is not None and spread_bps < 0) else "neutral")
+        )
         cells.append(cell("Yield Curve 2s10s", spread_bps, "bp", sig))
 
         real_10y = None
@@ -594,7 +598,11 @@ class MarketService:
             if common:
                 d = common[-1]
                 real_10y = round(y10[d] - be10[d], 2)
-        sig = "bearish" if (real_10y is not None and real_10y > 1.5) else ("bullish" if (real_10y is not None and real_10y < 0) else "neutral")
+        sig = (
+            "bearish"
+            if (real_10y is not None and real_10y > 1.5)
+            else ("bullish" if (real_10y is not None and real_10y < 0) else "neutral")
+        )
         cells.append(cell("Real Yields 10Y TIPS", real_10y, "%", sig))
 
         nom_10y = round(sorted(y10.values())[-1], 2) if y10 else None
@@ -602,14 +610,25 @@ class MarketService:
 
         hy_spread = await self._raw_market("HY_SPREAD", cutoff)
         hy_bps = round(list(hy_spread.values())[-1], 0) if hy_spread else None
-        cells.append(cell("Credit Spreads HY OAS", hy_bps, "bp", "neutral" if hy_bps is None else ("bearish" if hy_bps > 400 else "bullish")))
+        cells.append(
+            cell(
+                "Credit Spreads HY OAS",
+                hy_bps,
+                "bp",
+                "neutral" if hy_bps is None else ("bearish" if hy_bps > 400 else "bullish"),
+            )
+        )
 
         cells.append(cell("Financial Conditions Index", None, "", "neutral"))
 
         # Row 2: VIX, DXY, Fed BS trend, Junk vs IG, Put/Call
         vix_data = await self._raw_market("VIX", cutoff)
         vix_val = round(list(vix_data.values())[-1], 1) if vix_data else None
-        sig = "bullish" if (vix_val is not None and vix_val < 15) else ("bearish" if (vix_val is not None and vix_val > 30) else "neutral")
+        sig = (
+            "bullish"
+            if (vix_val is not None and vix_val < 15)
+            else ("bearish" if (vix_val is not None and vix_val > 30) else "neutral")
+        )
         cells.append(cell("VIX", vix_val, "", sig))
 
         dxy_data = await self._raw_market("DXY", cutoff)
@@ -630,11 +649,14 @@ class MarketService:
             v1 = cb_bs[-1]["value"]
             if v0 and v0 != 0:
                 bs_trend = round(((v1 - v0) / v0) * 100, 1)
-        cells.append(cell("Fed Balance Sheet Trend", bs_trend, "%", self._signal_from_change(bs_trend, True)))
+        cells.append(
+            cell("Fed Balance Sheet Trend", bs_trend, "%", self._signal_from_change(bs_trend, True))
+        )
 
-        hyg_iei = self._last_value(overview.get("hyg_iei") or [])
         hyg_iei_chg = self._pct_change_over_period(overview.get("hyg_iei") or [], 90)
-        cells.append(cell("Junk vs IG", hyg_iei_chg, "%", self._signal_from_change(hyg_iei_chg, True)))
+        cells.append(
+            cell("Junk vs IG", hyg_iei_chg, "%", self._signal_from_change(hyg_iei_chg, True))
+        )
         cells.append(cell("Equity Put/Call Ratio", None, "", "neutral"))
 
         # Row 3: Commodities
@@ -668,13 +690,31 @@ class MarketService:
 
         # Row 4: Factor ratios
         large_small_chg = self._pct_change_over_period(overview.get("large_small") or [], 90)
-        cells.append(cell("Small Cap vs Large Cap", large_small_chg, "%", self._signal_from_change(large_small_chg, True)))
+        cells.append(
+            cell(
+                "Small Cap vs Large Cap",
+                large_small_chg,
+                "%",
+                self._signal_from_change(large_small_chg, True),
+            )
+        )
         tech_mat_chg = self._pct_change_over_period(overview.get("tech_materials") or [], 90)
-        cells.append(cell("Growth vs Value", tech_mat_chg, "%", self._signal_from_change(tech_mat_chg, True)))
+        cells.append(
+            cell("Growth vs Value", tech_mat_chg, "%", self._signal_from_change(tech_mat_chg, True))
+        )
         hb_lb_chg = self._pct_change_over_period(overview.get("high_beta_low_beta") or [], 90)
-        cells.append(cell("High Beta vs Low Beta", hb_lb_chg, "%", self._signal_from_change(hb_lb_chg, True)))
+        cells.append(
+            cell("High Beta vs Low Beta", hb_lb_chg, "%", self._signal_from_change(hb_lb_chg, True))
+        )
         cyc_def_chg = self._pct_change_over_period(overview.get("cyclical_non_cyclical") or [], 90)
-        cells.append(cell("Cyclicals vs Defensives", cyc_def_chg, "%", self._signal_from_change(cyc_def_chg, True)))
+        cells.append(
+            cell(
+                "Cyclicals vs Defensives",
+                cyc_def_chg,
+                "%",
+                self._signal_from_change(cyc_def_chg, True),
+            )
+        )
         cells.append(cell("EPS Revisions Breadth", None, "", "neutral"))
 
         return cells
@@ -713,13 +753,15 @@ class MarketService:
                     continue
                 ma = None
                 if i >= ma_window - 1:
-                    window = values[i - ma_window + 1: i + 1]
+                    window = values[i - ma_window + 1 : i + 1]
                     ma = round(sum(window) / ma_window, 2)
-                merged.append({
-                    "date": d.isoformat(),
-                    "price": round(raw[d], 2),
-                    "ma200": ma,
-                })
+                merged.append(
+                    {
+                        "date": d.isoformat(),
+                        "price": round(raw[d], 2),
+                        "ma200": ma,
+                    }
+                )
             result[key] = merged
 
         # Breadth sub-charts: % of stocks above 200MA / 50MA per index
@@ -740,6 +782,7 @@ class MarketService:
         # BTC & Stablecoin dominance (CoinGecko — current only, no historical)
         try:
             import httpx
+
             r = httpx.get("https://api.coingecko.com/api/v3/global", timeout=10)
             if r.status_code == 200:
                 j = r.json()
@@ -785,9 +828,14 @@ class MarketService:
             gdata = gr.json().get("data", {}) if gr.status_code == 200 else {}
             mcp = gdata.get("market_cap_percentage") or {}
             btc_target = float(mcp["btc"]) if mcp.get("btc") is not None else None
-            stable_target = sum(
-                float(mcp[k]) for k in ("usdt", "usdc", "dai", "busd", "tusd") if mcp.get(k) is not None
-            ) or None
+            stable_target = (
+                sum(
+                    float(mcp[k])
+                    for k in ("usdt", "usdc", "dai", "busd", "tusd")
+                    if mcp.get(k) is not None
+                )
+                or None
+            )
             total_market_usd = float(gdata.get("total_market_cap", {}).get("usd") or 0) or None
 
             caps_by_coin: dict[str, dict[int, float]] = {}
@@ -820,7 +868,7 @@ class MarketService:
             rows_stable: list[dict] = []
 
             def iso_day(ts_ms: int) -> str:
-                return datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).date().isoformat()
+                return datetime.fromtimestamp(ts_ms / 1000, tz=UTC).date().isoformat()
 
             last_ts = all_ts[-1]
             b_last = caps_by_coin["bitcoin"].get(last_ts, 0)
@@ -866,7 +914,9 @@ class MarketService:
                     for row in rows_btc:
                         row["value"] = round(min(100.0, max(0.0, row["value"] * adj)), 4)
             if stable_target and rows_stable:
-                adj_s = stable_target / rows_stable[-1]["value"] if rows_stable[-1]["value"] else 1.0
+                adj_s = (
+                    stable_target / rows_stable[-1]["value"] if rows_stable[-1]["value"] else 1.0
+                )
                 if 0.7 <= adj_s <= 1.3:
                     for row in rows_stable:
                         row["value"] = round(min(100.0, max(0.0, row["value"] * adj_s)), 4)
@@ -909,16 +959,16 @@ class MarketService:
 
         # Forward Fed Funds Rate from ZQ futures (100 − price)
         zq = await self._raw_market("ZQ", cutoff)
-        fwd_rate = [
-            {"date": d.isoformat(), "value": round(100 - v, 4)}
-            for d, v in sorted(zq.items())
-        ] if zq else []
+        fwd_rate = (
+            [{"date": d.isoformat(), "value": round(100 - v, 4)} for d, v in sorted(zq.items())]
+            if zq
+            else []
+        )
 
         # Multi-yield overlay (2Y/5Y/10Y/30Y on one chart)
         all_dates = sorted(
             (set(y2) | set(y5) | set(y10) | set(y30))
-            - {d for d in (set(y2) | set(y5) | set(y10) | set(y30))
-               if d < cutoff}
+            - {d for d in (set(y2) | set(y5) | set(y10) | set(y30)) if d < cutoff}
         )
         yield_overlay = []
         for d in all_dates:
@@ -980,9 +1030,7 @@ class MarketService:
         if base == 0:
             return []
         return [
-            {"date": d.isoformat(),
-             "value": round(((v / base) - 1) * 100, 2)}
-            for d, v in merged
+            {"date": d.isoformat(), "value": round(((v / base) - 1) * 100, 2)} for d, v in merged
         ]
 
     async def get_sentiment_dashboard(self, days: int = 365) -> dict:
@@ -1007,8 +1055,7 @@ class MarketService:
             base = hb_ratio[0]["value"]
             if base != 0:
                 hb_ratio = [
-                    {"date": p["date"],
-                     "value": round(((p["value"] / base) - 1) * 100, 2)}
+                    {"date": p["date"], "value": round(((p["value"] / base) - 1) * 100, 2)}
                     for p in hb_ratio
                 ]
 
@@ -1023,8 +1070,7 @@ class MarketService:
         y10 = await self._yield_series("10Y", cutoff)
         y2 = await self._yield_series("2Y", cutoff)
         inversion = [
-            {"date": d.isoformat(),
-             "value": round(y10[d] - y2[d], 4)}
+            {"date": d.isoformat(), "value": round(y10[d] - y2[d], 4)}
             for d in sorted(set(y10) & set(y2))
         ]
 
@@ -1033,16 +1079,14 @@ class MarketService:
 
         # 3. US Inflation (CPI YoY) — from indicator_values
         from app.services.inflation_service import InflationService
+
         infl_svc = InflationService(self.db)
         cpi_yoy = await infl_svc.get_inflation_series("CPI", "yoy", days)
 
         return {
-            "non_cyclical": self._rebase_group(
-                [d for d in non_cyc if d], cutoff),
-            "cyclical": self._rebase_group(
-                [d for d in cyclical if d], cutoff),
-            "sensitive": self._rebase_group(
-                [d for d in sensitive if d], cutoff),
+            "non_cyclical": self._rebase_group([d for d in non_cyc if d], cutoff),
+            "cyclical": self._rebase_group([d for d in cyclical if d], cutoff),
+            "sensitive": self._rebase_group([d for d in sensitive if d], cutoff),
             "high_beta": hb_ratio,
             "gld": gld_rebased,
             "tlt": tlt_rebased,
@@ -1090,8 +1134,7 @@ class MarketService:
             if not first_val:
                 continue
             series = [
-                {"date": d.isoformat(),
-                 "value": round(((v / first_val) - 1) * 100, 2)}
+                {"date": d.isoformat(), "value": round(((v / first_val) - 1) * 100, 2)}
                 for d, v in sorted(vals.items())
             ]
             lines.append({"symbol": label, "series": series})
@@ -1107,6 +1150,7 @@ class MarketService:
         effr = await self._raw_market("EFFR_DAILY", cutoff)
 
         from app.services.inflation_service import InflationService
+
         infl_svc = InflationService(self.db)
         cpi_yoy = await infl_svc.get_inflation_series("CPI", "yoy", days)
 
@@ -1151,8 +1195,7 @@ class MarketService:
             if base == 0:
                 continue
             series = [
-                {"date": d.isoformat(),
-                 "value": round(((raw[d] / base) - 1) * 100, 2)}
+                {"date": d.isoformat(), "value": round(((raw[d] / base) - 1) * 100, 2)}
                 for d in sorted_dates
             ]
             lines.append({"symbol": label, "series": series, "color": color})
@@ -1164,15 +1207,16 @@ class MarketService:
             base = btc[sorted_dates[0]]
             if base != 0:
                 btc_series = [
-                    {"date": d.isoformat(),
-                     "value": round(((btc[d] / base) - 1) * 100, 2)}
+                    {"date": d.isoformat(), "value": round(((btc[d] / base) - 1) * 100, 2)}
                     for d in sorted_dates
                 ]
-                lines.append({
-                    "symbol": "BTC - Bitcoin",
-                    "series": btc_series,
-                    "color": "#f59e0b",
-                })
+                lines.append(
+                    {
+                        "symbol": "BTC - Bitcoin",
+                        "series": btc_series,
+                        "color": "#f59e0b",
+                    }
+                )
 
         # Sub-indicators
         y10 = await self._yield_series("10Y", cutoff)
@@ -1185,6 +1229,7 @@ class MarketService:
         effr = await self._raw_market("EFFR_DAILY", cutoff)
 
         from app.services.inflation_service import InflationService
+
         infl_svc = InflationService(self.db)
         cpi_yoy = await infl_svc.get_inflation_series("CPI", "yoy", days)
 
@@ -1212,12 +1257,15 @@ class MarketService:
             base = rows[0].value
             series = [
                 {"date": r.date.isoformat(), "value": round(((r.value / base) - 1) * 100, 2)}
-                for r in rows if base != 0
+                for r in rows
+                if base != 0
             ]
-            result.append({
-                "symbol": sym,
-                "series": series,
-                "current": rows[-1].value,
-                "change_pct": round(((rows[-1].value / base) - 1) * 100, 2) if base else 0,
-            })
+            result.append(
+                {
+                    "symbol": sym,
+                    "series": series,
+                    "current": rows[-1].value,
+                    "change_pct": round(((rows[-1].value / base) - 1) * 100, 2) if base else 0,
+                }
+            )
         return result

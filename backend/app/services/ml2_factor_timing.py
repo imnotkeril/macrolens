@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 from pathlib import Path
-import json
 
 import numpy as np
 import pandas as pd
@@ -40,7 +40,9 @@ class ML2FactorTimingService:
             "metrics": metrics,
             "model_version": "ml2-v1",
         }
-        self.metrics_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.metrics_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
         return payload
 
     def predict(self, df: pd.DataFrame) -> tuple[str, list[dict]]:
@@ -68,6 +70,11 @@ class ML2FactorTimingService:
 
     def load_metrics(self) -> dict:
         if not self.metrics_path.exists():
-            return {"trained_at": None, "rows": None, "horizons": HORIZONS, "metrics": {}, "model_version": "ml2-v1"}
+            return {
+                "trained_at": None,
+                "rows": None,
+                "horizons": HORIZONS,
+                "metrics": {},
+                "model_version": "ml2-v1",
+            }
         return json.loads(self.metrics_path.read_text(encoding="utf-8"))
-

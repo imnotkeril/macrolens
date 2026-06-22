@@ -1,9 +1,10 @@
 """OpenAI text embedding client (sync API wrapped for async callers)."""
+
 from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Sequence
+from collections.abc import Sequence
 
 from app.config import get_settings
 

@@ -2,47 +2,47 @@
 ML Regime Prediction API: predict, backtest, metrics, dataset info, train.
 Training runs in a separate process so it survives uvicorn --reload.
 """
+
 import asyncio
 import json
 import logging
 import os
 import subprocess
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
 from app.config import get_settings
+from app.database import get_db
 from app.schemas.ml_regime import (
-    RegimePredictResponse,
+    DatasetInfoResponse,
     RegimeBacktestResponse,
     RegimeMetricsResponse,
-    DatasetInfoResponse,
+    RegimePredictResponse,
     TrainResponse,
 )
-from app.services.ml_inference_service import (
-    predict_current,
-    get_backtest,
-    get_metrics,
-)
+from app.services.cycle_engine import CycleEngine
 from app.services.ml_dataset_builder import (
+    FEATURE_COLUMNS,
     build_dataset,
     build_dataset_single_indicator,
     diagnose_build_one_month,
-    FEATURE_COLUMNS,
     run_leakage_audit,
+)
+from app.services.ml_inference_service import (
+    get_backtest,
+    get_metrics,
+    predict_current,
 )
 from app.services.ml_regime_models import run_train_pipeline
 from app.services.navigator_engine import NavigatorEngine
-from app.services.cycle_engine import CycleEngine
 from app.services.progress_store import (
-    init_train_progress,
-    set_train_progress,
     get_train_progress,
     get_train_progress_from_file,
+    set_train_progress,
 )
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,12 @@ def _debug_log(message: str, data: dict, hypothesis_id: str, run_id: str = "run1
         return
     try:
         with open(log_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps({**payload, "timestamp": __import__("time").time() * 1000}, ensure_ascii=False) + "\n")
+            f.write(
+                json.dumps(
+                    {**payload, "timestamp": __import__("time").time() * 1000}, ensure_ascii=False
+                )
+                + "\n"
+            )
     except Exception:
         pass
 
@@ -120,8 +125,10 @@ async def regime_predict(db: AsyncSession = Depends(get_db)):
     growth = await nav_engine._compute_growth_score()
     fed = await nav_engine.fed_tracker.get_policy_score()
     cycle_features = await cycle_engine.get_features_at_date(date.today())
+
     def _f(v):
         return float(v) if v is not None else 0.0
+
     feature_row = {
         "growth_score": float(growth),
         "fed_policy_score": float(fed),
@@ -224,7 +231,7 @@ async def build_dataset_endpoint(
         settings = get_settings()
         out_path = str(_resolve_ml_path(settings.ml_dataset_path))
         end = date.today()
-        last_month_end = (end.replace(day=1) - timedelta(days=1))
+        last_month_end = end.replace(day=1) - timedelta(days=1)
         loop = asyncio.get_running_loop()
 
         if minimal:
@@ -249,7 +256,7 @@ async def build_dataset_endpoint(
             if max_months is not None and max_months >= 1:
                 start_ts = last_month_end
                 for _ in range(max_months - 1):
-                    start_ts = (start_ts.replace(day=1) - timedelta(days=1))
+                    start_ts = start_ts.replace(day=1) - timedelta(days=1)
                 _start, _end = start_ts, last_month_end
             else:
                 _start, _end = None, None
@@ -268,9 +275,13 @@ async def build_dataset_endpoint(
                 timeout=timeout_sec,
             )
             features_used = FEATURE_COLUMNS
-    except asyncio.TimeoutError:
-        logger.warning("build-dataset timed out after %s s (max_months=%s)", timeout_sec, max_months)
-        _debug_log("build-dataset timeout", {"timeout_sec": timeout_sec, "max_months": max_months}, "H0")
+    except TimeoutError:
+        logger.warning(
+            "build-dataset timed out after %s s (max_months=%s)", timeout_sec, max_months
+        )
+        _debug_log(
+            "build-dataset timeout", {"timeout_sec": timeout_sec, "max_months": max_months}, "H0"
+        )
         raise HTTPException(
             status_code=504,
             detail=f"Build timed out after {timeout_sec}s. Check backend logs and DB (indicators, Fed, cycle). One month should finish in under a minute.",
@@ -307,7 +318,11 @@ async def build_dataset_endpoint(
         date_min=df["date"].min() if "date" in df.columns else None,
         date_max=df["date"].max() if "date" in df.columns else None,
         features=features_used,
-        last_built=datetime.fromtimestamp(path.stat().st_mtime).isoformat() if path.exists() else datetime.now(timezone.utc).isoformat(),
+        last_built=(
+            datetime.fromtimestamp(path.stat().st_mtime).isoformat()
+            if path.exists()
+            else datetime.now(UTC).isoformat()
+        ),
         path=out_path,
         build_error=None,
     )
@@ -334,8 +349,11 @@ async def dataset_info():
             build_error=None,
         )
     import pandas as pd
+
     df = pd.read_parquet(path)
-    _debug_log("dataset_info read parquet", {"path_resolved": str(path.resolve()), "rows": len(df)}, "H4")
+    _debug_log(
+        "dataset_info read parquet", {"path_resolved": str(path.resolve()), "rows": len(df)}, "H4"
+    )
     return DatasetInfoResponse(
         rows=len(df),
         date_min=df["date"].min() if "date" in df.columns and len(df) else None,
@@ -365,12 +383,19 @@ async def _run_training_background() -> None:
     settings = get_settings()
     try:
         set_train_progress(
-            phase="dataset", percent=0.0, message="Building dataset…", log_line="[0%] Building dataset…"
+            phase="dataset",
+            percent=0.0,
+            message="Building dataset…",
+            log_line="[0%] Building dataset…",
         )
         df = await build_dataset(output_path=str(_resolve_ml_path(settings.ml_dataset_path)))
         _debug_log(
             "after build_dataset",
-            {"len_df": len(df), "empty": bool(df.empty), "ml_dataset_path": settings.ml_dataset_path},
+            {
+                "len_df": len(df),
+                "empty": bool(df.empty),
+                "ml_dataset_path": settings.ml_dataset_path,
+            },
             "H2",
         )
         if df.empty or len(df) < 24:
@@ -379,10 +404,14 @@ async def _run_training_background() -> None:
             return
         leak = run_leakage_audit(df)
         if not leak.get("passed", False):
-            set_train_progress(done=True, error=f"Leakage audit failed: {leak.get('issues', [])[:3]}")
+            set_train_progress(
+                done=True, error=f"Leakage audit failed: {leak.get('issues', [])[:3]}"
+            )
             return
         set_train_progress(
-            percent=50.0, message="Training models…", log_line="[50%] Dataset built. Training models…"
+            percent=50.0,
+            message="Training models…",
+            log_line="[50%] Dataset built. Training models…",
         )
         meta = run_train_pipeline(
             df,
@@ -460,10 +489,19 @@ async def regime_train():
     if not _start_train_worker(progress_path, cwd):
         progress_path.write_text(
             json.dumps(
-                {"phase": "", "percent": 0.0, "message": "", "logs": [], "done": True, "error": "Failed to start worker"},
+                {
+                    "phase": "",
+                    "percent": 0.0,
+                    "message": "",
+                    "logs": [],
+                    "done": True,
+                    "error": "Failed to start worker",
+                },
                 ensure_ascii=False,
             ),
             encoding="utf-8",
         )
-        return TrainResponse(status="error", version=None, metrics=None, error="Failed to start worker")
+        return TrainResponse(
+            status="error", version=None, metrics=None, error="Failed to start worker"
+        )
     return TrainResponse(status="started", version=None, metrics=None, error=None)

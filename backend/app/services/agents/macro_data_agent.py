@@ -1,6 +1,7 @@
 """
 Macro Data Agent: coverage snapshot + optional LLM narrative from latest indicator values.
 """
+
 from __future__ import annotations
 
 import json
@@ -12,10 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.intelligence import AgentSignal
+from app.schemas.agent_outputs import MacroDataAgentLLMOutput
 from app.services.agent_persistence import get_or_create_agent_run, upsert_agent_signal
 from app.services.llm.claude_client import ClaudeClient
 from app.services.llm.json_extract import extract_json_object
-from app.schemas.agent_outputs import MacroDataAgentLLMOutput
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,9 @@ logger = logging.getLogger(__name__)
 class MacroDataAgent:
     async def run(self, db: AsyncSession, as_of: date | None = None) -> AgentSignal:
         as_of = as_of or date.today()
-        run = await get_or_create_agent_run(db, agent_name="macro_data_agent", run_key=as_of.isoformat())
+        run = await get_or_create_agent_run(
+            db, agent_name="macro_data_agent", run_key=as_of.isoformat()
+        )
 
         cnt = (
             await db.execute(
@@ -31,22 +34,28 @@ class MacroDataAgent:
             )
         ).scalar() or 0
         latest_iv = (
-            await db.execute(select(func.max(IndicatorValue.date)).where(IndicatorValue.date <= as_of))
+            await db.execute(
+                select(func.max(IndicatorValue.date)).where(IndicatorValue.date <= as_of)
+            )
         ).scalar()
 
         sample_rows = (
-            (
-                await db.execute(
-                    select(Indicator.name, IndicatorValue.date, IndicatorValue.value)
-                    .join(Indicator, Indicator.id == IndicatorValue.indicator_id)
-                    .where(IndicatorValue.date <= as_of)
-                    .order_by(IndicatorValue.date.desc())
-                    .limit(24)
-                )
+            await db.execute(
+                select(Indicator.name, IndicatorValue.date, IndicatorValue.value)
+                .join(Indicator, Indicator.id == IndicatorValue.indicator_id)
+                .where(IndicatorValue.date <= as_of)
+                .order_by(IndicatorValue.date.desc())
+                .limit(24)
             )
-            .all()
-        )
-        sample = [{"name": r[0], "date": r[1].isoformat(), "value": float(r[2]) if r[2] is not None else None} for r in sample_rows]
+        ).all()
+        sample = [
+            {
+                "name": r[0],
+                "date": r[1].isoformat(),
+                "value": float(r[2]) if r[2] is not None else None,
+            }
+            for r in sample_rows
+        ]
 
         rule_summary = (
             f"Macro data coverage: {int(cnt)} indicator values on/before {as_of.isoformat()}; "
@@ -115,7 +124,11 @@ class MacroDataAgent:
                     signal_type="macro_data_summary",
                     score=score,
                     summary=rule_summary,
-                    payload={**base_payload, "model_version": "claude-parse-fallback", "parse_error": str(e)},
+                    payload={
+                        **base_payload,
+                        "model_version": "claude-parse-fallback",
+                        "parse_error": str(e),
+                    },
                 )
 
         run.status = "completed"

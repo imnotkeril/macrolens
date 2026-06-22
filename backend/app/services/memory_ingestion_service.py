@@ -1,27 +1,30 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone, date, timedelta
 import json
+from datetime import UTC, date, datetime, timedelta
 
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.fed_policy import FedRate
+from app.models.indicator import Indicator, IndicatorValue
 from app.models.intelligence import (
-    DashboardRadarSnapshot,
+    AgentSignal,
     AnalysisIndicatorsSnapshot,
+    DashboardRadarSnapshot,
     MemoryPipelineRun,
+    ML2AnomalySignal,
+    ML2FactorScore,
+    Recommendation,
 )
-from app.services.memory_service import MemoryService
+from app.models.market_data import YieldData
 from app.services.cycle_engine import CycleEngine
-from app.services.navigator_engine import NavigatorEngine
-from app.services.market_service import MarketService
+from app.services.fed_rate_schema import apply_fed_rate_load_columns
 from app.services.fed_tracker import FedTracker
 from app.services.inflation_service import InflationService
-from app.models.indicator import Indicator, IndicatorValue
-from sqlalchemy import select, desc
-from app.models.fed_policy import FedRate
-from app.models.market_data import YieldData
-from app.services.fed_rate_schema import apply_fed_rate_load_columns
-from app.models.intelligence import AgentSignal, Recommendation, ML2FactorScore, ML2AnomalySignal
+from app.services.market_service import MarketService
+from app.services.memory_service import MemoryService
+from app.services.navigator_engine import NavigatorEngine
 
 
 class MemoryIngestionService:
@@ -32,20 +35,24 @@ class MemoryIngestionService:
     def _json_safe(value):
         return json.loads(json.dumps(value, ensure_ascii=False, default=str))
 
-    async def _start_run(self, db: AsyncSession, pipeline_name: str, run_key: str) -> MemoryPipelineRun:
+    async def _start_run(
+        self, db: AsyncSession, pipeline_name: str, run_key: str
+    ) -> MemoryPipelineRun:
         run = MemoryPipelineRun(pipeline_name=pipeline_name, run_key=run_key, status="running")
         db.add(run)
         await db.flush()
         return run
 
-    async def _finish_run(self, run: MemoryPipelineRun, rows_written: int, error: str | None = None) -> None:
+    async def _finish_run(
+        self, run: MemoryPipelineRun, rows_written: int, error: str | None = None
+    ) -> None:
         run.status = "failed" if error else "completed"
         run.rows_written = rows_written
         run.error = error
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(UTC)
 
     async def snapshot_dashboard_radar(self, db: AsyncSession, source_version: str = "v1") -> dict:
-        run_key = f"dashboard_radar:{datetime.now(timezone.utc).isoformat()}"
+        run_key = f"dashboard_radar:{datetime.now(UTC).isoformat()}"
         run = await self._start_run(db, "dashboard_radar_snapshot", run_key)
         try:
             cycle = CycleEngine(db)
@@ -69,19 +76,29 @@ class MemoryIngestionService:
 
             payload = {
                 "regime_current": regime.model_dump() if hasattr(regime, "model_dump") else regime,
-                "regime_history": [x.model_dump() if hasattr(x, "model_dump") else x for x in regime_history],
-                "navigator_recommendation": nav_rec.model_dump() if hasattr(nav_rec, "model_dump") else nav_rec,
+                "regime_history": [
+                    x.model_dump() if hasattr(x, "model_dump") else x for x in regime_history
+                ],
+                "navigator_recommendation": (
+                    nav_rec.model_dump() if hasattr(nav_rec, "model_dump") else nav_rec
+                ),
                 "navigator_history": nav_hist,
                 "navigator_forward": nav_fwd,
-                "cross_asset_signals": [x.model_dump() if hasattr(x, "model_dump") else x for x in signals],
+                "cross_asset_signals": [
+                    x.model_dump() if hasattr(x, "model_dump") else x for x in signals
+                ],
                 "cross_asset_radar": radar,
-                "recession_check": recession.model_dump() if hasattr(recession, "model_dump") else recession,
+                "recession_check": (
+                    recession.model_dump() if hasattr(recession, "model_dump") else recession
+                ),
                 "recession_bands": recession_bands,
-                "fed_status": fed_status.model_dump() if hasattr(fed_status, "model_dump") else fed_status,
+                "fed_status": (
+                    fed_status.model_dump() if hasattr(fed_status, "model_dump") else fed_status
+                ),
                 "rates_dashboard": yield_curve,
                 "inflation_latest": inflation_latest,
             }
-            snapshot_key = f"dashboard-radar:{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
+            snapshot_key = f"dashboard-radar:{datetime.now(UTC).strftime('%Y%m%d%H%M')}"
             safe_payload = self._json_safe(payload)
             rec = DashboardRadarSnapshot(
                 snapshot_key=snapshot_key,
@@ -111,7 +128,11 @@ class MemoryIngestionService:
                 doc_key=snapshot_key,
                 title="Dashboard+Radar Snapshot",
                 content=json.dumps(safe_payload, ensure_ascii=False, default=str)[:8000],
-                metadata={"quality_score": 1.0, "source_version": source_version, "as_of_date": datetime.now(timezone.utc).date().isoformat()},
+                metadata={
+                    "quality_score": 1.0,
+                    "source_version": source_version,
+                    "as_of_date": datetime.now(UTC).date().isoformat(),
+                },
                 tags=["dashboard", "radar", "snapshot"],
             )
             await self._finish_run(run, rows_written=1)
@@ -144,8 +165,10 @@ class MemoryIngestionService:
             tags=["forecast_lab", "predictions", str(phase).lower().replace(" ", "_")],
         )
 
-    async def snapshot_analysis_indicators(self, db: AsyncSession, source_version: str = "v1") -> dict:
-        run_key = f"analysis_indicators:{datetime.now(timezone.utc).isoformat()}"
+    async def snapshot_analysis_indicators(
+        self, db: AsyncSession, source_version: str = "v1"
+    ) -> dict:
+        run_key = f"analysis_indicators:{datetime.now(UTC).isoformat()}"
         run = await self._start_run(db, "analysis_indicators_snapshot", run_key)
         try:
             market = MarketService(db)
@@ -160,7 +183,11 @@ class MemoryIngestionService:
             macro = await market.get_macro_overview(365 * 5)
             inflation = await infl.get_inflation_dashboard(365 * 5)
 
-            indicators = (await db.execute(select(Indicator).order_by(Indicator.category, Indicator.name))).scalars().all()
+            indicators = (
+                (await db.execute(select(Indicator).order_by(Indicator.category, Indicator.name)))
+                .scalars()
+                .all()
+            )
             indicator_records = []
             for ind in indicators:
                 latest = (
@@ -172,13 +199,17 @@ class MemoryIngestionService:
                     )
                 ).scalar_one_or_none()
                 history = (
-                    await db.execute(
-                        select(IndicatorValue)
-                        .where(IndicatorValue.indicator_id == ind.id)
-                        .order_by(desc(IndicatorValue.date))
-                        .limit(120)
+                    (
+                        await db.execute(
+                            select(IndicatorValue)
+                            .where(IndicatorValue.indicator_id == ind.id)
+                            .order_by(desc(IndicatorValue.date))
+                            .limit(120)
+                        )
                     )
-                ).scalars().all()
+                    .scalars()
+                    .all()
+                )
                 indicator_records.append(
                     {
                         "indicator_id": ind.id,
@@ -193,7 +224,12 @@ class MemoryIngestionService:
                             "trend": latest.trend if latest else None,
                         },
                         "history": [
-                            {"date": h.date.isoformat(), "value": h.value, "z_score": h.z_score, "surprise": h.surprise}
+                            {
+                                "date": h.date.isoformat(),
+                                "value": h.value,
+                                "z_score": h.z_score,
+                                "surprise": h.surprise,
+                            }
                             for h in history
                         ],
                     }
@@ -212,7 +248,7 @@ class MemoryIngestionService:
                 },
                 "economic_indicators": indicator_records,
             }
-            snapshot_key = f"analysis-indicators:{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
+            snapshot_key = f"analysis-indicators:{datetime.now(UTC).strftime('%Y%m%d%H%M')}"
             safe_payload = self._json_safe(payload)
             rec = AnalysisIndicatorsSnapshot(
                 snapshot_key=snapshot_key,
@@ -243,7 +279,11 @@ class MemoryIngestionService:
                 doc_key=snapshot_key,
                 title="Analysis+Indicators Snapshot",
                 content=json.dumps(safe_payload, ensure_ascii=False, default=str)[:12000],
-                metadata={"quality_score": 1.0, "source_version": source_version, "as_of_date": datetime.now(timezone.utc).date().isoformat()},
+                metadata={
+                    "quality_score": 1.0,
+                    "source_version": source_version,
+                    "as_of_date": datetime.now(UTC).date().isoformat(),
+                },
                 tags=["analysis", "indicators", "snapshot"],
             )
             await self._finish_run(run, rows_written=1)
@@ -252,11 +292,13 @@ class MemoryIngestionService:
             await self._finish_run(run, rows_written=0, error=str(e))
             raise
 
-    async def ingest_domain_records(self, db: AsyncSession, source_version: str = "v1", as_of_date: date | None = None) -> dict:
-        run_key = f"domain_ingestion:{datetime.now(timezone.utc).isoformat()}"
+    async def ingest_domain_records(
+        self, db: AsyncSession, source_version: str = "v1", as_of_date: date | None = None
+    ) -> dict:
+        run_key = f"domain_ingestion:{datetime.now(UTC).isoformat()}"
         run = await self._start_run(db, "domain_ingestion", run_key)
         written = 0
-        as_of = as_of_date or datetime.now(timezone.utc).date()
+        as_of = as_of_date or datetime.now(UTC).date()
         try:
             from app.services.fed_press_ingestion import ingest_fed_press_rss
             from app.services.telegram_news_ingestion import ingest_telegram_whitelist
@@ -280,8 +322,19 @@ class MemoryIngestionService:
                     source="fed_cb",
                     doc_key=f"fed:{fed.date.isoformat()}",
                     title="Fed latest rate snapshot",
-                    content=json.dumps({"date": fed.date.isoformat(), "target_upper": fed.target_upper, "target_lower": fed.target_lower, "effr": fed.effr}),
-                    metadata={"quality_score": 1.0, "source_version": source_version, "as_of_date": as_of.isoformat()},
+                    content=json.dumps(
+                        {
+                            "date": fed.date.isoformat(),
+                            "target_upper": fed.target_upper,
+                            "target_lower": fed.target_lower,
+                            "effr": fed.effr,
+                        }
+                    ),
+                    metadata={
+                        "quality_score": 1.0,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                    },
                     tags=["fed", "rates"],
                 )
                 written += 1
@@ -292,15 +345,29 @@ class MemoryIngestionService:
                     doc_key=f"fed:{as_of.isoformat()}",
                     title="Fed snapshot unavailable",
                     content=json.dumps({"as_of_date": as_of.isoformat(), "available": False}),
-                    metadata={"quality_score": 0.0, "source_version": source_version, "as_of_date": as_of.isoformat(), "available": False},
+                    metadata={
+                        "quality_score": 0.0,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                        "available": False,
+                    },
                     tags=["fed", "rates", "missing"],
                 )
                 written += 1
 
             # yield
             y = (
-                await db.execute(select(YieldData).where(YieldData.date <= as_of).order_by(YieldData.date.desc()).limit(10))
-            ).scalars().all()
+                (
+                    await db.execute(
+                        select(YieldData)
+                        .where(YieldData.date <= as_of)
+                        .order_by(YieldData.date.desc())
+                        .limit(10)
+                    )
+                )
+                .scalars()
+                .all()
+            )
             if y:
                 await self.memory.upsert_document(
                     db,
@@ -319,7 +386,11 @@ class MemoryIngestionService:
                             for x in y
                         ]
                     ),
-                    metadata={"quality_score": 1.0, "source_version": source_version, "as_of_date": as_of.isoformat()},
+                    metadata={
+                        "quality_score": 1.0,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                    },
                     tags=["yield", "curve"],
                 )
                 written += 1
@@ -330,15 +401,29 @@ class MemoryIngestionService:
                     doc_key=f"yield:{as_of.isoformat()}",
                     title="Yield curve snapshot unavailable",
                     content=json.dumps({"as_of_date": as_of.isoformat(), "available": False}),
-                    metadata={"quality_score": 0.0, "source_version": source_version, "as_of_date": as_of.isoformat(), "available": False},
+                    metadata={
+                        "quality_score": 0.0,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                        "available": False,
+                    },
                     tags=["yield", "curve", "missing"],
                 )
                 written += 1
 
             # macro indicators
             inds = (
-                await db.execute(select(IndicatorValue).where(IndicatorValue.date <= as_of).order_by(IndicatorValue.date.desc()).limit(100))
-            ).scalars().all()
+                (
+                    await db.execute(
+                        select(IndicatorValue)
+                        .where(IndicatorValue.date <= as_of)
+                        .order_by(IndicatorValue.date.desc())
+                        .limit(100)
+                    )
+                )
+                .scalars()
+                .all()
+            )
             if inds:
                 await self.memory.upsert_document(
                     db,
@@ -347,11 +432,20 @@ class MemoryIngestionService:
                     title="Macro indicators latest batch",
                     content=json.dumps(
                         [
-                            {"indicator_id": x.indicator_id, "date": x.date.isoformat(), "value": x.value, "z_score": x.z_score}
+                            {
+                                "indicator_id": x.indicator_id,
+                                "date": x.date.isoformat(),
+                                "value": x.value,
+                                "z_score": x.z_score,
+                            }
                             for x in inds
                         ]
                     ),
-                    metadata={"quality_score": 0.95, "source_version": source_version, "as_of_date": as_of.isoformat()},
+                    metadata={
+                        "quality_score": 0.95,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                    },
                     tags=["macro", "indicators"],
                 )
                 written += 1
@@ -362,7 +456,12 @@ class MemoryIngestionService:
                     doc_key=f"macro:{as_of.isoformat()}",
                     title="Macro snapshot unavailable",
                     content=json.dumps({"as_of_date": as_of.isoformat(), "available": False}),
-                    metadata={"quality_score": 0.0, "source_version": source_version, "as_of_date": as_of.isoformat(), "available": False},
+                    metadata={
+                        "quality_score": 0.0,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                        "available": False,
+                    },
                     tags=["macro", "indicators", "missing"],
                 )
                 written += 1
@@ -392,7 +491,11 @@ class MemoryIngestionService:
                             "reason_codes": rec.reason_codes,
                         }
                     ),
-                    metadata={"quality_score": 1.0, "source_version": source_version, "as_of_date": as_of.isoformat()},
+                    metadata={
+                        "quality_score": 1.0,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                    },
                     tags=["decision", "master"],
                 )
                 written += 1
@@ -403,20 +506,29 @@ class MemoryIngestionService:
                     doc_key=f"decision:{as_of.isoformat()}",
                     title="Decision snapshot unavailable",
                     content=json.dumps({"as_of_date": as_of.isoformat(), "available": False}),
-                    metadata={"quality_score": 0.0, "source_version": source_version, "as_of_date": as_of.isoformat(), "available": False},
+                    metadata={
+                        "quality_score": 0.0,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                        "available": False,
+                    },
                     tags=["decision", "master", "missing"],
                 )
                 written += 1
 
             # news + agent
             signals = (
-                await db.execute(
-                    select(AgentSignal)
-                    .where(AgentSignal.signal_date <= as_of)
-                    .order_by(AgentSignal.created_at.desc())
-                    .limit(20)
+                (
+                    await db.execute(
+                        select(AgentSignal)
+                        .where(AgentSignal.signal_date <= as_of)
+                        .order_by(AgentSignal.created_at.desc())
+                        .limit(20)
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             if signals:
                 await self.memory.upsert_document(
                     db,
@@ -435,7 +547,11 @@ class MemoryIngestionService:
                             for s in signals
                         ]
                     ),
-                    metadata={"quality_score": 0.9, "source_version": source_version, "as_of_date": as_of.isoformat()},
+                    metadata={
+                        "quality_score": 0.9,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                    },
                     tags=["news", "signals", "agents"],
                 )
                 written += 1
@@ -446,23 +562,35 @@ class MemoryIngestionService:
                     doc_key=f"signals:{as_of.strftime('%Y%m%d')}",
                     title="News/agent signals unavailable",
                     content=json.dumps({"as_of_date": as_of.isoformat(), "available": False}),
-                    metadata={"quality_score": 0.0, "source_version": source_version, "as_of_date": as_of.isoformat(), "available": False},
+                    metadata={
+                        "quality_score": 0.0,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                        "available": False,
+                    },
                     tags=["news", "signals", "agents", "missing"],
                 )
                 written += 1
 
             # ml snapshots
             ml2 = (
-                await db.execute(
-                    select(ML2FactorScore)
-                    .where(ML2FactorScore.date <= as_of)
-                    .order_by(ML2FactorScore.date.desc())
-                    .limit(20)
+                (
+                    await db.execute(
+                        select(ML2FactorScore)
+                        .where(ML2FactorScore.date <= as_of)
+                        .order_by(ML2FactorScore.date.desc())
+                        .limit(20)
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             an = (
                 await db.execute(
-                    select(ML2AnomalySignal).where(ML2AnomalySignal.date <= as_of).order_by(ML2AnomalySignal.date.desc()).limit(1)
+                    select(ML2AnomalySignal)
+                    .where(ML2AnomalySignal.date <= as_of)
+                    .order_by(ML2AnomalySignal.date.desc())
+                    .limit(1)
                 )
             ).scalar_one_or_none()
             if ml2 or an:
@@ -490,7 +618,11 @@ class MemoryIngestionService:
                             },
                         }
                     ),
-                    metadata={"quality_score": 0.95, "source_version": source_version, "as_of_date": as_of.isoformat()},
+                    metadata={
+                        "quality_score": 0.95,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                    },
                     tags=["ml", "snapshots"],
                 )
                 written += 1
@@ -501,7 +633,12 @@ class MemoryIngestionService:
                     doc_key=f"ml:{as_of.strftime('%Y%m%d')}",
                     title="ML snapshots unavailable",
                     content=json.dumps({"as_of_date": as_of.isoformat(), "available": False}),
-                    metadata={"quality_score": 0.0, "source_version": source_version, "as_of_date": as_of.isoformat(), "available": False},
+                    metadata={
+                        "quality_score": 0.0,
+                        "source_version": source_version,
+                        "as_of_date": as_of.isoformat(),
+                        "available": False,
+                    },
                     tags=["ml", "snapshots", "missing"],
                 )
                 written += 1
@@ -514,7 +651,7 @@ class MemoryIngestionService:
 
     @staticmethod
     def _month_ends(years: int) -> list[date]:
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
         start = today - timedelta(days=365 * years)
         cursor = date(start.year, start.month, 1)
         points: list[date] = []
@@ -528,7 +665,9 @@ class MemoryIngestionService:
             cursor = next_month
         return points
 
-    async def _upsert_snapshot_placeholders(self, db: AsyncSession, as_of: date, source_version: str) -> int:
+    async def _upsert_snapshot_placeholders(
+        self, db: AsyncSession, as_of: date, source_version: str
+    ) -> int:
         written = 0
         dashboard_payload = {
             "as_of_date": as_of.isoformat(),
@@ -541,7 +680,12 @@ class MemoryIngestionService:
             doc_key=f"dashboard-radar:{as_of.isoformat()}",
             title="Dashboard+Radar Snapshot",
             content=json.dumps(dashboard_payload),
-            metadata={"quality_score": 0.8, "source_version": source_version, "as_of_date": as_of.isoformat(), "backfill": True},
+            metadata={
+                "quality_score": 0.8,
+                "source_version": source_version,
+                "as_of_date": as_of.isoformat(),
+                "backfill": True,
+            },
             tags=["dashboard", "radar", "snapshot", "backfill"],
         )
         written += 1
@@ -557,14 +701,21 @@ class MemoryIngestionService:
             doc_key=f"analysis-indicators:{as_of.isoformat()}",
             title="Analysis+Indicators Snapshot",
             content=json.dumps(analysis_payload),
-            metadata={"quality_score": 0.8, "source_version": source_version, "as_of_date": as_of.isoformat(), "backfill": True},
+            metadata={
+                "quality_score": 0.8,
+                "source_version": source_version,
+                "as_of_date": as_of.isoformat(),
+                "backfill": True,
+            },
             tags=["analysis", "indicators", "snapshot", "backfill"],
         )
         written += 1
         return written
 
-    async def backfill_last_years(self, db: AsyncSession, years: int = 5, source_version: str = "backfill-v1") -> dict:
-        run_key = f"backfill:{years}y:{datetime.now(timezone.utc).isoformat()}"
+    async def backfill_last_years(
+        self, db: AsyncSession, years: int = 5, source_version: str = "backfill-v1"
+    ) -> dict:
+        run_key = f"backfill:{years}y:{datetime.now(UTC).isoformat()}"
         run = await self._start_run(db, "memory_backfill", run_key)
         points = self._month_ends(years)
         total_written = 0
@@ -576,9 +727,16 @@ class MemoryIngestionService:
                     as_of_date=as_of,
                 )
                 total_written += int(result.get("rows_written", 0))
-                total_written += await self._upsert_snapshot_placeholders(db, as_of=as_of, source_version=source_version)
+                total_written += await self._upsert_snapshot_placeholders(
+                    db, as_of=as_of, source_version=source_version
+                )
             await self._finish_run(run, rows_written=total_written)
-            return {"points": len(points), "rows_written": total_written, "start_date": points[0].isoformat(), "end_date": points[-1].isoformat()}
+            return {
+                "points": len(points),
+                "rows_written": total_written,
+                "start_date": points[0].isoformat(),
+                "end_date": points[-1].isoformat(),
+            }
         except Exception as e:
             await self._finish_run(run, rows_written=total_written, error=str(e))
             raise

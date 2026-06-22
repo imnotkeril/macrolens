@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, func, update
 
 from app.database import get_db
 from app.models.alert import Alert, AlertSeverity
-from app.schemas.alert import AlertResponse, AlertCount
+from app.schemas.alert import AlertCount, AlertResponse
 
 router = APIRouter()
 

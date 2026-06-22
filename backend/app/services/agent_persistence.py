@@ -1,4 +1,5 @@
 """Idempotent persistence for agent runs, signals, briefs, and recommendations."""
+
 from __future__ import annotations
 
 from datetime import date

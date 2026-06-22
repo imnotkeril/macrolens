@@ -21,6 +21,7 @@
 
 <p align="center">
   <a href="https://github.com/imnotkeril/macrolens/actions/workflows/ci.yml"><img src="https://github.com/imnotkeril/macrolens/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://codecov.io/gh/imnotkeril/macrolens"><img src="https://codecov.io/gh/imnotkeril/macrolens/graph/badge.svg" alt="Codecov"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Proprietary-red.svg" alt="License: Proprietary"></a>
   <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white" alt="Python 3.12">
   <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" alt="FastAPI"></a>
@@ -350,11 +351,21 @@ When running the backend directly from `backend/`, copy `backend/.env.example` t
 
 ## Testing And Code Quality
 
+CI (`.github/workflows/ci.yml`) runs **Ruff, Black, isort, Mypy, Pytest** on Python 3.12 for the
+backend, plus **lint / typecheck / build** for the frontend. Backend tooling is configured in
+`backend/pyproject.toml`; coverage scope (Forecast Lab core, gate ≥ 60%) in `backend/.coveragerc`.
+
 Backend:
 
 ```powershell
 cd backend
-python -m pytest
+pip install -r requirements-dev.txt
+ruff check app tests
+black --check app tests
+isort --check-only app tests
+mypy app
+pytest --cov=app/services/forecast_lab --cov-config=.coveragerc --cov-fail-under=60
+pre-commit install   # optional: run black/isort/ruff on commit
 ```
 
 Frontend:
@@ -370,12 +381,12 @@ Current verification status:
 
 | Gate | Command | Status |
 |------|---------|--------|
-| Backend tests | `python -m pytest` | Passing: 29 tests |
-| Frontend lint | `npm run lint` | Passing, no warnings |
-| Frontend typecheck | `npm run typecheck` | Passing |
-| Frontend production build | `npm run build` | Passing |
-
-Known warning: backend tests currently emit one Pydantic v2 deprecation warning for class-based settings config.
+| Backend lint | `ruff check app tests` | Passing |
+| Backend format | `black --check` / `isort --check-only` | Passing |
+| Backend types | `mypy app` | Passing (129 files) |
+| Backend tests | `pytest` | Passing: 29 tests |
+| Backend coverage | Forecast Lab core | ~68% (gate ≥ 60%) |
+| Frontend lint / typecheck / build | `npm run …` | Passing |
 
 ---
 

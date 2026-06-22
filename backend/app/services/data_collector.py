@@ -3,22 +3,23 @@ import logging
 from datetime import date, timedelta
 
 import pandas as pd
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from app.config import get_settings
 from app.database import async_session
-from app.models.indicator import Indicator, IndicatorValue
-from app.models.fed_policy import FedRate, BalanceSheet
-from app.models.market_data import YieldData, MarketData
 from app.models.economic_calendar import SourceHealthMetric
 from app.models.factor import FactorReturn, SectorPerformance
-from app.config import get_settings
-from app.services.fred_client import (
-    FredClient, INDICATOR_SERIES, YIELD_SERIES, TIPS_SERIES, BREAKEVEN_SERIES, MARKET_SERIES,
-)
-from app.services.yahoo_client import YahooClient, YAHOO_MACRO_ETFS
-from app.services.data_sources import FredAdapter, YahooAdapter, SourceRouter
+from app.models.fed_policy import BalanceSheet, FedRate
+from app.models.indicator import Indicator, IndicatorValue
+from app.models.market_data import MarketData, YieldData
+from app.services.data_sources import FredAdapter, SourceRouter, YahooAdapter
 from app.services.fed_press_service import backfill_fomc_signal_phrases
+from app.services.fred_client import (
+    MARKET_SERIES,
+    FredClient,
+)
+from app.services.yahoo_client import YAHOO_MACRO_ETFS, YahooClient
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +69,7 @@ class DataCollector:
             return
 
         async with async_session() as db:
-            result = await db.execute(
-                select(Indicator).where(Indicator.frequency == "weekly")
-            )
+            result = await db.execute(select(Indicator).where(Indicator.frequency == "weekly"))
             indicators = result.scalars().all()
 
             for ind in indicators:
@@ -95,14 +94,18 @@ class DataCollector:
                 if idx > 0:
                     prev_val = float(series.iloc[idx - 1])
 
-                stmt = pg_insert(IndicatorValue).values(
-                    indicator_id=indicator.id,
-                    date=obs_date,
-                    value=float(value),
-                    previous=prev_val,
-                ).on_conflict_do_update(
-                    constraint="uq_indicator_date",
-                    set_={"value": float(value), "previous": prev_val},
+                stmt = (
+                    pg_insert(IndicatorValue)
+                    .values(
+                        indicator_id=indicator.id,
+                        date=obs_date,
+                        value=float(value),
+                        previous=prev_val,
+                    )
+                    .on_conflict_do_update(
+                        constraint="uq_indicator_date",
+                        set_={"value": float(value), "previous": prev_val},
+                    )
                 )
                 await db.execute(stmt)
 
@@ -137,9 +140,7 @@ class DataCollector:
     async def need_indicators_historical(self) -> bool:
         """True if indicator_values have too little history (< ~1 year across all indicators)."""
         async with async_session() as db:
-            total = (
-                await db.execute(select(func.count(IndicatorValue.id)))
-            ).scalar() or 0
+            total = (await db.execute(select(func.count(IndicatorValue.id)))).scalar() or 0
             # ~12 months * 30 indicators = 360; if less, backfill
             if total < 360:
                 logger.info(
@@ -210,12 +211,16 @@ class DataCollector:
         for i, (ts, value) in enumerate(series.items()):
             obs_date = ts.date() if hasattr(ts, "date") else ts
             prev_val = float(series.iloc[i - 1]) if i > 0 else None
-            stmt = pg_insert(IndicatorValue).values(
-                indicator_id=indicator_id,
-                date=obs_date,
-                value=float(value),
-                previous=prev_val,
-            ).on_conflict_do_nothing(constraint="uq_indicator_date")
+            stmt = (
+                pg_insert(IndicatorValue)
+                .values(
+                    indicator_id=indicator_id,
+                    date=obs_date,
+                    value=float(value),
+                    previous=prev_val,
+                )
+                .on_conflict_do_nothing(constraint="uq_indicator_date")
+            )
             await db.execute(stmt)
 
     # ------------------------------------------------------------------
@@ -232,26 +237,32 @@ class DataCollector:
             lower = rates.get("fed_funds_lower", pd.Series(dtype=float))
             effr = rates.get("effr", pd.Series(dtype=float))
 
-            all_dates = sorted(set(
-                [d.date() for d in upper.index] +
-                [d.date() for d in lower.index] +
-                [d.date() for d in effr.index]
-            ))
+            all_dates = sorted(
+                set(
+                    [d.date() for d in upper.index]
+                    + [d.date() for d in lower.index]
+                    + [d.date() for d in effr.index]
+                )
+            )
 
             for d in all_dates:
                 ts = pd.Timestamp(d)
-                stmt = pg_insert(FedRate).values(
-                    date=d,
-                    target_upper=float(upper.get(ts, 0)) if ts in upper.index else 0,
-                    target_lower=float(lower.get(ts, 0)) if ts in lower.index else 0,
-                    effr=float(effr.get(ts)) if ts in effr.index else None,
-                ).on_conflict_do_update(
-                    constraint="fed_rates_date_key",
-                    set_={
-                        "target_upper": float(upper.get(ts, 0)) if ts in upper.index else 0,
-                        "target_lower": float(lower.get(ts, 0)) if ts in lower.index else 0,
-                        "effr": float(effr.get(ts)) if ts in effr.index else None,
-                    },
+                stmt = (
+                    pg_insert(FedRate)
+                    .values(
+                        date=d,
+                        target_upper=float(upper.get(ts, 0)) if ts in upper.index else 0,
+                        target_lower=float(lower.get(ts, 0)) if ts in lower.index else 0,
+                        effr=float(effr.get(ts)) if ts in effr.index else None,
+                    )
+                    .on_conflict_do_update(
+                        constraint="fed_rates_date_key",
+                        set_={
+                            "target_upper": float(upper.get(ts, 0)) if ts in upper.index else 0,
+                            "target_lower": float(lower.get(ts, 0)) if ts in lower.index else 0,
+                            "effr": float(effr.get(ts)) if ts in effr.index else None,
+                        },
+                    )
                 )
                 await db.execute(stmt)
 
@@ -259,14 +270,18 @@ class DataCollector:
                 lr = self.fred.get_latest("FEDTARMDLR")
                 if lr:
                     obs_date, val = lr
-                    stmt = pg_insert(MarketData).values(
-                        date=obs_date,
-                        symbol="FEDTARMDLR",
-                        value=float(val),
-                        source="fred",
-                    ).on_conflict_do_update(
-                        constraint="uq_market_date_symbol",
-                        set_={"value": float(val), "source": "fred"},
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=obs_date,
+                            symbol="FEDTARMDLR",
+                            value=float(val),
+                            source="fred",
+                        )
+                        .on_conflict_do_update(
+                            constraint="uq_market_date_symbol",
+                            set_={"value": float(val), "source": "fred"},
+                        )
                     )
                     await db.execute(stmt)
             except Exception:
@@ -289,20 +304,26 @@ class DataCollector:
             lower = rates.get("fed_funds_lower", pd.Series(dtype=float))
             effr = rates.get("effr", pd.Series(dtype=float))
 
-            all_dates = sorted(set(
-                [d.date() for d in upper.index] +
-                [d.date() for d in lower.index] +
-                [d.date() for d in effr.index]
-            ))
+            all_dates = sorted(
+                set(
+                    [d.date() for d in upper.index]
+                    + [d.date() for d in lower.index]
+                    + [d.date() for d in effr.index]
+                )
+            )
 
             for d in all_dates:
                 ts = pd.Timestamp(d)
-                stmt = pg_insert(FedRate).values(
-                    date=d,
-                    target_upper=float(upper.get(ts, 0)) if ts in upper.index else 0,
-                    target_lower=float(lower.get(ts, 0)) if ts in lower.index else 0,
-                    effr=float(effr.get(ts)) if ts in effr.index else None,
-                ).on_conflict_do_nothing(constraint="fed_rates_date_key")
+                stmt = (
+                    pg_insert(FedRate)
+                    .values(
+                        date=d,
+                        target_upper=float(upper.get(ts, 0)) if ts in upper.index else 0,
+                        target_lower=float(lower.get(ts, 0)) if ts in lower.index else 0,
+                        effr=float(effr.get(ts)) if ts in effr.index else None,
+                    )
+                    .on_conflict_do_nothing(constraint="fed_rates_date_key")
+                )
                 await db.execute(stmt)
             await db.commit()
         logger.info("Historical Fed rate data loaded")
@@ -318,13 +339,17 @@ class DataCollector:
             reserves = bs_data.get("balance_reserves", pd.Series(dtype=float))
             for ts, val in total.items():
                 d = ts.date() if hasattr(ts, "date") else ts
-                stmt = pg_insert(BalanceSheet).values(
-                    date=d,
-                    total_assets=float(val),
-                    treasuries=float(treasuries.get(ts)) if ts in treasuries.index else None,
-                    mbs=float(mbs.get(ts)) if ts in mbs.index else None,
-                    reserves=float(reserves.get(ts)) if ts in reserves.index else None,
-                ).on_conflict_do_nothing(constraint="balance_sheet_date_key")
+                stmt = (
+                    pg_insert(BalanceSheet)
+                    .values(
+                        date=d,
+                        total_assets=float(val),
+                        treasuries=float(treasuries.get(ts)) if ts in treasuries.index else None,
+                        mbs=float(mbs.get(ts)) if ts in mbs.index else None,
+                        reserves=float(reserves.get(ts)) if ts in reserves.index else None,
+                    )
+                    .on_conflict_do_nothing(constraint="balance_sheet_date_key")
+                )
                 await db.execute(stmt)
             await db.commit()
         logger.info("Historical balance sheet data loaded")
@@ -334,7 +359,9 @@ class DataCollector:
             return
 
         async with async_session() as db:
-            bs_data = self.fred.get_balance_sheet(start=(date.today() - timedelta(days=90)).isoformat())
+            bs_data = self.fred.get_balance_sheet(
+                start=(date.today() - timedelta(days=90)).isoformat()
+            )
             total = bs_data.get("balance_total", pd.Series(dtype=float))
             treasuries = bs_data.get("balance_treasuries", pd.Series(dtype=float))
             mbs = bs_data.get("balance_mbs", pd.Series(dtype=float))
@@ -342,15 +369,19 @@ class DataCollector:
 
             for ts, val in total.items():
                 d = ts.date() if hasattr(ts, "date") else ts
-                stmt = pg_insert(BalanceSheet).values(
-                    date=d,
-                    total_assets=float(val),
-                    treasuries=float(treasuries.get(ts)) if ts in treasuries.index else None,
-                    mbs=float(mbs.get(ts)) if ts in mbs.index else None,
-                    reserves=float(reserves.get(ts)) if ts in reserves.index else None,
-                ).on_conflict_do_update(
-                    constraint="balance_sheet_date_key",
-                    set_={"total_assets": float(val)},
+                stmt = (
+                    pg_insert(BalanceSheet)
+                    .values(
+                        date=d,
+                        total_assets=float(val),
+                        treasuries=float(treasuries.get(ts)) if ts in treasuries.index else None,
+                        mbs=float(mbs.get(ts)) if ts in mbs.index else None,
+                        reserves=float(reserves.get(ts)) if ts in reserves.index else None,
+                    )
+                    .on_conflict_do_update(
+                        constraint="balance_sheet_date_key",
+                        set_={"total_assets": float(val)},
+                    )
                 )
                 await db.execute(stmt)
             await db.commit()
@@ -376,15 +407,21 @@ class DataCollector:
 
                 for ts, val in series.items():
                     d = ts.date() if hasattr(ts, "date") else ts
-                    stmt = pg_insert(YieldData).values(
-                        date=d,
-                        maturity=maturity,
-                        nominal_yield=float(val),
-                        tips_yield=float(tips_series.get(ts)) if ts in tips_series.index else None,
-                        breakeven=float(be_series.get(ts)) if ts in be_series.index else None,
-                    ).on_conflict_do_update(
-                        constraint="uq_yield_date_maturity",
-                        set_={"nominal_yield": float(val)},
+                    stmt = (
+                        pg_insert(YieldData)
+                        .values(
+                            date=d,
+                            maturity=maturity,
+                            nominal_yield=float(val),
+                            tips_yield=(
+                                float(tips_series.get(ts)) if ts in tips_series.index else None
+                            ),
+                            breakeven=float(be_series.get(ts)) if ts in be_series.index else None,
+                        )
+                        .on_conflict_do_update(
+                            constraint="uq_yield_date_maturity",
+                            set_={"nominal_yield": float(val)},
+                        )
                     )
                     await db.execute(stmt)
             await db.commit()
@@ -402,13 +439,19 @@ class DataCollector:
 
                 for ts, val in series.items():
                     d = ts.date() if hasattr(ts, "date") else ts
-                    stmt = pg_insert(YieldData).values(
-                        date=d,
-                        maturity=maturity,
-                        nominal_yield=float(val),
-                        tips_yield=float(tips_series.get(ts)) if ts in tips_series.index else None,
-                        breakeven=float(be_series.get(ts)) if ts in be_series.index else None,
-                    ).on_conflict_do_nothing(constraint="uq_yield_date_maturity")
+                    stmt = (
+                        pg_insert(YieldData)
+                        .values(
+                            date=d,
+                            maturity=maturity,
+                            nominal_yield=float(val),
+                            tips_yield=(
+                                float(tips_series.get(ts)) if ts in tips_series.index else None
+                            ),
+                            breakeven=float(be_series.get(ts)) if ts in be_series.index else None,
+                        )
+                        .on_conflict_do_nothing(constraint="uq_yield_date_maturity")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical yield data loaded")
@@ -432,11 +475,18 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
-                    ).on_conflict_do_update(
-                        constraint="uq_market_date_symbol",
-                        set_={"value": float(val), "change_pct": change},
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                        )
+                        .on_conflict_do_update(
+                            constraint="uq_market_date_symbol",
+                            set_={"value": float(val), "change_pct": change},
+                        )
                     )
                     await db.execute(stmt)
             await db.commit()
@@ -460,23 +510,33 @@ class DataCollector:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
 
-                    stmt = pg_insert(MarketData).values(
-                        date=d,
-                        symbol=symbol,
-                        value=float(val),
-                        change_pct=change,
-                        source=fx_source if symbol in fx else market_source,
-                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                        quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
-                    ).on_conflict_do_update(
-                        constraint="uq_market_date_symbol",
-                        set_={
-                            "value": float(val),
-                            "change_pct": change,
-                            "source": fx_source if symbol in fx else market_source,
-                            "as_of": ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                            "quality_status": self._quality_status_for_point(value=float(val), change_pct=change),
-                        },
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                            source=fx_source if symbol in fx else market_source,
+                            as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                            quality_status=self._quality_status_for_point(
+                                value=float(val), change_pct=change
+                            ),
+                        )
+                        .on_conflict_do_update(
+                            constraint="uq_market_date_symbol",
+                            set_={
+                                "value": float(val),
+                                "change_pct": change,
+                                "source": fx_source if symbol in fx else market_source,
+                                "as_of": (
+                                    ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None
+                                ),
+                                "quality_status": self._quality_status_for_point(
+                                    value=float(val), change_pct=change
+                                ),
+                            },
+                        )
                     )
                     await db.execute(stmt)
 
@@ -490,11 +550,18 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         daily_ret = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(SectorPerformance).values(
-                        date=d, sector=symbol, value=float(val), daily_return=daily_ret,
-                    ).on_conflict_do_update(
-                        constraint="uq_sector_date",
-                        set_={"value": float(val), "daily_return": daily_ret},
+                    stmt = (
+                        pg_insert(SectorPerformance)
+                        .values(
+                            date=d,
+                            sector=symbol,
+                            value=float(val),
+                            daily_return=daily_ret,
+                        )
+                        .on_conflict_do_update(
+                            constraint="uq_sector_date",
+                            set_={"value": float(val), "daily_return": daily_ret},
+                        )
                     )
                     await db.execute(stmt)
 
@@ -506,11 +573,18 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         daily_ret = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(FactorReturn).values(
-                        date=d, factor_name=symbol, value=float(val), daily_return=daily_ret,
-                    ).on_conflict_do_update(
-                        constraint="uq_factor_date_name",
-                        set_={"value": float(val), "daily_return": daily_ret},
+                    stmt = (
+                        pg_insert(FactorReturn)
+                        .values(
+                            date=d,
+                            factor_name=symbol,
+                            value=float(val),
+                            daily_return=daily_ret,
+                        )
+                        .on_conflict_do_update(
+                            constraint="uq_factor_date_name",
+                            set_={"value": float(val), "daily_return": daily_ret},
+                        )
                     )
                     await db.execute(stmt)
 
@@ -523,11 +597,18 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
-                    ).on_conflict_do_update(
-                        constraint="uq_market_date_symbol",
-                        set_={"value": float(val), "change_pct": change},
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                        )
+                        .on_conflict_do_update(
+                            constraint="uq_market_date_symbol",
+                            set_={"value": float(val), "change_pct": change},
+                        )
                     )
                     await db.execute(stmt)
 
@@ -540,11 +621,18 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
-                    ).on_conflict_do_update(
-                        constraint="uq_market_date_symbol",
-                        set_={"value": float(val), "change_pct": change},
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                        )
+                        .on_conflict_do_update(
+                            constraint="uq_market_date_symbol",
+                            set_={"value": float(val), "change_pct": change},
+                        )
                     )
                     await db.execute(stmt)
 
@@ -568,22 +656,33 @@ class DataCollector:
                             prev = float(series.iloc[i - 1])
                             if prev != 0:
                                 change = ((float(val) - prev) / prev) * 100
-                        stmt = pg_insert(MarketData).values(
-                            date=d, symbol=symbol,
-                            value=float(val),
-                            change_pct=change,
-                            source=macro_source,
-                            as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                            quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
-                        ).on_conflict_do_update(
-                            constraint="uq_market_date_symbol",
-                            set_={
-                                "value": float(val),
-                                "change_pct": change,
-                                "source": macro_source,
-                                "as_of": ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                                "quality_status": self._quality_status_for_point(value=float(val), change_pct=change),
-                            },
+                        stmt = (
+                            pg_insert(MarketData)
+                            .values(
+                                date=d,
+                                symbol=symbol,
+                                value=float(val),
+                                change_pct=change,
+                                source=macro_source,
+                                as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                                quality_status=self._quality_status_for_point(
+                                    value=float(val), change_pct=change
+                                ),
+                            )
+                            .on_conflict_do_update(
+                                constraint="uq_market_date_symbol",
+                                set_={
+                                    "value": float(val),
+                                    "change_pct": change,
+                                    "source": macro_source,
+                                    "as_of": (
+                                        ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None
+                                    ),
+                                    "quality_status": self._quality_status_for_point(
+                                        value=float(val), change_pct=change
+                                    ),
+                                },
+                            )
                         )
                         await db.execute(stmt)
 
@@ -641,23 +740,31 @@ class DataCollector:
                 if i > 0:
                     prev = float(series.iloc[i - 1])
                     change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                stmt = pg_insert(MarketData).values(
-                    date=d,
-                    symbol=symbol,
-                    value=float(val),
-                    change_pct=change,
-                    source="fred",
-                    as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                    quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
-                ).on_conflict_do_update(
-                    constraint="uq_market_date_symbol",
-                    set_={
-                        "value": float(val),
-                        "change_pct": change,
-                        "source": "fred",
-                        "as_of": ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                        "quality_status": self._quality_status_for_point(value=float(val), change_pct=change),
-                    },
+                stmt = (
+                    pg_insert(MarketData)
+                    .values(
+                        date=d,
+                        symbol=symbol,
+                        value=float(val),
+                        change_pct=change,
+                        source="fred",
+                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                        quality_status=self._quality_status_for_point(
+                            value=float(val), change_pct=change
+                        ),
+                    )
+                    .on_conflict_do_update(
+                        constraint="uq_market_date_symbol",
+                        set_={
+                            "value": float(val),
+                            "change_pct": change,
+                            "source": "fred",
+                            "as_of": ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                            "quality_status": self._quality_status_for_point(
+                                value=float(val), change_pct=change
+                            ),
+                        },
+                    )
                 )
                 await db.execute(stmt)
                 upserts += 1
@@ -702,23 +809,31 @@ class DataCollector:
                 if i > 0:
                     prev = float(series.iloc[i - 1])
                     change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                stmt = pg_insert(MarketData).values(
-                    date=d,
-                    symbol=symbol,
-                    value=float(val),
-                    change_pct=change,
-                    source="yahoo",
-                    as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                    quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
-                ).on_conflict_do_update(
-                    constraint="uq_market_date_symbol",
-                    set_={
-                        "value": float(val),
-                        "change_pct": change,
-                        "source": "yahoo",
-                        "as_of": ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                        "quality_status": self._quality_status_for_point(value=float(val), change_pct=change),
-                    },
+                stmt = (
+                    pg_insert(MarketData)
+                    .values(
+                        date=d,
+                        symbol=symbol,
+                        value=float(val),
+                        change_pct=change,
+                        source="yahoo",
+                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                        quality_status=self._quality_status_for_point(
+                            value=float(val), change_pct=change
+                        ),
+                    )
+                    .on_conflict_do_update(
+                        constraint="uq_market_date_symbol",
+                        set_={
+                            "value": float(val),
+                            "change_pct": change,
+                            "source": "yahoo",
+                            "as_of": ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                            "quality_status": self._quality_status_for_point(
+                                value=float(val), change_pct=change
+                            ),
+                        },
+                    )
                 )
                 await db.execute(stmt)
                 upserts += 1
@@ -744,15 +859,21 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d,
-                        symbol=symbol,
-                        value=float(val),
-                        change_pct=change,
-                        source="yahoo" if symbol in yahoo_symbols else market_source,
-                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                        quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
-                    ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                            source="yahoo" if symbol in yahoo_symbols else market_source,
+                            as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                            quality_status=self._quality_status_for_point(
+                                value=float(val), change_pct=change
+                            ),
+                        )
+                        .on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical market data loaded (FRED + Yahoo)")
@@ -767,15 +888,21 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d,
-                        symbol=symbol,
-                        value=float(val),
-                        change_pct=change,
-                        source=fx_source,
-                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                        quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
-                    ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                            source=fx_source,
+                            as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                            quality_status=self._quality_status_for_point(
+                                value=float(val), change_pct=change
+                            ),
+                        )
+                        .on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical FX data loaded")
@@ -790,9 +917,16 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         daily_ret = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(SectorPerformance).values(
-                        date=d, sector=symbol, value=float(val), daily_return=daily_ret,
-                    ).on_conflict_do_nothing(constraint="uq_sector_date")
+                    stmt = (
+                        pg_insert(SectorPerformance)
+                        .values(
+                            date=d,
+                            sector=symbol,
+                            value=float(val),
+                            daily_return=daily_ret,
+                        )
+                        .on_conflict_do_nothing(constraint="uq_sector_date")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical sector data loaded")
@@ -807,9 +941,16 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         daily_ret = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(FactorReturn).values(
-                        date=d, factor_name=symbol, value=float(val), daily_return=daily_ret,
-                    ).on_conflict_do_nothing(constraint="uq_factor_date_name")
+                    stmt = (
+                        pg_insert(FactorReturn)
+                        .values(
+                            date=d,
+                            factor_name=symbol,
+                            value=float(val),
+                            daily_return=daily_ret,
+                        )
+                        .on_conflict_do_nothing(constraint="uq_factor_date_name")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical factor data loaded")
@@ -824,9 +965,16 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
-                    ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                        )
+                        .on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical index data loaded")
@@ -841,9 +989,16 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
-                    ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                        )
+                        .on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical extra market data loaded (MOVE)")
@@ -858,9 +1013,16 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
-                    ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                        )
+                        .on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical breadth data loaded (MMTW, MMFI, MMTH, PCC, NYHGH, NYLOW)")
@@ -875,9 +1037,16 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d, symbol=symbol, value=float(val), change_pct=change,
-                    ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                        )
+                        .on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical macro ETF data loaded")
@@ -894,15 +1063,21 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d,
-                        symbol=symbol,
-                        value=float(val),
-                        change_pct=change,
-                        source=macro_source,
-                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                        quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
-                    ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                            source=macro_source,
+                            as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                            quality_status=self._quality_status_for_point(
+                                value=float(val), change_pct=change
+                            ),
+                        )
+                        .on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical macro FRED data loaded (CNLEI, ECBBS)")
@@ -917,15 +1092,21 @@ class DataCollector:
                     if i > 0:
                         prev = float(series.iloc[i - 1])
                         change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
-                    stmt = pg_insert(MarketData).values(
-                        date=d,
-                        symbol=symbol,
-                        value=float(val),
-                        change_pct=change,
-                        source=regime_source,
-                        as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
-                        quality_status=self._quality_status_for_point(value=float(val), change_pct=change),
-                    ).on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    stmt = (
+                        pg_insert(MarketData)
+                        .values(
+                            date=d,
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                            source=regime_source,
+                            as_of=ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else None,
+                            quality_status=self._quality_status_for_point(
+                                value=float(val), change_pct=change
+                            ),
+                        )
+                        .on_conflict_do_nothing(constraint="uq_market_date_symbol")
+                    )
                     await db.execute(stmt)
             await db.commit()
         logger.info("Historical regime data loaded")

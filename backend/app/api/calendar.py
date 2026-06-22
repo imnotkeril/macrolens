@@ -28,5 +28,6 @@ async def get_event_impact(
     result = await service.get_event_impact(indicator_id, limit=limit)
     if not result:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Indicator not found")
     return result

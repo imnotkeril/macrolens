@@ -1,8 +1,13 @@
 from datetime import date, datetime
+
 from pydantic import BaseModel
 
 from app.models.indicator import (
-    IndicatorCategory, IndicatorType, Frequency, Importance, TrendDirection,
+    Frequency,
+    Importance,
+    IndicatorCategory,
+    IndicatorType,
+    TrendDirection,
 )
 
 

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Float, Integer, Date, DateTime, String, UniqueConstraint, Index
+from sqlalchemy import Date, DateTime, Float, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -8,6 +8,7 @@ from app.database import Base
 
 class FactorReturn(Base):
     """Daily factor return tracking (Growth, Value, Quality, Size, Momentum)."""
+
     __tablename__ = "factor_returns"
     __table_args__ = (
         UniqueConstraint("date", "factor_name", name="uq_factor_date_name"),
@@ -24,6 +25,7 @@ class FactorReturn(Base):
 
 class SectorPerformance(Base):
     """Sector-level performance tracking."""
+
     __tablename__ = "sector_performance"
     __table_args__ = (
         UniqueConstraint("date", "sector", name="uq_sector_date"),

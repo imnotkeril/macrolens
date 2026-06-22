@@ -26,11 +26,15 @@ class FredAdapter(ProviderAdapter):
 
     def healthcheck(self) -> SourceHealth:
         if not self.client.is_configured:
-            return SourceHealth(source=self.source_name, status="down", note="FRED API key is missing")
+            return SourceHealth(
+                source=self.source_name, status="down", note="FRED API key is missing"
+            )
         try:
             test = self.client.get_series("DFF", start=None, end=None)
             if test.empty:
-                return SourceHealth(source=self.source_name, status="degraded", note="DFF returned empty series")
+                return SourceHealth(
+                    source=self.source_name, status="degraded", note="DFF returned empty series"
+                )
             return SourceHealth(source=self.source_name, status="ok")
         except Exception as exc:
             return SourceHealth(source=self.source_name, status="down", note=str(exc))

@@ -1,18 +1,21 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models.fed_policy import FedRate, BalanceSheet
+from app.models.fed_policy import BalanceSheet, FedRate
 from app.schemas.fed import (
-    FedRateResponse,
     BalanceSheetResponse,
-    FedPolicyStatus,
     FedDotPlotResponse,
+    FedPolicyStatus,
+    FedRateResponse,
+)
+from app.services.fed_dashboard import FedDashboardService
+from app.services.fed_rate_schema import (
+    apply_fed_rate_load_columns,
+    fed_rates_has_signal_phrase_column,
 )
 from app.services.fed_tracker import FedTracker
-from app.services.fed_dashboard import FedDashboardService
-from app.services.fed_rate_schema import apply_fed_rate_load_columns, fed_rates_has_signal_phrase_column
 
 router = APIRouter()
 

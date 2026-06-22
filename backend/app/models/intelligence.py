@@ -1,18 +1,18 @@
 from sqlalchemy import (
+    JSON,
+    Boolean,
     Column,
-    Integer,
-    String,
-    Float,
     Date,
     DateTime,
-    Text,
-    Boolean,
-    JSON,
+    Float,
     ForeignKey,
+    Integer,
+    String,
+    Text,
     UniqueConstraint,
 )
-from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.database import Base
 
@@ -152,14 +152,18 @@ class MemoryChunk(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    document_id = Column(Integer, ForeignKey(f"{SCHEMA_CORE}.documents.id"), nullable=False, index=True)
+    document_id = Column(
+        Integer, ForeignKey(f"{SCHEMA_CORE}.documents.id"), nullable=False, index=True
+    )
     chunk_index = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     metadata_json = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     document = relationship("MemoryDocument", back_populates="chunks")
-    embedding = relationship("MemoryEmbedding", back_populates="chunk", uselist=False, cascade="all, delete-orphan")
+    embedding = relationship(
+        "MemoryEmbedding", back_populates="chunk", uselist=False, cascade="all, delete-orphan"
+    )
 
 
 class MemoryEmbedding(Base):
@@ -184,8 +188,12 @@ class MemoryLink(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    src_doc_id = Column(Integer, ForeignKey(f"{SCHEMA_CORE}.documents.id"), nullable=False, index=True)
-    dst_doc_id = Column(Integer, ForeignKey(f"{SCHEMA_CORE}.documents.id"), nullable=False, index=True)
+    src_doc_id = Column(
+        Integer, ForeignKey(f"{SCHEMA_CORE}.documents.id"), nullable=False, index=True
+    )
+    dst_doc_id = Column(
+        Integer, ForeignKey(f"{SCHEMA_CORE}.documents.id"), nullable=False, index=True
+    )
     relation = Column(String(64), nullable=False)
     weight = Column(Float, nullable=False, default=1.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -291,4 +299,3 @@ class RetrievalTrace(Base):
     hit_count = Column(Integer, nullable=False, default=0)
     result_json = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-

@@ -9,7 +9,10 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.forecast_lab.asset_implied_labels import load_price_series, symbols_from_asset_expectations
+from app.services.forecast_lab.asset_implied_labels import (
+    load_price_series,
+    symbols_from_asset_expectations,
+)
 from app.services.forecast_lab.asset_implied_labels_core import forward_pair_hit_rate_for_quadrant
 from app.services.forecast_lab.dates_util import add_months, iter_month_ends
 from app.services.forecast_lab.expectations import load_expectations

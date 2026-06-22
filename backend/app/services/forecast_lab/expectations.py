@@ -8,7 +8,9 @@ from typing import Any
 import yaml
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_EXPECTATIONS_PATH = _BACKEND_ROOT / "config" / "forecast_lab" / "asset_phase_expectations.yaml"
+DEFAULT_EXPECTATIONS_PATH = (
+    _BACKEND_ROOT / "config" / "forecast_lab" / "asset_phase_expectations.yaml"
+)
 
 
 def load_expectations(path: Path | None = None) -> dict[str, Any]:

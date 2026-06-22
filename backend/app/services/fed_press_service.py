@@ -13,11 +13,14 @@ import xml.etree.ElementTree as ET
 from datetime import date
 
 import httpx
-from sqlalchemy import select, desc, update
+from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.fed_policy import FedRate
-from app.services.fed_rate_schema import apply_fed_rate_load_columns, fed_rates_has_signal_phrase_column
+from app.services.fed_rate_schema import (
+    apply_fed_rate_load_columns,
+    fed_rates_has_signal_phrase_column,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +54,6 @@ async def _fetch_rss_items() -> list[tuple[date, str, str]]:
         logger.warning("Fed RSS parse error")
         return []
 
-    ns = {"atom": "http://www.w3.org/2005/Atom"}
     items: list[tuple[date, str, str]] = []
     for item in root.findall(".//item"):
         title_el = item.find("title")
@@ -77,7 +79,9 @@ def _match_excerpt_for_rate_date(rate_date: date, rss: list[tuple[date, str, str
         delta = abs((pub_dt - rate_date).days)
         if delta > 6:
             continue
-        score = delta * 10 + (0 if "statement" in title.lower() or "release" in title.lower() else 3)
+        score = delta * 10 + (
+            0 if "statement" in title.lower() or "release" in title.lower() else 3
+        )
         if best is None or score < best[0]:
             best = (score, excerpt)
     return best[1] if best else None
@@ -116,9 +120,7 @@ async def backfill_fomc_signal_phrases(db: AsyncSession, *, max_updates: int = 8
         if not excerpt:
             continue
         await db.execute(
-            update(FedRate)
-            .where(FedRate.id == cur.id)
-            .values(fomc_signal_phrase=excerpt)
+            update(FedRate).where(FedRate.id == cur.id).values(fomc_signal_phrase=excerpt)
         )
         updates += 1
     return updates

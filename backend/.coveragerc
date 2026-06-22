@@ -1,0 +1,39 @@
+# Coverage scope: the unit-tested Forecast Lab core (rules, labels, cycle/recession
+# math, ensemble, curve features). Heavy data/training/inference and DB-bound modules
+# (train_pipeline, inference, features_pit, macro_*, stress, regime materialize, progress)
+# are exercised via integration/manual QA, not unit tests — omitted from the gate.
+[run]
+source = app/services/forecast_lab
+omit =
+    */tests/*
+    */__pycache__/*
+    */alembic/*
+    */forecast_lab/train_pipeline.py
+    */forecast_lab/inference.py
+    */forecast_lab/features_pit.py
+    */forecast_lab/macro_config.py
+    */forecast_lab/macro_data.py
+    */forecast_lab/macro_infer.py
+    */forecast_lab/macro_train.py
+    */forecast_lab/stress.py
+    */forecast_lab/regime_history_materialize.py
+    */forecast_lab/progress.py
+    */forecast_lab/phase_alignment.py
+    */forecast_lab/expectations.py
+    */forecast_lab/recession_labels.py
+    */forecast_lab/labels.py
+    */forecast_lab/artifacts.py
+    */forecast_lab/diagnostics.py
+    */forecast_lab/hmm_infer.py
+    # DB/market-data variant; its pure logic is unit-tested in asset_implied_labels_core.py
+    */forecast_lab/asset_implied_labels.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod

@@ -9,11 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db
 from app.models.intelligence import ML2AnomalySignal, ML2FactorScore
-from app.schemas.intelligence import ML2MetricsResponse, ML2PredictResponse, ML2FactorItem
+from app.schemas.intelligence import ML2FactorItem, ML2MetricsResponse, ML2PredictResponse
+from app.services.memory_service import MemoryService
+from app.services.ml2_anomaly import ML2AnomalyService
 from app.services.ml2_dataset_builder import build_ml2_dataset
 from app.services.ml2_factor_timing import ML2FactorTimingService
-from app.services.ml2_anomaly import ML2AnomalyService
-from app.services.memory_service import MemoryService
 
 router = APIRouter()
 
@@ -83,7 +83,14 @@ async def predict_ml2(db: AsyncSession = Depends(get_db)):
         source="ml_snapshots",
         doc_key=f"ml2-predict:{as_of_date}",
         title="ML2 predict snapshot",
-        content=str({"as_of_date": as_of_date, "top_factors": factors[:12], "anomaly_score": anomaly_score, "is_anomaly": is_anomaly}),
+        content=str(
+            {
+                "as_of_date": as_of_date,
+                "top_factors": factors[:12],
+                "anomaly_score": anomaly_score,
+                "is_anomaly": is_anomaly,
+            }
+        ),
         metadata={"quality_score": 0.95, "source_version": "ml2-v1"},
         tags=["ml2", "predict", "snapshot"],
     )
@@ -117,13 +124,17 @@ async def latest_ml2_stored(db: AsyncSession = Depends(get_db)):
         )
 
     frows = (
-        await db.execute(
-            select(ML2FactorScore)
-            .where(ML2FactorScore.date == latest_date)
-            .order_by(ML2FactorScore.score.desc())
-            .limit(12)
+        (
+            await db.execute(
+                select(ML2FactorScore)
+                .where(ML2FactorScore.date == latest_date)
+                .order_by(ML2FactorScore.score.desc())
+                .limit(12)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     arow = (
         await db.execute(select(ML2AnomalySignal).where(ML2AnomalySignal.date == latest_date))
     ).scalar_one_or_none()
@@ -145,4 +156,3 @@ async def latest_ml2_stored(db: AsyncSession = Depends(get_db)):
         trained=True,
         model_version="ml2-v1",
     )
-

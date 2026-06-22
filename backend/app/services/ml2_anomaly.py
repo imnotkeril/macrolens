@@ -23,5 +23,9 @@ class ML2AnomalyService:
         delta = (corr - latest_corr).abs()
         score = float(delta.values.mean())
         threshold = float(max(0.15, corr.abs().values.mean() * 0.35))
-        return score, score >= threshold, threshold, {"baseline_corr_mean": float(corr.abs().values.mean())}
-
+        return (
+            score,
+            score >= threshold,
+            threshold,
+            {"baseline_corr_mean": float(corr.abs().values.mean())},
+        )

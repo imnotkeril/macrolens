@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, Text, JSON, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -63,7 +63,9 @@ class RegimeHistoryMonthly(Base):
     asset_used_rule_fallback: Mapped[bool] = mapped_column(Boolean, nullable=False)
 
     # Forward confirmation of fl_rule_quadrant over evaluation_horizon_months (YAML / phase_alignment).
-    forward_confirmation_score: Mapped[float] = mapped_column(Float, nullable=False)  # -1 if not evaluable
+    forward_confirmation_score: Mapped[float] = mapped_column(
+        Float, nullable=False
+    )  # -1 if not evaluable
     forward_regime_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False)
     confirmed_regime_quadrant: Mapped[str | None] = mapped_column(String(32), nullable=True)
 

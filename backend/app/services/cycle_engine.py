@@ -10,58 +10,63 @@ Implements the Cycle Radar system:
 - Light FCI (Financial Conditions Index, 7 components)
 - Template-based Narrative Summary
 """
+
 import logging
 import math
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 import numpy as np
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.fed_policy import FedRate
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.market_data import MarketData, YieldData
-from app.models.fed_policy import FedRate
 from app.schemas.regime import (
-    RegimeSnapshot, RegimeHistoryPoint,
-    CycleDriverContribution, RecessionModelResult,
-    PhaseTransitionSignal, LightFCIComponent,
-    TacticalAllocationRow, ExpectedReturn,
+    CycleDriverContribution,
+    ExpectedReturn,
+    LightFCIComponent,
+    PhaseTransitionSignal,
+    RecessionModelResult,
+    RegimeHistoryPoint,
+    RegimeSnapshot,
+    TacticalAllocationRow,
 )
 
 logger = logging.getLogger(__name__)
 
 # ── 8 Cycle Variables (spec 1.1) ────────────────────────────
 CYCLE_WEIGHTS = {
-    "ism_new_orders":       0.20,
-    "yield_curve_10y2y":    0.20,
-    "lei_6m_change":        0.15,
-    "payrolls_3m_avg":      0.15,
-    "gdp_gap":              0.10,
-    "hy_spread":            0.10,
-    "leading_credit":       0.05,
-    "consumer_confidence":  0.05,
+    "ism_new_orders": 0.20,
+    "yield_curve_10y2y": 0.20,
+    "lei_6m_change": 0.15,
+    "payrolls_3m_avg": 0.15,
+    "gdp_gap": 0.10,
+    "hy_spread": 0.10,
+    "leading_credit": 0.05,
+    "consumer_confidence": 0.05,
 }
 
 CYCLE_LABELS = {
-    "ism_new_orders":       "ISM Manufacturing New Orders",
-    "yield_curve_10y2y":    "Yield Curve 10Y-2Y",
-    "lei_6m_change":        "LEI 6M Change",
-    "payrolls_3m_avg":      "Nonfarm Payrolls (3M Avg)",
-    "gdp_gap":              "Real GDP Gap vs Potential",
-    "hy_spread":            "HY Credit Spread",
-    "leading_credit":       "Bank Lending Standards (SLOOS)",
-    "consumer_confidence":  "Consumer Sentiment (Michigan)",
+    "ism_new_orders": "ISM Manufacturing New Orders",
+    "yield_curve_10y2y": "Yield Curve 10Y-2Y",
+    "lei_6m_change": "LEI 6M Change",
+    "payrolls_3m_avg": "Nonfarm Payrolls (3M Avg)",
+    "gdp_gap": "Real GDP Gap vs Potential",
+    "hy_spread": "HY Credit Spread",
+    "leading_credit": "Bank Lending Standards (SLOOS)",
+    "consumer_confidence": "Consumer Sentiment (Michigan)",
 }
 
 INVERTED_VARIABLES = {"hy_spread", "leading_credit"}
 
 # ── Phase mapping (spec Cycle Phase Mapping) ────────────────
 PHASE_MAP = [
-    (+60, +100, "expansion",   "Late Expansion"),
-    (+20,  +60, "expansion",   "Mid Expansion"),
-    (  0,  +20, "slowdown",    "Early Slowdown"),
-    (-20,    0, "slowdown",    "Slowdown"),
-    (-60,  -20, "contraction", "Contraction"),
+    (+60, +100, "expansion", "Late Expansion"),
+    (+20, +60, "expansion", "Mid Expansion"),
+    (0, +20, "slowdown", "Early Slowdown"),
+    (-20, 0, "slowdown", "Slowdown"),
+    (-60, -20, "contraction", "Contraction"),
     (-100, -60, "contraction", "Deep Contraction"),
 ]
 
@@ -69,56 +74,56 @@ NEUTRAL_FED_RATE = 2.5
 
 # ── Tactical Allocation Matrix (spec 1.6) ───────────────────
 TACTICAL_ALLOCATION = [
-    ("US Large Cap Equities",  "overweight",  "overweight",  "neutral",      "underweight"),
-    ("US Small Cap",           "overweight",  "overweight",  "underweight",  "underweight"),
-    ("IG Bonds",               "neutral",     "underweight", "overweight",   "overweight"),
-    ("High Yield",             "overweight",  "neutral",     "underweight",  "underweight"),
-    ("Commodities",            "neutral",     "overweight",  "neutral",      "underweight"),
-    ("Gold",                   "overweight",  "underweight", "overweight",   "overweight"),
-    ("Cash",                   "underweight", "underweight", "neutral",      "overweight"),
-    ("EM Equities",            "overweight",  "overweight",  "neutral",      "underweight"),
+    ("US Large Cap Equities", "overweight", "overweight", "neutral", "underweight"),
+    ("US Small Cap", "overweight", "overweight", "underweight", "underweight"),
+    ("IG Bonds", "neutral", "underweight", "overweight", "overweight"),
+    ("High Yield", "overweight", "neutral", "underweight", "underweight"),
+    ("Commodities", "neutral", "overweight", "neutral", "underweight"),
+    ("Gold", "overweight", "underweight", "overweight", "overweight"),
+    ("Cash", "underweight", "underweight", "neutral", "overweight"),
+    ("EM Equities", "overweight", "overweight", "neutral", "underweight"),
 ]
 
 EXPECTED_RETURNS = {
     "expansion": [
-        ("US Equities",  12.3, 0.82,  0.71),
-        ("HY Bonds",      4.8, 0.48,  0.62),
-        ("Commodities",  18.2, 0.61,  0.85),
-        ("Gold",           6.1, 0.44, -0.23),
-        ("Bitcoin (BTC)", 22.0, 0.62,  1.05),
-        ("US TIPS",        5.2, 0.51, -0.38),
-        ("US REITs",       9.6, 0.57,  0.66),
-        ("IG Bonds",       4.1, 0.55, -0.31),
+        ("US Equities", 12.3, 0.82, 0.71),
+        ("HY Bonds", 4.8, 0.48, 0.62),
+        ("Commodities", 18.2, 0.61, 0.85),
+        ("Gold", 6.1, 0.44, -0.23),
+        ("Bitcoin (BTC)", 22.0, 0.62, 1.05),
+        ("US TIPS", 5.2, 0.51, -0.38),
+        ("US REITs", 9.6, 0.57, 0.66),
+        ("IG Bonds", 4.1, 0.55, -0.31),
     ],
     "recovery": [
-        ("US Equities",  18.7, 0.91,  0.83),
-        ("HY Bonds",      9.2, 0.72,  0.74),
-        ("Commodities",  11.4, 0.55,  0.68),
-        ("Gold",          10.2, 0.52, -0.15),
-        ("Bitcoin (BTC)", 28.5, 0.74,  1.18),
-        ("US TIPS",        7.0, 0.60, -0.30),
-        ("US REITs",      14.0, 0.69,  0.74),
-        ("IG Bonds",       6.3, 0.68, -0.22),
+        ("US Equities", 18.7, 0.91, 0.83),
+        ("HY Bonds", 9.2, 0.72, 0.74),
+        ("Commodities", 11.4, 0.55, 0.68),
+        ("Gold", 10.2, 0.52, -0.15),
+        ("Bitcoin (BTC)", 28.5, 0.74, 1.18),
+        ("US TIPS", 7.0, 0.60, -0.30),
+        ("US REITs", 14.0, 0.69, 0.74),
+        ("IG Bonds", 6.3, 0.68, -0.22),
     ],
     "slowdown": [
-        ("US Equities",   3.1, 0.28,  0.45),
-        ("HY Bonds",      1.2, 0.15,  0.38),
-        ("Commodities",  -2.4, 0.12, -0.55),
-        ("Gold",          12.8, 0.62, -0.41),
-        ("Bitcoin (BTC)",  4.2, 0.24,  0.88),
-        ("US TIPS",        4.0, 0.34, -0.44),
-        ("US REITs",       2.4, 0.21,  0.46),
-        ("IG Bonds",       7.2, 0.71, -0.52),
+        ("US Equities", 3.1, 0.28, 0.45),
+        ("HY Bonds", 1.2, 0.15, 0.38),
+        ("Commodities", -2.4, 0.12, -0.55),
+        ("Gold", 12.8, 0.62, -0.41),
+        ("Bitcoin (BTC)", 4.2, 0.24, 0.88),
+        ("US TIPS", 4.0, 0.34, -0.44),
+        ("US REITs", 2.4, 0.21, 0.46),
+        ("IG Bonds", 7.2, 0.71, -0.52),
     ],
     "contraction": [
         ("US Equities", -14.2, -0.45, 0.82),
-        ("HY Bonds",     -8.1, -0.38, 0.71),
+        ("HY Bonds", -8.1, -0.38, 0.71),
         ("Commodities", -18.5, -0.42, 0.78),
-        ("Gold",          15.3, 0.68, -0.55),
+        ("Gold", 15.3, 0.68, -0.55),
         ("Bitcoin (BTC)", -20.0, -0.32, 1.15),
-        ("US TIPS",        6.5, 0.53, -0.56),
-        ("US REITs",      -9.8, -0.29, 0.86),
-        ("IG Bonds",       8.4, 0.72, -0.61),
+        ("US TIPS", 6.5, 0.53, -0.56),
+        ("US REITs", -9.8, -0.29, 0.86),
+        ("IG Bonds", 8.4, 0.72, -0.61),
     ],
 }
 
@@ -148,8 +153,15 @@ class CycleEngine:
         completeness = available / len(CYCLE_WEIGHTS)
 
         narrative = self._generate_narrative(
-            cycle_score, phase, phase_label, recession_prob,
-            models, drivers, signals, fci_gdp, completeness,
+            cycle_score,
+            phase,
+            phase_label,
+            recession_prob,
+            models,
+            drivers,
+            signals,
+            fci_gdp,
+            completeness,
         )
 
         return RegimeSnapshot(
@@ -167,7 +179,7 @@ class CycleEngine:
             tactical_allocation=allocation,
             expected_returns=expected,
             data_completeness=round(completeness, 2),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
     async def get_history(self, months: int = 60) -> list[RegimeHistoryPoint]:
@@ -183,12 +195,14 @@ class CycleEngine:
             phase, _ = self._map_phase(score)
             prob = self._recession_prob_from_score(score)
 
-            points.append(RegimeHistoryPoint(
-                date=target.isoformat(),
-                cycle_score=round(score, 1),
-                phase=phase,
-                recession_prob=round(prob, 1),
-            ))
+            points.append(
+                RegimeHistoryPoint(
+                    date=target.isoformat(),
+                    cycle_score=round(score, 1),
+                    phase=phase,
+                    recession_prob=round(prob, 1),
+                )
+            )
 
         return points
 
@@ -276,9 +290,7 @@ class CycleEngine:
         )
         return (await self.db.execute(q)).scalar_one_or_none()
 
-    async def _get_market_series(
-        self, symbol: str, days: int = 365 * 10
-    ) -> list[float]:
+    async def _get_market_series(self, symbol: str, days: int = 365 * 10) -> list[float]:
         since = date.today() - timedelta(days=days)
         q = (
             select(MarketData.value)
@@ -304,9 +316,7 @@ class CycleEngine:
         rows = (await self.db.execute(q)).all()
         return [r[0] for r in rows]
 
-    async def _get_market_pct_change(
-        self, symbol: str, days: int
-    ) -> float | None:
+    async def _get_market_pct_change(self, symbol: str, days: int) -> float | None:
         latest = await self._get_market_latest(symbol)
         target = date.today() - timedelta(days=days)
         prev = await self._get_market_at(symbol, target)
@@ -314,9 +324,7 @@ class CycleEngine:
             return ((latest - prev) / abs(prev)) * 100
         return None
 
-    async def _get_market_pct_change_at(
-        self, symbol: str, days: int, at: date
-    ) -> float | None:
+    async def _get_market_pct_change_at(self, symbol: str, days: int, at: date) -> float | None:
         latest = await self._get_market_at(symbol, at)
         prev = await self._get_market_at(symbol, at - timedelta(days=days))
         if latest is not None and prev is not None and prev != 0:
@@ -343,9 +351,7 @@ class CycleEngine:
         )
         return (await self.db.execute(q)).scalar_one_or_none()
 
-    async def _get_indicator_series(
-        self, name: str, days: int = 365 * 10
-    ) -> list[float]:
+    async def _get_indicator_series(self, name: str, days: int = 365 * 10) -> list[float]:
         since = date.today() - timedelta(days=days)
         q = (
             select(IndicatorValue.value)
@@ -373,9 +379,7 @@ class CycleEngine:
         rows = (await self.db.execute(q)).all()
         return [r[0] for r in rows]
 
-    async def _get_yield_spread(
-        self, long: str, short: str
-    ) -> float | None:
+    async def _get_yield_spread(self, long: str, short: str) -> float | None:
         long_q = (
             select(YieldData.nominal_yield)
             .where(YieldData.maturity == long)
@@ -394,9 +398,7 @@ class CycleEngine:
             return (l_val - s_val) * 100  # bps
         return None
 
-    async def _get_yield_spread_at(
-        self, long: str, short: str, target: date
-    ) -> float | None:
+    async def _get_yield_spread_at(self, long: str, short: str, target: date) -> float | None:
         long_q = (
             select(YieldData.nominal_yield)
             .where(YieldData.maturity == long, YieldData.date <= target)
@@ -509,9 +511,7 @@ class CycleEngine:
         z = (value - mean) / std
         return float(np.clip(z, -3, 3) / 3)
 
-    async def _normalize_variables(
-        self, raw: dict[str, float | None]
-    ) -> dict[str, float]:
+    async def _normalize_variables(self, raw: dict[str, float | None]) -> dict[str, float]:
         norm = {}
 
         if raw["ism_new_orders"] is not None:
@@ -530,8 +530,11 @@ class CycleEngine:
             all_lei = await self._get_market_series("LEI")
             if len(all_lei) >= 7:
                 pct_changes = [
-                    ((all_lei[i] - all_lei[max(0, i - 6)]) / abs(all_lei[max(0, i - 6)])) * 100
-                    if all_lei[max(0, i - 6)] != 0 else 0
+                    (
+                        ((all_lei[i] - all_lei[max(0, i - 6)]) / abs(all_lei[max(0, i - 6)])) * 100
+                        if all_lei[max(0, i - 6)] != 0
+                        else 0
+                    )
                     for i in range(6, len(all_lei))
                 ]
                 norm["lei_6m_change"] = self._zscore(raw["lei_6m_change"], pct_changes)
@@ -604,12 +607,20 @@ class CycleEngine:
                 since = target - timedelta(days=lookback_days)
                 long_q = (
                     select(YieldData.date, YieldData.nominal_yield)
-                    .where(YieldData.maturity == "10Y", YieldData.date >= since, YieldData.date <= target)
+                    .where(
+                        YieldData.maturity == "10Y",
+                        YieldData.date >= since,
+                        YieldData.date <= target,
+                    )
                     .order_by(YieldData.date)
                 )
                 short_q = (
                     select(YieldData.date, YieldData.nominal_yield)
-                    .where(YieldData.maturity == "2Y", YieldData.date >= since, YieldData.date <= target)
+                    .where(
+                        YieldData.maturity == "2Y",
+                        YieldData.date >= since,
+                        YieldData.date <= target,
+                    )
                     .order_by(YieldData.date)
                 )
                 lr = {r[0]: r[1] for r in (await self.db.execute(long_q)).all()}
@@ -621,9 +632,7 @@ class CycleEngine:
                     "HY_SPREAD", target, days=lookback_days
                 )
             elif key == "leading_credit":
-                series = await self._get_market_series_before(
-                    "SLOOS", target, days=lookback_days
-                )
+                series = await self._get_market_series_before("SLOOS", target, days=lookback_days)
             elif key == "consumer_confidence":
                 series = await self._get_indicator_series_before(
                     "Consumer Sentiment (Michigan)", target, days=lookback_days
@@ -642,9 +651,7 @@ class CycleEngine:
                 )
                 series = [g - 2.0 for g in all_gdp]
             elif key == "lei_6m_change":
-                all_lei = await self._get_market_series_before(
-                    "LEI", target, days=lookback_days
-                )
+                all_lei = await self._get_market_series_before("LEI", target, days=lookback_days)
                 series = []
                 for i in range(6, len(all_lei)):
                     prev = all_lei[max(0, i - 6)]
@@ -666,10 +673,7 @@ class CycleEngine:
         normalized: dict[str, float],
         raw: dict[str, float | None],
     ) -> tuple[float, list[CycleDriverContribution]]:
-        available_weights = {
-            k: w for k, w in CYCLE_WEIGHTS.items()
-            if raw.get(k) is not None
-        }
+        available_weights = {k: w for k, w in CYCLE_WEIGHTS.items() if raw.get(k) is not None}
         total_weight = sum(available_weights.values()) or 1.0
 
         contributions = []
@@ -682,14 +686,16 @@ class CycleEngine:
             score_raw += c
 
             direction = "positive" if c > 0.02 else ("negative" if c < -0.02 else "neutral")
-            contributions.append(CycleDriverContribution(
-                name=CYCLE_LABELS[key],
-                raw_value=raw.get(key),
-                normalized=round(n, 3),
-                weight=round(effective_weight, 3),
-                contribution=round(c * 100, 2),
-                direction=direction,
-            ))
+            contributions.append(
+                CycleDriverContribution(
+                    name=CYCLE_LABELS[key],
+                    raw_value=raw.get(key),
+                    normalized=round(n, 3),
+                    weight=round(effective_weight, 3),
+                    contribution=round(c * 100, 2),
+                    direction=direction,
+                )
+            )
 
         cycle_score = max(-100.0, min(100.0, score_raw * 100))
 
@@ -832,13 +838,15 @@ class CycleEngine:
         spread = raw.get("yield_curve_10y2y")
         if spread is not None:
             status = "red" if spread <= 0 else ("yellow" if spread < 50 else "green")
-            signals.append(PhaseTransitionSignal(
-                name="Yield Curve 10Y-2Y",
-                current_value=f"{spread:+.0f} bps",
-                threshold="< 0 bps = inversion",
-                status=status,
-                description="Historically precedes recession by 12-18 months",
-            ))
+            signals.append(
+                PhaseTransitionSignal(
+                    name="Yield Curve 10Y-2Y",
+                    current_value=f"{spread:+.0f} bps",
+                    threshold="< 0 bps = inversion",
+                    status=status,
+                    description="Historically precedes recession by 12-18 months",
+                )
+            )
         else:
             signals.append(self._na_signal("Yield Curve 10Y-2Y", "< 0 bps = inversion"))
 
@@ -846,13 +854,15 @@ class CycleEngine:
         ism = await self._get_market_latest("ISM_PMI")
         if ism is not None:
             status = "red" if ism < 50 else ("yellow" if ism < 52 else "green")
-            signals.append(PhaseTransitionSignal(
-                name="ISM Manufacturing PMI",
-                current_value=f"{ism:.1f}",
-                threshold="< 50 = contraction",
-                status=status,
-                description="Below 50 signals manufacturing contraction",
-            ))
+            signals.append(
+                PhaseTransitionSignal(
+                    name="ISM Manufacturing PMI",
+                    current_value=f"{ism:.1f}",
+                    threshold="< 50 = contraction",
+                    status=status,
+                    description="Below 50 signals manufacturing contraction",
+                )
+            )
         else:
             signals.append(self._na_signal("ISM Manufacturing PMI", "< 50 = contraction"))
 
@@ -861,13 +871,15 @@ class CycleEngine:
         if claims is not None:
             ck = claims / 1000.0
             status = "red" if ck > 300 else ("yellow" if ck > 250 else "green")
-            signals.append(PhaseTransitionSignal(
-                name="Initial Jobless Claims (4W Avg)",
-                current_value=f"{ck:.0f}k",
-                threshold="> 300K = deterioration",
-                status=status,
-                description="Rising claims indicate labor market weakening",
-            ))
+            signals.append(
+                PhaseTransitionSignal(
+                    name="Initial Jobless Claims (4W Avg)",
+                    current_value=f"{ck:.0f}k",
+                    threshold="> 300K = deterioration",
+                    status=status,
+                    description="Rising claims indicate labor market weakening",
+                )
+            )
         else:
             signals.append(self._na_signal("Initial Jobless Claims", "> 300K = deterioration"))
 
@@ -875,13 +887,15 @@ class CycleEngine:
         lei_6m = raw.get("lei_6m_change")
         if lei_6m is not None:
             status = "red" if lei_6m < -4 else ("yellow" if lei_6m < -2 else "green")
-            signals.append(PhaseTransitionSignal(
-                name="Leading Economic Index (6M)",
-                current_value=f"{lei_6m:+.1f}%",
-                threshold="< -4% = recession signal",
-                status=status,
-                description="Sustained decline in LEI precedes economic downturns",
-            ))
+            signals.append(
+                PhaseTransitionSignal(
+                    name="Leading Economic Index (6M)",
+                    current_value=f"{lei_6m:+.1f}%",
+                    threshold="< -4% = recession signal",
+                    status=status,
+                    description="Sustained decline in LEI precedes economic downturns",
+                )
+            )
         else:
             signals.append(self._na_signal("Leading Economic Index (6M)", "< -4% = recession"))
 
@@ -889,13 +903,15 @@ class CycleEngine:
         hy = raw.get("hy_spread")
         if hy is not None:
             status = "red" if hy > 500 else ("yellow" if hy > 400 else "green")
-            signals.append(PhaseTransitionSignal(
-                name="HY Credit Spread",
-                current_value=f"{hy:.0f} bps",
-                threshold="> 500 bps = stress",
-                status=status,
-                description="Widening HY spreads signal credit stress and risk-off",
-            ))
+            signals.append(
+                PhaseTransitionSignal(
+                    name="HY Credit Spread",
+                    current_value=f"{hy:.0f} bps",
+                    threshold="> 500 bps = stress",
+                    status=status,
+                    description="Widening HY spreads signal credit stress and risk-off",
+                )
+            )
         else:
             signals.append(self._na_signal("HY Credit Spread", "> 500 bps = stress"))
 
@@ -907,13 +923,15 @@ class CycleEngine:
         if retail is not None and retail_prev is not None and retail_prev != 0:
             yoy = ((retail - retail_prev) / abs(retail_prev)) * 100
             status = "red" if yoy < 0 else ("yellow" if yoy < 1 else "green")
-            signals.append(PhaseTransitionSignal(
-                name="Retail Sales (YoY)",
-                current_value=f"{yoy:+.1f}%",
-                threshold="< 0% = consumer contraction",
-                status=status,
-                description="Negative real retail sales growth signals consumer weakness",
-            ))
+            signals.append(
+                PhaseTransitionSignal(
+                    name="Retail Sales (YoY)",
+                    current_value=f"{yoy:+.1f}%",
+                    threshold="< 0% = consumer contraction",
+                    status=status,
+                    description="Negative real retail sales growth signals consumer weakness",
+                )
+            )
         else:
             signals.append(self._na_signal("Retail Sales (YoY)", "< 0% = contraction"))
 
@@ -925,13 +943,15 @@ class CycleEngine:
         if permits is not None and permits_prev is not None and permits_prev != 0:
             mom = ((permits - permits_prev) / abs(permits_prev)) * 100
             status = "red" if mom < -10 else ("yellow" if mom < -5 else "green")
-            signals.append(PhaseTransitionSignal(
-                name="Building Permits (MoM)",
-                current_value=f"{mom:+.1f}%",
-                threshold="< -10% = housing weakness",
-                status=status,
-                description="Sharp decline in permits signals housing downturn",
-            ))
+            signals.append(
+                PhaseTransitionSignal(
+                    name="Building Permits (MoM)",
+                    current_value=f"{mom:+.1f}%",
+                    threshold="< -10% = housing weakness",
+                    status=status,
+                    description="Sharp decline in permits signals housing downturn",
+                )
+            )
         else:
             signals.append(self._na_signal("Building Permits (MoM)", "< -10% = housing weakness"))
 
@@ -942,13 +962,15 @@ class CycleEngine:
             ma_200 = float(np.mean(sp_series[-200:]))
             pct_above = ((sp - ma_200) / ma_200) * 100
             status = "red" if pct_above < 0 else ("yellow" if pct_above < 2 else "green")
-            signals.append(PhaseTransitionSignal(
-                name="S&P 500 vs 200-MA",
-                current_value=f"{pct_above:+.1f}%",
-                threshold="Below 200-MA = bear signal",
-                status=status,
-                description="Below 200-day MA signals bearish trend regime",
-            ))
+            signals.append(
+                PhaseTransitionSignal(
+                    name="S&P 500 vs 200-MA",
+                    current_value=f"{pct_above:+.1f}%",
+                    threshold="Below 200-MA = bear signal",
+                    status=status,
+                    description="Below 200-day MA signals bearish trend regime",
+                )
+            )
         else:
             signals.append(self._na_signal("S&P 500 vs 200-MA", "Below 200-MA = bear"))
 
@@ -957,13 +979,15 @@ class CycleEngine:
         if fed is not None:
             diff_bps = (fed - NEUTRAL_FED_RATE) * 100
             status = "red" if diff_bps > 100 else ("yellow" if diff_bps > 50 else "green")
-            signals.append(PhaseTransitionSignal(
-                name="Fed Funds vs Neutral Rate",
-                current_value=f"{diff_bps:+.0f} bps",
-                threshold="> +100 bps = restrictive",
-                status=status,
-                description="Rate above neutral signals tight monetary conditions",
-            ))
+            signals.append(
+                PhaseTransitionSignal(
+                    name="Fed Funds vs Neutral Rate",
+                    current_value=f"{diff_bps:+.0f} bps",
+                    threshold="> +100 bps = restrictive",
+                    status=status,
+                    description="Rate above neutral signals tight monetary conditions",
+                )
+            )
         else:
             signals.append(self._na_signal("Fed Funds vs Neutral", "> +100 bps = restrictive"))
 
@@ -971,13 +995,15 @@ class CycleEngine:
         sahm = await self._get_market_latest("SAHM_RULE")
         if sahm is not None:
             status = "red" if sahm >= 0.5 else ("yellow" if sahm >= 0.3 else "green")
-            signals.append(PhaseTransitionSignal(
-                name="Sahm Rule Indicator",
-                current_value=f"{sahm:.2f}%",
-                threshold="> 0.50% = recession",
-                status=status,
-                description="3-month average unemployment rise from 12-month low",
-            ))
+            signals.append(
+                PhaseTransitionSignal(
+                    name="Sahm Rule Indicator",
+                    current_value=f"{sahm:.2f}%",
+                    threshold="> 0.50% = recession",
+                    status=status,
+                    description="3-month average unemployment rise from 12-month low",
+                )
+            )
         else:
             signals.append(self._na_signal("Sahm Rule Indicator", "> 0.50% = recession"))
 
@@ -1012,7 +1038,9 @@ class CycleEngine:
         if fed is not None and pce_val is not None and pce_prev is not None and pce_prev != 0:
             pce_yoy = ((pce_val - pce_prev) / pce_prev) * 100
             real_fed = fed - pce_yoy
-        c1 = await self._fci_component("Short-term rates (Real FFR)", 0.20, real_fed, "real_fed", True)
+        c1 = await self._fci_component(
+            "Short-term rates (Real FFR)", 0.20, real_fed, "real_fed", True
+        )
         components.append(c1)
         if c1.z_score is not None:
             weighted_sum += c1.z_score * c1.weight
@@ -1020,7 +1048,9 @@ class CycleEngine:
 
         # 2. Long-term rates (real 10Y): weight 15%
         real_10y = await self._get_tips_10y()
-        c2 = await self._fci_component("Long-term rates (Real 10Y)", 0.15, real_10y, "tips_10y", True)
+        c2 = await self._fci_component(
+            "Long-term rates (Real 10Y)", 0.15, real_10y, "tips_10y", True
+        )
         components.append(c2)
         if c2.z_score is not None:
             weighted_sum += c2.z_score * c2.weight
@@ -1034,7 +1064,9 @@ class CycleEngine:
             credit_avg = (hy + ig) / 2
         elif hy is not None:
             credit_avg = hy
-        c3 = await self._fci_component("Credit spreads (IG+HY)", 0.20, credit_avg, "credit_spread", True)
+        c3 = await self._fci_component(
+            "Credit spreads (IG+HY)", 0.20, credit_avg, "credit_spread", True
+        )
         components.append(c3)
         if c3.z_score is not None:
             weighted_sum += c3.z_score * c3.weight
@@ -1047,7 +1079,9 @@ class CycleEngine:
         if sp is not None and len(sp_series) >= 60:
             trend = float(np.mean(sp_series))
             sp_deviation = ((sp - trend) / trend) * 100
-        c4 = await self._fci_component_direct("Equity prices (S&P 500)", 0.15, sp_deviation, sp_series, False)
+        c4 = await self._fci_component_direct(
+            "Equity prices (S&P 500)", 0.15, sp_deviation, sp_series, False
+        )
         components.append(c4)
         if c4.z_score is not None:
             weighted_sum += c4.z_score * c4.weight
@@ -1059,7 +1093,9 @@ class CycleEngine:
         if mortgage is not None and pce_val is not None and pce_prev is not None and pce_prev != 0:
             pce_yoy = ((pce_val - pce_prev) / pce_prev) * 100
             real_mortgage = mortgage - pce_yoy
-        c5 = await self._fci_component("Housing (Real 30Y Mortgage)", 0.15, real_mortgage, "mortgage", True)
+        c5 = await self._fci_component(
+            "Housing (Real 30Y Mortgage)", 0.15, real_mortgage, "mortgage", True
+        )
         components.append(c5)
         if c5.z_score is not None:
             weighted_sum += c5.z_score * c5.weight
@@ -1092,13 +1128,20 @@ class CycleEngine:
         return fci_score, gdp_impact, components
 
     async def _fci_component(
-        self, name: str, weight: float, value: float | None,
-        series_key: str, inverted: bool,
+        self,
+        name: str,
+        weight: float,
+        value: float | None,
+        series_key: str,
+        inverted: bool,
     ) -> LightFCIComponent:
         if value is None:
             return LightFCIComponent(
-                name=name, weight=weight, z_score=None,
-                contribution=None, direction="neutral",
+                name=name,
+                weight=weight,
+                z_score=None,
+                contribution=None,
+                direction="neutral",
             )
 
         series_map = {
@@ -1114,8 +1157,11 @@ class CycleEngine:
 
         if len(series) < 12:
             return LightFCIComponent(
-                name=name, weight=weight, z_score=None,
-                contribution=None, direction="neutral",
+                name=name,
+                weight=weight,
+                z_score=None,
+                contribution=None,
+                direction="neutral",
             )
 
         arr = np.array(series, dtype=float)
@@ -1132,18 +1178,28 @@ class CycleEngine:
 
         direction = "tightening" if z > 0.25 else ("loosening" if z < -0.25 else "neutral")
         return LightFCIComponent(
-            name=name, weight=weight, z_score=round(z, 2),
-            contribution=round(z * weight, 3), direction=direction,
+            name=name,
+            weight=weight,
+            z_score=round(z, 2),
+            contribution=round(z * weight, 3),
+            direction=direction,
         )
 
     async def _fci_component_direct(
-        self, name: str, weight: float, value: float | None,
-        series: list[float], inverted: bool,
+        self,
+        name: str,
+        weight: float,
+        value: float | None,
+        series: list[float],
+        inverted: bool,
     ) -> LightFCIComponent:
         if value is None or len(series) < 12:
             return LightFCIComponent(
-                name=name, weight=weight, z_score=None,
-                contribution=None, direction="neutral",
+                name=name,
+                weight=weight,
+                z_score=None,
+                contribution=None,
+                direction="neutral",
             )
 
         arr = np.array(series, dtype=float)
@@ -1157,8 +1213,11 @@ class CycleEngine:
 
         direction = "tightening" if z > 0.25 else ("loosening" if z < -0.25 else "neutral")
         return LightFCIComponent(
-            name=name, weight=weight, z_score=round(z, 2),
-            contribution=round(z * weight, 3), direction=direction,
+            name=name,
+            weight=weight,
+            z_score=round(z, 2),
+            contribution=round(z * weight, 3),
+            direction=direction,
         )
 
     # ── FCI helper series builders ──────────────────────────
@@ -1166,9 +1225,11 @@ class CycleEngine:
     async def _build_real_fed_series(self) -> list[float]:
         """Build approximate real fed funds rate history."""
         since = date.today() - timedelta(days=365 * 5)
-        q = select(FedRate.date, FedRate.effr).where(
-            FedRate.date >= since, FedRate.effr.isnot(None)
-        ).order_by(FedRate.date)
+        q = (
+            select(FedRate.date, FedRate.effr)
+            .where(FedRate.date >= since, FedRate.effr.isnot(None))
+            .order_by(FedRate.date)
+        )
         fed_rows = {r[0]: r[1] for r in (await self.db.execute(q)).all()}
         if not fed_rows:
             return []
@@ -1210,19 +1271,26 @@ class CycleEngine:
 
     def _get_tactical_allocation(self, phase: str) -> list[TacticalAllocationRow]:
         phase_col = {
-            "recovery": "recovery", "expansion": "expansion",
-            "slowdown": "slowdown", "contraction": "contraction",
+            "recovery": "recovery",
+            "expansion": "expansion",
+            "slowdown": "slowdown",
+            "contraction": "contraction",
         }
         current = phase_col.get(phase, "expansion")
 
         rows = []
         for asset, rec, exp, slow, contr in TACTICAL_ALLOCATION:
             signal_map = {"recovery": rec, "expansion": exp, "slowdown": slow, "contraction": contr}
-            rows.append(TacticalAllocationRow(
-                asset_class=asset,
-                recovery=rec, expansion=exp, slowdown=slow, contraction=contr,
-                current_signal=signal_map[current],
-            ))
+            rows.append(
+                TacticalAllocationRow(
+                    asset_class=asset,
+                    recovery=rec,
+                    expansion=exp,
+                    slowdown=slow,
+                    contraction=contr,
+                    current_signal=signal_map[current],
+                )
+            )
         return rows
 
     def _get_expected_returns(self, phase: str) -> list[ExpectedReturn]:
@@ -1270,8 +1338,10 @@ class CycleEngine:
         # Top driver
         if drivers:
             top = drivers[0]
-            dir_text = "supporting growth" if top.direction == "positive" else (
-                "dragging on growth" if top.direction == "negative" else "neutral"
+            dir_text = (
+                "supporting growth"
+                if top.direction == "positive"
+                else ("dragging on growth" if top.direction == "negative" else "neutral")
             )
             sentences.append(
                 f"The primary driver is {top.name} ({dir_text}, "

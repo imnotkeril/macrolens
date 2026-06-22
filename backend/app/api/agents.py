@@ -8,7 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.intelligence import AgentSignal, Recommendation
-from app.schemas.intelligence import AgentRunResponse, RecommendationResponse, AgentSignalItem, RiskOverlay, ML2FactorItem
+from app.schemas.intelligence import (
+    AgentRunResponse,
+    AgentSignalItem,
+    ML2FactorItem,
+    RecommendationResponse,
+    RiskOverlay,
+)
 from app.services.agent_context_pack import (
     build_context_pack,
     fed_rhetoric_history,
@@ -30,7 +36,11 @@ async def run_agents(db: AsyncSession = Depends(get_db)):
             "fed_cb_agent": result["fed_cb_summary"],
             "news_agent": result["news_summary"],
             "macro_data_agent": result.get("macro_summary") or "",
-            "as_of_date": as_of_ml2 if isinstance(as_of_ml2, str) else (as_of_ml2.isoformat() if as_of_ml2 else ""),
+            "as_of_date": (
+                as_of_ml2
+                if isinstance(as_of_ml2, str)
+                else (as_of_ml2.isoformat() if as_of_ml2 else "")
+            ),
             "regime": str(result.get("regime") or ""),
         },
     )
@@ -38,7 +48,9 @@ async def run_agents(db: AsyncSession = Depends(get_db)):
 
 @router.get("/context-pack")
 async def get_context_pack(
-    as_of: date | None = Query(None, description="Signals and recommendation for this calendar date"),
+    as_of: date | None = Query(
+        None, description="Signals and recommendation for this calendar date"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """Single payload for Dashboard / Analysis: specialist signals + Master recommendation."""
@@ -47,7 +59,9 @@ async def get_context_pack(
 
 @router.get("/fed-rhetoric/history")
 async def get_fed_rhetoric_history(
-    date_from: date | None = Query(None, description="Inclusive start; default 365d before date_to"),
+    date_from: date | None = Query(
+        None, description="Inclusive start; default 365d before date_to"
+    ),
     date_to: date | None = Query(None, description="Inclusive end; default today"),
     db: AsyncSession = Depends(get_db),
 ):
@@ -60,7 +74,9 @@ async def get_fed_rhetoric_history(
 
 @router.get("/macro/tab-summary")
 async def get_macro_tab_summary(
-    tab: str = Query(..., description="Analysis tab id: indices, sectors, rates, breadth, macro, inflation, fed"),
+    tab: str = Query(
+        ..., description="Analysis tab id: indices, sectors, rates, breadth, macro, inflation, fed"
+    ),
     as_of: date | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
@@ -85,7 +101,11 @@ async def latest_signals(
     db: AsyncSession = Depends(get_db),
 ):
     target = as_of or date.today()
-    q = select(AgentSignal).where(AgentSignal.signal_date == target).order_by(AgentSignal.created_at.desc())
+    q = (
+        select(AgentSignal)
+        .where(AgentSignal.signal_date == target)
+        .order_by(AgentSignal.created_at.desc())
+    )
     rows = (await db.execute(q)).scalars().all()
     return [
         AgentSignalItem(
@@ -143,4 +163,3 @@ async def latest_recommendation(db: AsyncSession = Depends(get_db)):
         ),
         payload=p,
     )
-

@@ -42,7 +42,11 @@ def _build_xy(
         y_list.append(v[i + horizon])
     if len(y_list) < 12:
         return None, None, None
-    return np.array(X_list, dtype=float), np.array(y_list, dtype=float), work["date"].iloc[3 : n - horizon]
+    return (
+        np.array(X_list, dtype=float),
+        np.array(y_list, dtype=float),
+        work["date"].iloc[3 : n - horizon],
+    )
 
 
 def fit_and_save_macro(

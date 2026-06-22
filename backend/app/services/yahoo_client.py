@@ -47,49 +47,49 @@ YAHOO_EXTRA = {
 }
 
 YAHOO_BREADTH_SERIES = {
-    "MMTW": "^MMTW",       # % of S&P 500 stocks above 20-day MA
-    "MMFI": "^MMFI",       # % of S&P 500 stocks above 50-day MA
-    "MMTH": "^MMTH",       # % of S&P 500 stocks above 200-day MA
-    "NAA200": "^NAA200",   # % of Nasdaq stocks above 200-day MA
-    "NAA50": "^NAA50",     # % of Nasdaq stocks above 50-day MA
-    "PCC": "^PCC",         # CBOE Put/Call Ratio
-    "NYHGH": "^NYHGH",     # NYSE New Highs
-    "NYLOW": "^NYLOW",     # NYSE New Lows
-    "NYMO": "^NYMO",       # McClellan Oscillator
-    "NYSI": "^NYSI",       # McClellan Summation Index
+    "MMTW": "^MMTW",  # % of S&P 500 stocks above 20-day MA
+    "MMFI": "^MMFI",  # % of S&P 500 stocks above 50-day MA
+    "MMTH": "^MMTH",  # % of S&P 500 stocks above 200-day MA
+    "NAA200": "^NAA200",  # % of Nasdaq stocks above 200-day MA
+    "NAA50": "^NAA50",  # % of Nasdaq stocks above 50-day MA
+    "PCC": "^PCC",  # CBOE Put/Call Ratio
+    "NYHGH": "^NYHGH",  # NYSE New Highs
+    "NYLOW": "^NYLOW",  # NYSE New Lows
+    "NYMO": "^NYMO",  # McClellan Oscillator
+    "NYSI": "^NYSI",  # McClellan Summation Index
 }
 
 YAHOO_MACRO_ETFS = {
-    "GLD": "GLD",          # SPDR Gold Shares ETF
-    "TLT": "TLT",          # iShares 20+ Year Treasury Bond ETF
-    "TIP": "TIP",          # iShares TIPS Bond ETF
-    "IEF": "IEF",          # iShares 7-10 Year Treasury Bond ETF
-    "IVV": "IVV",          # iShares Core S&P 500 ETF
-    "IJH": "IJH",          # iShares Core S&P Mid-Cap ETF (vs IJR small-cap ratio)
-    "SPY": "SPY",          # Forecast Lab asset_implied pairs + sector proxy
-    "IWM": "IWM",          # Russell 2000 ETF (pairs vs SPY)
-    "VTV": "VTV",          # Value factor ETF
-    "VUG": "VUG",          # Growth factor ETF
-    "XLP": "XLP",          # Consumer Staples (also in sector table; needed in market_data for FL)
-    "XLY": "XLY",          # Consumer Discretionary
-    "IJR": "IJR",          # iShares Core S&P SmallCap 600 ETF
-    "VEA": "VEA",          # Vanguard FTSE Developed Markets ETF
-    "IPO_ETF": "IPO",      # Renaissance IPO ETF
-    "LUMBER": "LBS=F",     # Random Length Lumber Futures
-    "ZQ": "ZQ=F",          # 30-Day Federal Funds Futures
-    "HYG": "HYG",          # iShares High Yield Corporate Bond ETF
-    "IEI_ETF": "IEI",      # iShares 3-7 Year Treasury Bond ETF
-    "LQD": "LQD",          # iShares Investment Grade Corporate Bond ETF
+    "GLD": "GLD",  # SPDR Gold Shares ETF
+    "TLT": "TLT",  # iShares 20+ Year Treasury Bond ETF
+    "TIP": "TIP",  # iShares TIPS Bond ETF
+    "IEF": "IEF",  # iShares 7-10 Year Treasury Bond ETF
+    "IVV": "IVV",  # iShares Core S&P 500 ETF
+    "IJH": "IJH",  # iShares Core S&P Mid-Cap ETF (vs IJR small-cap ratio)
+    "SPY": "SPY",  # Forecast Lab asset_implied pairs + sector proxy
+    "IWM": "IWM",  # Russell 2000 ETF (pairs vs SPY)
+    "VTV": "VTV",  # Value factor ETF
+    "VUG": "VUG",  # Growth factor ETF
+    "XLP": "XLP",  # Consumer Staples (also in sector table; needed in market_data for FL)
+    "XLY": "XLY",  # Consumer Discretionary
+    "IJR": "IJR",  # iShares Core S&P SmallCap 600 ETF
+    "VEA": "VEA",  # Vanguard FTSE Developed Markets ETF
+    "IPO_ETF": "IPO",  # Renaissance IPO ETF
+    "LUMBER": "LBS=F",  # Random Length Lumber Futures
+    "ZQ": "ZQ=F",  # 30-Day Federal Funds Futures
+    "HYG": "HYG",  # iShares High Yield Corporate Bond ETF
+    "IEI_ETF": "IEI",  # iShares 3-7 Year Treasury Bond ETF
+    "LQD": "LQD",  # iShares Investment Grade Corporate Bond ETF
     "COPPER_FUT": "HG=F",  # Copper Futures (daily)
-    "KOSPI": "^KS11",      # Korea KOSPI Index
-    "TAIEX": "^TWII",      # Taiwan TAIEX Index
-    "USDCNH": "CNY=X",     # USD/CNY onshore yuan
-    "CEW": "CEW",           # WisdomTree Emerging Currency Strategy Fund
+    "KOSPI": "^KS11",  # Korea KOSPI Index
+    "TAIEX": "^TWII",  # Taiwan TAIEX Index
+    "USDCNH": "CNY=X",  # USD/CNY onshore yuan
+    "CEW": "CEW",  # WisdomTree Emerging Currency Strategy Fund
     # Proxies for macro ratio charts (BCOM/ZB, Baltic Dry)
     # ^BDIY often has no Yahoo history; BDRY ETF tracks dry bulk / Baltic proxy
     "BDIY": "BDRY",
-    "DBC": "DBC",          # Invesco DB Commodity Index ETF (~BCOM basket)
-    "ZB_FUT": "ZB=F",      # 30Y U.S. Treasury bond futures (ZB)
+    "DBC": "DBC",  # Invesco DB Commodity Index ETF (~BCOM basket)
+    "ZB_FUT": "ZB=F",  # 30Y U.S. Treasury bond futures (ZB)
 }
 
 SECTOR_LABELS = {

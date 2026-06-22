@@ -12,28 +12,11 @@ from typing import Any
 import joblib
 import numpy as np
 import xgboost as xgb
-from sqlalchemy import select, desc, func
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.forecast_lab import RecessionLabel
-from app.services.forecast_lab import features_pit
-from app.services.forecast_lab.artifacts import active_bundle_dir, load_meta
-from app.services.forecast_lab.cycle_phase_probs import cycle_quadrant_probs_at_date
-from app.services.forecast_lab.ensemble import (
-    align_multiclass_proba_row,
-    ensemble_probs,
-    ensemble_probs_four,
-    normalize_weights,
-)
-from app.services.forecast_lab.macro_infer import predict_macro_panel
-from app.services.forecast_lab.rule_phase import (
-    QUADRANT_ORDER,
-    determine_quadrant,
-    rule_probs,
-)
-from app.services.forecast_lab.stress import compute_stress
-from app.services.forecast_lab.hmm_infer import hmm_probs_at_end, simplex_dirichlet_smooth
 from app.config import get_settings
+from app.models.forecast_lab import RecessionLabel
 from app.schemas.forecast_lab import (
     DashboardContextBlock,
     ExpertPhaseBreakdown,
@@ -43,11 +26,30 @@ from app.schemas.forecast_lab import (
     StressBlock,
     StressZContributor,
 )
+from app.services.forecast_lab import features_pit
+from app.services.forecast_lab.artifacts import active_bundle_dir, load_meta
+from app.services.forecast_lab.cycle_phase_probs import cycle_quadrant_probs_at_date
+from app.services.forecast_lab.ensemble import (
+    align_multiclass_proba_row,
+    ensemble_probs,
+    ensemble_probs_four,
+    normalize_weights,
+)
+from app.services.forecast_lab.hmm_infer import hmm_probs_at_end, simplex_dirichlet_smooth
+from app.services.forecast_lab.macro_infer import predict_macro_panel
+from app.services.forecast_lab.rule_phase import (
+    QUADRANT_ORDER,
+    determine_quadrant,
+    rule_probs,
+)
+from app.services.forecast_lab.stress import compute_stress
 
 logger = logging.getLogger("forecast_lab")
 
 
-def _load_bundle_models(bundle_path: Path) -> tuple[Any, xgb.XGBClassifier | None, Any, list[int], dict[str, float] | None]:
+def _load_bundle_models(
+    bundle_path: Path,
+) -> tuple[Any, xgb.XGBClassifier | None, Any, list[int], dict[str, float] | None]:
     meta = load_meta(bundle_path)
     if not meta:
         return None, None, None, [], None
@@ -142,7 +144,11 @@ async def _recession_snapshot(db: AsyncSession, as_of: date) -> tuple[float | No
 
 def _effective_as_of(as_of: date | None, align_month_end: bool | None) -> date:
     settings = get_settings()
-    align = settings.forecast_lab_summary_align_month_end if align_month_end is None else align_month_end
+    align = (
+        settings.forecast_lab_summary_align_month_end
+        if align_month_end is None
+        else align_month_end
+    )
     d = as_of or date.today()
     if not align:
         return d
@@ -160,7 +166,6 @@ async def build_summary(
     settings = get_settings()
     row = await features_pit.build_feature_row(db, as_of)
     pr = rule_probs(row.growth_score, row.fed_policy_score)
-    q_rule = determine_quadrant(row.growth_score, row.fed_policy_score)
 
     bundle_path = active_bundle_dir()
     meta = load_meta(bundle_path)

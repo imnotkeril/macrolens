@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from sqlalchemy import select, delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.intelligence import (
-    MemoryDocument,
     MemoryChunk,
+    MemoryDocument,
     MemoryEmbedding,
-    MemoryTag,
     MemorySourceRegistry,
+    MemoryTag,
 )
 from app.services.embedding_service import EmbeddingService
 from app.services.retrieval_service import RetrievalService
@@ -33,7 +33,9 @@ class MemoryService:
         q = select(MemoryDocument).where(MemoryDocument.doc_key == doc_key)
         existing = (await db.execute(q)).scalar_one_or_none()
         if existing is None:
-            existing = MemoryDocument(source=source, doc_key=doc_key, title=title, content=content, metadata_json=metadata)
+            existing = MemoryDocument(
+                source=source, doc_key=doc_key, title=title, content=content, metadata_json=metadata
+            )
             db.add(existing)
             await db.flush()
         else:
@@ -42,10 +44,14 @@ class MemoryService:
             existing.metadata_json = metadata
 
         # one-chunk strategy
-        cq = select(MemoryChunk).where(MemoryChunk.document_id == existing.id, MemoryChunk.chunk_index == 0)
+        cq = select(MemoryChunk).where(
+            MemoryChunk.document_id == existing.id, MemoryChunk.chunk_index == 0
+        )
         chunk = (await db.execute(cq)).scalar_one_or_none()
         if chunk is None:
-            chunk = MemoryChunk(document_id=existing.id, chunk_index=0, content=content, metadata_json=metadata)
+            chunk = MemoryChunk(
+                document_id=existing.id, chunk_index=0, content=content, metadata_json=metadata
+            )
             db.add(chunk)
             await db.flush()
         else:
@@ -82,13 +88,21 @@ class MemoryService:
                 MemorySourceRegistry(
                     source_name=source,
                     source_key=doc_key,
-                    source_version=str(metadata.get("source_version")) if metadata.get("source_version") else None,
+                    source_version=(
+                        str(metadata.get("source_version"))
+                        if metadata.get("source_version")
+                        else None
+                    ),
                     quality_score=quality,
                     metadata_json=metadata,
                 )
             )
         else:
-            src.source_version = str(metadata.get("source_version")) if metadata.get("source_version") else src.source_version
+            src.source_version = (
+                str(metadata.get("source_version"))
+                if metadata.get("source_version")
+                else src.source_version
+            )
             src.quality_score = quality
             src.metadata_json = metadata
 
@@ -112,4 +126,3 @@ class MemoryService:
 
     async def stats(self, db: AsyncSession) -> dict:
         return await self.retrieval.stats(db)
-

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +29,7 @@ def _idle_payload() -> dict[str, Any]:
         "message": "idle",
         "log_line": None,
         "done": True,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -54,7 +54,9 @@ def recover_progress_after_restart() -> None:
         reset_progress_idle()
 
 
-def set_progress(percent: float, message: str, log_line: str | None = None, done: bool = False) -> None:
+def set_progress(
+    percent: float, message: str, log_line: str | None = None, done: bool = False
+) -> None:
     path = _path()
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -62,7 +64,7 @@ def set_progress(percent: float, message: str, log_line: str | None = None, done
         "message": message,
         "log_line": log_line,
         "done": done,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -85,8 +87,8 @@ def get_progress() -> dict[str, Any]:
             try:
                 ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
                 if ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
-                age = (datetime.now(timezone.utc) - ts).total_seconds()
+                    ts = ts.replace(tzinfo=UTC)
+                age = (datetime.now(UTC) - ts).total_seconds()
                 stale = age > _STALE_AFTER_SEC
             except ValueError:
                 stale = True

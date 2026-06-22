@@ -33,9 +33,7 @@ class InflationService:
         transform: 'raw', 'mom' (month-over-month %), 'yoy' (year-over-year %)
         """
         # Exact match first, fallback to partial
-        result = await self.db.execute(
-            select(Indicator).where(Indicator.name == indicator_name)
-        )
+        result = await self.db.execute(select(Indicator).where(Indicator.name == indicator_name))
         indicator = result.scalar_one_or_none()
         if not indicator:
             result = await self.db.execute(
@@ -62,7 +60,8 @@ class InflationService:
             final_cutoff = date.today() - timedelta(days=days)
             return [
                 {"date": r.date.isoformat(), "value": r.value}
-                for r in rows if r.date >= final_cutoff
+                for r in rows
+                if r.date >= final_cutoff
             ]
 
         values = [(r.date, r.value) for r in rows]
@@ -83,7 +82,11 @@ class InflationService:
             for d, v in values:
                 if d < final_cutoff:
                     continue
-                year_ago = d.replace(year=d.year - 1) if d.month != 2 or d.day != 29 else d.replace(year=d.year - 1, day=28)
+                year_ago = (
+                    d.replace(year=d.year - 1)
+                    if d.month != 2 or d.day != 29
+                    else d.replace(year=d.year - 1, day=28)
+                )
                 # Find closest date within 45 days of year_ago
                 best_match = None
                 best_diff = timedelta(days=46)
@@ -105,17 +108,17 @@ class InflationService:
             series = await self.get_inflation_series(short_name, "yoy", 365)
             if series:
                 latest = series[-1]
-                result.append({
-                    "name": short_name,
-                    "full_name": full_name,
-                    "yoy": latest["value"],
-                    "date": latest["date"],
-                })
+                result.append(
+                    {
+                        "name": short_name,
+                        "full_name": full_name,
+                        "yoy": latest["value"],
+                        "date": latest["date"],
+                    }
+                )
         return result
 
-    async def get_inflation_dashboard(
-        self, days: int = 365 * 5
-    ) -> dict:
+    async def get_inflation_dashboard(self, days: int = 365 * 5) -> dict:
         """All 9 inflation series + SPX for the dashboard."""
         cutoff = date.today() - timedelta(days=days)
         spx_q = (
@@ -127,10 +130,7 @@ class InflationService:
             .order_by(MarketData.date)
         )
         spx_rows = (await self.db.execute(spx_q)).all()
-        spx = [
-            {"date": r.date.isoformat(), "value": r.value}
-            for r in spx_rows
-        ]
+        spx = [{"date": r.date.isoformat(), "value": r.value} for r in spx_rows]
 
         # Breakeven inflation rates from YieldData table
         be5_q = (
@@ -235,24 +235,15 @@ class InflationService:
 
         return {
             "spx": spx,
-            "cpi_yoy": await self.get_inflation_series(
-                "CPI", "yoy", days),
-            "cpi_core_yoy": await self.get_inflation_series(
-                "Core CPI", "yoy", days),
-            "cpi_mom": await self.get_inflation_series(
-                "CPI", "mom", days),
-            "pce_yoy": await self.get_inflation_series(
-                "PCE", "yoy", days),
-            "pce_core_yoy": await self.get_inflation_series(
-                "Core PCE", "yoy", days),
-            "pce_mom": await self.get_inflation_series(
-                "PCE", "mom", days),
-            "ppi_yoy": await self.get_inflation_series(
-                "PPI", "yoy", days),
-            "ppi_core_yoy": await self.get_inflation_series(
-                "Core PPI", "yoy", days),
-            "ppi_mom": await self.get_inflation_series(
-                "PPI", "mom", days),
+            "cpi_yoy": await self.get_inflation_series("CPI", "yoy", days),
+            "cpi_core_yoy": await self.get_inflation_series("Core CPI", "yoy", days),
+            "cpi_mom": await self.get_inflation_series("CPI", "mom", days),
+            "pce_yoy": await self.get_inflation_series("PCE", "yoy", days),
+            "pce_core_yoy": await self.get_inflation_series("Core PCE", "yoy", days),
+            "pce_mom": await self.get_inflation_series("PCE", "mom", days),
+            "ppi_yoy": await self.get_inflation_series("PPI", "yoy", days),
+            "ppi_core_yoy": await self.get_inflation_series("Core PPI", "yoy", days),
+            "ppi_mom": await self.get_inflation_series("PPI", "mom", days),
             # Inflation expectations & sticky
             "mich": mich,
             "t5yie": t5yie,

@@ -46,8 +46,8 @@ def rule_probs_soft(
     s_neg = 1.0 - s_pos
     s_tight = 1.0 - s_easy
     raw = [
-        s_pos * s_easy,   # Q1
-        s_neg * s_easy,   # Q2
+        s_pos * s_easy,  # Q1
+        s_neg * s_easy,  # Q2
         s_pos * s_tight,  # Q3
         s_neg * s_tight,  # Q4
     ]

@@ -64,4 +64,3 @@ class AgentRunResponse(BaseModel):
 class MemorySearchResponse(BaseModel):
     query: str
     hits: list[dict]
-

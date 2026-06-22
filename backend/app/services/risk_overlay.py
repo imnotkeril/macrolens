@@ -9,7 +9,9 @@ def build_risk_overlay(
     data_quality_score: float = 0.85,
 ) -> dict:
     anomaly_penalty = min(0.5, max(0.0, anomaly_score - anomaly_threshold))
-    confidence = max(0.0, min(1.0, (0.6 * regime_confidence + 0.4 * ml2_confidence) - anomaly_penalty))
+    confidence = max(
+        0.0, min(1.0, (0.6 * regime_confidence + 0.4 * ml2_confidence) - anomaly_penalty)
+    )
     uncertainty = 1.0 - confidence
     regime_stability_score = max(0.0, min(1.0, 1.0 - anomaly_score))
     no_trade = confidence < 0.45 or anomaly_score > (anomaly_threshold * 1.2)
@@ -36,4 +38,3 @@ def build_risk_overlay(
             "max_single_factor_tilt": 0.2 if no_trade else 0.35,
         },
     }
-

@@ -35,7 +35,9 @@ class MacroForecastRow(BaseModel):
 
 class StressZContributor(BaseModel):
     symbol: str
-    z_abs: float = Field(description="|z| of latest monthly return vs trailing months for this ETF.")
+    z_abs: float = Field(
+        description="|z| of latest monthly return vs trailing months for this ETF."
+    )
 
 
 class StressBlock(BaseModel):

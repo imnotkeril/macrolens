@@ -389,10 +389,10 @@ REGIME_SERIES = {
 
 MACRO_OVERVIEW_SERIES = {
     "CNLEI": "CHNLOLITONOSTSAM",  # China OECD Composite Leading Indicator
-    "ECBBS": "ECBASSETSW",        # ECB Total Assets (weekly, EUR millions)
-    "SOFR": "SOFR",               # Secured Overnight Financing Rate (daily, %)
-    "EFFR_DAILY": "DFF",          # Effective Federal Funds Rate (daily, %)
-    "MICH": "MICH",               # Michigan 5Y Inflation Expectations (monthly, %)
+    "ECBBS": "ECBASSETSW",  # ECB Total Assets (weekly, EUR millions)
+    "SOFR": "SOFR",  # Secured Overnight Financing Rate (daily, %)
+    "EFFR_DAILY": "DFF",  # Effective Federal Funds Rate (daily, %)
+    "MICH": "MICH",  # Michigan 5Y Inflation Expectations (monthly, %)
     "STICKY_CPI": "CORESTICKM159SFRBATL",  # Sticky CPI ex F&E YoY (Atlanta Fed)
 }
 
@@ -562,9 +562,7 @@ class FredClient:
                 logger.warning("Could not fetch FX series %s (%s)", name, sid)
         return result
 
-    def get_macro_overview_data(
-        self, start: str | None = None
-    ) -> dict[str, pd.Series]:
+    def get_macro_overview_data(self, start: str | None = None) -> dict[str, pd.Series]:
         result = {}
         for name, sid in MACRO_OVERVIEW_SERIES.items():
             try:
@@ -572,6 +570,7 @@ class FredClient:
             except Exception:
                 logger.warning(
                     "Could not fetch macro overview series %s (%s)",
-                    name, sid,
+                    name,
+                    sid,
                 )
         return result

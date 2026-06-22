@@ -1,13 +1,18 @@
 """Seed the indicators table with all 30 tracked indicators."""
+
 import asyncio
 import logging
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.database import engine, Base, async_session
+from app.database import Base, async_session, engine
 from app.models.indicator import (
-    Indicator, IndicatorCategory, IndicatorType, Frequency, Importance,
+    Frequency,
+    Importance,
+    Indicator,
+    IndicatorCategory,
+    IndicatorType,
 )
 from app.services.fred_client import INDICATOR_SERIES
 
@@ -47,26 +52,30 @@ async def seed_indicators():
 
     async with async_session() as db:
         for name, meta in INDICATOR_SERIES.items():
-            stmt = pg_insert(Indicator).values(
-                name=name,
-                fred_series_id=meta["fred_id"],
-                category=CATEGORY_MAP[meta["category"]],
-                importance=IMPORTANCE_MAP[meta["importance"]],
-                indicator_type=TYPE_MAP[meta["type"]],
-                frequency=FREQ_MAP[meta["frequency"]],
-                source=meta["source"],
-                unit=meta.get("unit"),
-            ).on_conflict_do_update(
-                index_elements=["fred_series_id"],
-                set_={
-                    "name": name,
-                    "category": CATEGORY_MAP[meta["category"]],
-                    "importance": IMPORTANCE_MAP[meta["importance"]],
-                    "indicator_type": TYPE_MAP[meta["type"]],
-                    "frequency": FREQ_MAP[meta["frequency"]],
-                    "source": meta["source"],
-                    "unit": meta.get("unit"),
-                },
+            stmt = (
+                pg_insert(Indicator)
+                .values(
+                    name=name,
+                    fred_series_id=meta["fred_id"],
+                    category=CATEGORY_MAP[meta["category"]],
+                    importance=IMPORTANCE_MAP[meta["importance"]],
+                    indicator_type=TYPE_MAP[meta["type"]],
+                    frequency=FREQ_MAP[meta["frequency"]],
+                    source=meta["source"],
+                    unit=meta.get("unit"),
+                )
+                .on_conflict_do_update(
+                    index_elements=["fred_series_id"],
+                    set_={
+                        "name": name,
+                        "category": CATEGORY_MAP[meta["category"]],
+                        "importance": IMPORTANCE_MAP[meta["importance"]],
+                        "indicator_type": TYPE_MAP[meta["type"]],
+                        "frequency": FREQ_MAP[meta["frequency"]],
+                        "source": meta["source"],
+                        "unit": meta.get("unit"),
+                    },
+                )
             )
             await db.execute(stmt)
 

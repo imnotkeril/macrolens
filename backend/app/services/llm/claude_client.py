@@ -1,4 +1,5 @@
 """Anthropic Claude client (sync API wrapped for async callers)."""
+
 from __future__ import annotations
 
 import asyncio

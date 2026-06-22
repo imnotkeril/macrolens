@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
 
 from app.database import get_db
-from app.models.indicator import Indicator, IndicatorValue, IndicatorCategory
+from app.models.indicator import Indicator, IndicatorCategory, IndicatorValue
 from app.schemas.indicator import (
-    IndicatorResponse,
-    IndicatorWithLatest,
-    IndicatorValueResponse,
     CategoryScore,
+    IndicatorResponse,
+    IndicatorValueResponse,
+    IndicatorWithLatest,
     KpiIndicatorsBundle,
 )
 from app.services.indicator_analyzer import IndicatorAnalyzer
@@ -30,13 +30,17 @@ async def _latest_values_by_indicator_ids(
     if not ids:
         return {}
     latest_rows = (
-        await db.execute(
-            select(IndicatorValue)
-            .where(IndicatorValue.indicator_id.in_(ids))
-            .distinct(IndicatorValue.indicator_id)
-            .order_by(IndicatorValue.indicator_id, desc(IndicatorValue.date))
+        (
+            await db.execute(
+                select(IndicatorValue)
+                .where(IndicatorValue.indicator_id.in_(ids))
+                .distinct(IndicatorValue.indicator_id)
+                .order_by(IndicatorValue.indicator_id, desc(IndicatorValue.date))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return {row.indicator_id: row for row in latest_rows}
 
 
@@ -151,15 +155,12 @@ async def get_inflation_dashboard(
 
 
 @router.get("/{indicator_id}", response_model=IndicatorResponse)
-async def get_indicator(
-    indicator_id: int, db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(
-        select(Indicator).where(Indicator.id == indicator_id)
-    )
+async def get_indicator(indicator_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Indicator).where(Indicator.id == indicator_id))
     indicator = result.scalar_one_or_none()
     if not indicator:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Indicator not found")
     return indicator
 

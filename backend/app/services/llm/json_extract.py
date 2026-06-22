@@ -1,4 +1,5 @@
 """Extract a single JSON object from LLM output (markdown fences tolerant)."""
+
 from __future__ import annotations
 
 import json

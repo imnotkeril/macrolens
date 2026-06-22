@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from app.schemas.navigator import CrossAssetSignal, TradingState
 
-
 _STATE_EXPOSURE = {
     "risk_on": 1.0,
     "neutral": 0.7,
@@ -85,4 +84,3 @@ def build_trading_state(signals: list[CrossAssetSignal]) -> TradingState:
         score=round(composite_score, 3),
         reason_codes=reason_codes[:3],
     )
-

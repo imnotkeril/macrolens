@@ -9,7 +9,9 @@ from typing import Any
 import yaml
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
-EXPECTATIONS_PATH = _BACKEND_ROOT / "config" / "navigator" / "quadrant_yield_curve_expectations.yaml"
+EXPECTATIONS_PATH = (
+    _BACKEND_ROOT / "config" / "navigator" / "quadrant_yield_curve_expectations.yaml"
+)
 
 
 @lru_cache

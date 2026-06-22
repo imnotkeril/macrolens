@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.intelligence import MemoryDocument, MemoryPipelineRun
 from app.schemas.intelligence import MemorySearchResponse
-from app.services.memory_service import MemoryService
 from app.services.memory_ingestion_service import MemoryIngestionService
+from app.services.memory_service import MemoryService
 
 router = APIRouter()
 
@@ -160,7 +160,15 @@ async def memory_admin_overview(db: AsyncSession = Depends(get_db)):
     ).all()
     by_source = {src: int(cnt) for src, cnt in source_rows}
 
-    docs = (await db.execute(select(MemoryDocument).order_by(MemoryDocument.created_at.desc()).limit(5000))).scalars().all()
+    docs = (
+        (
+            await db.execute(
+                select(MemoryDocument).order_by(MemoryDocument.created_at.desc()).limit(5000)
+            )
+        )
+        .scalars()
+        .all()
+    )
     coverage: dict[str, dict[str, str]] = {}
     for d in docs:
         as_of = (d.metadata_json or {}).get("as_of_date")
@@ -173,7 +181,15 @@ async def memory_admin_overview(db: AsyncSession = Depends(get_db)):
         coverage[d.source]["min_as_of"] = min(current["min_as_of"], as_of)
         coverage[d.source]["max_as_of"] = max(current["max_as_of"], as_of)
 
-    runs = (await db.execute(select(MemoryPipelineRun).order_by(MemoryPipelineRun.started_at.desc()).limit(20))).scalars().all()
+    runs = (
+        (
+            await db.execute(
+                select(MemoryPipelineRun).order_by(MemoryPipelineRun.started_at.desc()).limit(20)
+            )
+        )
+        .scalars()
+        .all()
+    )
     recent_runs = [
         {
             "pipeline_name": r.pipeline_name,
@@ -197,7 +213,12 @@ async def memory_admin_samples(
 ):
     q = select(MemoryDocument).order_by(MemoryDocument.created_at.desc()).limit(limit)
     if source:
-        q = select(MemoryDocument).where(MemoryDocument.source == source).order_by(MemoryDocument.created_at.desc()).limit(limit)
+        q = (
+            select(MemoryDocument)
+            .where(MemoryDocument.source == source)
+            .order_by(MemoryDocument.created_at.desc())
+            .limit(limit)
+        )
     docs = (await db.execute(q)).scalars().all()
     return {
         "items": [
@@ -229,4 +250,3 @@ async def memory_context(
         "domain": domain,
         "hits": hits,
     }
-

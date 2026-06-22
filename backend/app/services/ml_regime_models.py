@@ -3,12 +3,13 @@ ML Regime Models: Markov transition matrix, XGBoost classifier, Rule baseline, e
 
 Quadrant order: Q1=0, Q2=1, Q3=2, Q4=3 (GOLDILOCKS, REFLATION, OVERHEATING, STAGFLATION).
 """
+
 from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
@@ -16,14 +17,14 @@ import xgboost as xgb
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
-    log_loss,
     confusion_matrix,
+    log_loss,
 )
 
 from app.services.ml_dataset_builder import (
-    QUADRANT_TO_ID,
-    ID_TO_QUADRANT,
     FEATURE_COLUMNS,
+    ID_TO_QUADRANT,
+    QUADRANT_TO_ID,
     _determine_quadrant,
 )
 from app.services.progress_store import set_train_progress
@@ -51,7 +52,7 @@ class MarkovModel:
         # (4, 4) row = from, col = to
         self.transition_: np.ndarray | None = None
 
-    def fit(self, y: np.ndarray) -> "MarkovModel":
+    def fit(self, y: np.ndarray) -> MarkovModel:
         # y: 1d array of quadrant_id (0..3)
         counts = np.zeros((N_CLASSES, N_CLASSES))
         for i in range(len(y) - 1):
@@ -102,7 +103,7 @@ class XGBoostModel:
         y: np.ndarray,
         X_val: pd.DataFrame | None = None,
         y_val: np.ndarray | None = None,
-    ) -> "XGBoostModel":
+    ) -> XGBoostModel:
         for c in self.feature_cols_:
             if c not in X.columns:
                 X = X.copy()
@@ -150,6 +151,7 @@ def compute_ensemble_weights(
     y_val: np.ndarray,
 ) -> list[float]:
     """Inverse log-loss weights on validation; normalize to sum to 1."""
+
     def logloss(probs_list: list[list[float]], y: np.ndarray) -> float:
         if not probs_list or len(probs_list) != len(y):
             return 1e9
@@ -174,7 +176,11 @@ def run_train_pipeline(
     Train Markov, XGBoost, ensemble weights; save artifacts and metrics.
     Reports progress 50–100% via progress_store.
     """
-    set_train_progress(percent=50.0, message="Splitting train/val/test…", log_line="[50%] Splitting train/val/test…")
+    set_train_progress(
+        percent=50.0,
+        message="Splitting train/val/test…",
+        log_line="[50%] Splitting train/val/test…",
+    )
     train, val, test = train_val_test_split(df, train_end, val_end)
     if train.empty or test.empty:
         return {"error": "Insufficient data for train or test", "trained": False}
@@ -187,14 +193,20 @@ def run_train_pipeline(
     markov = MarkovModel(alpha=0.1)
     markov.fit(y_train)
 
-    set_train_progress(percent=65.0, message="Training XGBoost…", log_line="[65%] Training XGBoost…")
+    set_train_progress(
+        percent=65.0, message="Training XGBoost…", log_line="[65%] Training XGBoost…"
+    )
     xgb_model = XGBoostModel(random_state=random_seed)
     if not val.empty:
         xgb_model.fit(train, y_train, val, y_val)
     else:
         xgb_model.fit(train, y_train)
 
-    set_train_progress(percent=85.0, message="Computing ensemble & metrics…", log_line="[85%] Computing ensemble & metrics…")
+    set_train_progress(
+        percent=85.0,
+        message="Computing ensemble & metrics…",
+        log_line="[85%] Computing ensemble & metrics…",
+    )
     # Validation probs for ensemble weights
     val_probs_rule = []
     if not val.empty:
@@ -204,7 +216,8 @@ def run_train_pipeline(
             )
     val_probs_markov = (
         [markov.predict_proba_one(int(y_val[i])) for i in range(len(y_val))]
-        if y_val is not None and len(y_val) else []
+        if y_val is not None and len(y_val)
+        else []
     )
     if not val.empty:
         val_probs_xgb = xgb_model.predict_proba(val).tolist()
@@ -212,9 +225,7 @@ def run_train_pipeline(
         val_probs_xgb = []
 
     if val_probs_rule and val_probs_markov and val_probs_xgb and len(y_val):
-        weights = compute_ensemble_weights(
-            val_probs_rule, val_probs_markov, val_probs_xgb, y_val
-        )
+        weights = compute_ensemble_weights(val_probs_rule, val_probs_markov, val_probs_xgb, y_val)
     else:
         weights = [1.0 / 3.0] * 3
 
@@ -224,23 +235,17 @@ def run_train_pipeline(
         for _, row in test.iterrows()
     ]
     test_probs_markov = [
-        markov.predict_proba_sequence(y_test[:i].tolist())
-        for i in range(len(y_test))
+        markov.predict_proba_sequence(y_test[:i].tolist()) for i in range(len(y_test))
     ]
     test_probs_xgb = xgb_model.predict_proba(test).tolist()
 
     def ensemble_probs(pr: list[float], pm: list[float], px: list[float]) -> list[float]:
-        e = [
-            weights[0] * pr[j] + weights[1] * pm[j] + weights[2] * px[j]
-            for j in range(N_CLASSES)
-        ]
+        e = [weights[0] * pr[j] + weights[1] * pm[j] + weights[2] * px[j] for j in range(N_CLASSES)]
         s = sum(e)
         return [x / s if s > 0 else 0.25 for x in e]
 
     test_probs_ensemble = [
-        ensemble_probs(
-            test_probs_rule[i], test_probs_markov[i], test_probs_xgb[i]
-        )
+        ensemble_probs(test_probs_rule[i], test_probs_markov[i], test_probs_xgb[i])
         for i in range(len(test_probs_rule))
     ]
 
@@ -252,12 +257,14 @@ def run_train_pipeline(
     cm = confusion_matrix(y_test, pred_ensemble).tolist()
     wf_acc = _walk_forward_accuracy(test_probs_ensemble, y_test)
 
-    set_train_progress(percent=92.0, message="Saving artifacts…", log_line="[92%] Saving artifacts…")
+    set_train_progress(
+        percent=92.0, message="Saving artifacts…", log_line="[92%] Saving artifacts…"
+    )
     # Save artifacts
     art_path = Path(artifacts_dir)
     art_path.mkdir(parents=True, exist_ok=True)
     meta = {
-        "trained_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "trained_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "train_end": train_end,
         "val_end": val_end,
         "train_rows": int(len(train)),
@@ -267,7 +274,9 @@ def run_train_pipeline(
         "test_end": test["date"].max() if not test.empty else None,
         "feature_columns": FEATURE_COLUMNS,
         "ensemble_weights": {
-            "rule": weights[0], "markov": weights[1], "xgboost": weights[2],
+            "rule": weights[0],
+            "markov": weights[1],
+            "xgboost": weights[2],
         },
         "metrics": {
             "test_accuracy": float(acc),
@@ -286,16 +295,18 @@ def run_train_pipeline(
     for i in range(len(test)):
         q_act = ID_TO_QUADRANT.get(int(y_test[i]), "Q1_GOLDILOCKS")
         q_ens = ID_TO_QUADRANT.get(int(pred_ensemble[i]), "Q1_GOLDILOCKS")
-        backtest_rows.append({
-            "date": test.iloc[i]["date"],
-            "quadrant_actual": q_act,
-            "quadrant_ensemble": q_ens,
-            "match": bool(y_test[i] == pred_ensemble[i]),
-            "p_q1": test_probs_ensemble[i][0],
-            "p_q2": test_probs_ensemble[i][1],
-            "p_q3": test_probs_ensemble[i][2],
-            "p_q4": test_probs_ensemble[i][3],
-        })
+        backtest_rows.append(
+            {
+                "date": test.iloc[i]["date"],
+                "quadrant_actual": q_act,
+                "quadrant_ensemble": q_ens,
+                "match": bool(y_test[i] == pred_ensemble[i]),
+                "p_q1": test_probs_ensemble[i][0],
+                "p_q2": test_probs_ensemble[i][1],
+                "p_q3": test_probs_ensemble[i][2],
+                "p_q4": test_probs_ensemble[i][3],
+            }
+        )
     with open(art_path / "backtest.json", "w") as f:
         json.dump(backtest_rows, f, indent=0)
     logger.info("ML artifacts saved to %s", art_path)
