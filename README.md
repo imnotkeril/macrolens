@@ -10,7 +10,6 @@
   <a href="frontend/ARCHITECTURE.md">Frontend architecture</a>
 </p>
 
-<<<<<<< HEAD
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" alt="FastAPI">
@@ -47,8 +46,6 @@ MacroLens combines economic indicators, Fed policy, yield curve dynamics, inflat
 
 Add screenshots under each heading after capturing the current UI.
 
-=======
->>>>>>> eea6e851487e6ba2e0faa05ee3e50292993bd3d4
 ### Dashboard
 
 <img width="2269" height="1264" alt="Снимок экрана 2026-05-31 060914" src="https://github.com/user-attachments/assets/3094f32d-4586-47ab-af8a-b51d3307238b" />
