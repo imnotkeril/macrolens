@@ -3,7 +3,7 @@
 **Professional macro trading terminal** for regime analysis, Fed policy, yield curves, inflation, cross-asset confirmation, Forecast Lab diagnostics, and report-ready market intelligence.
 
 <p align="center">
-  <a href="https://macrolens-terminal.vercel.app/"><strong>Live app</strong></a>
+  <a href="https://macrolenz.vercel.app/dashboard"><strong>Live app</strong></a>
   &nbsp;·&nbsp;
   <a href="DEPLOY.md">Deploy</a>
   &nbsp;·&nbsp;
