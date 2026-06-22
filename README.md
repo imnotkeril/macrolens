@@ -3,20 +3,30 @@
 **Professional macro trading terminal** for regime analysis, Fed policy, yield curves, inflation, cross-asset confirmation, Forecast Lab diagnostics, and report-ready market intelligence.
 
 <p align="center">
-  <a href="#run-with-docker"><strong>Run with Docker</strong></a>
-  &nbsp;|&nbsp;
+  <a href="https://frontend-olive-two-44.vercel.app/"><strong>Live app</strong></a>
+  &nbsp;·&nbsp;
+  <a href="DEPLOY.md">Deploy</a>
+  &nbsp;·&nbsp;
   <a href="USER_GUIDE.md">User guide</a>
-  &nbsp;|&nbsp;
+  &nbsp;·&nbsp;
   <a href="frontend/ARCHITECTURE.md">Frontend architecture</a>
 </p>
 
 <p align="center">
+  <strong>Production:</strong>
+  web <a href="https://frontend-olive-two-44.vercel.app/">Vercel</a>
+  · API <a href="https://imnotkeril-macrolens-api.hf.space/docs">Hugging Face Spaces</a>
+  · DB Supabase Postgres
+</p>
+
+<p align="center">
+  <a href="https://github.com/imnotkeril/macrolens/actions/workflows/ci.yml"><img src="https://github.com/imnotkeril/macrolens/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Proprietary-red.svg" alt="License: Proprietary"></a>
   <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white" alt="Python 3.12">
-  <img src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white" alt="Next.js 14">
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white" alt="Next.js 14"></a>
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white" alt="Redis">
 </p>
 
 MacroLens combines economic indicators, Fed policy, yield curve dynamics, inflation, market breadth, cross-asset signals, AI-assisted context, and Forecast Lab model artifacts into a signal-first dashboard for macro trading decisions.
