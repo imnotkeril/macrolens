@@ -11,9 +11,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Build deps for scientific wheels are already prebuilt; only need a small runtime libgomp for xgboost/lightgbm.
+# libgomp1 for xgboost/lightgbm; ca-certificates so TLS to managed Postgres (Supabase) verifies.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgomp1 \
+    && apt-get install -y --no-install-recommends libgomp1 ca-certificates \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
