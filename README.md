@@ -393,41 +393,9 @@ Current verification status:
 ## Documentation
 
 - **[USER_GUIDE.md](USER_GUIDE.md)**: user workflows, page guide, data notes, and troubleshooting
-- **[frontend/ARCHITECTURE.md](frontend/ARCHITECTURE.md)**: frontend module rules and migration strategy
-- **[DESIGN.md](DESIGN.md)**: visual identity, tokens, layout, typography, and component guidelines
-- **docs/**: internal research/specification material, ignored from publication by `.gitignore`
 
 ---
 
-## Roadmap
-
-### Done
-
-- FastAPI backend with PostgreSQL, Redis, SQLAlchemy, Pydantic, scheduler, and modular routers
-- Next.js dashboard shell with production routes and compatibility redirects
-- Dashboard, Radar, Macro Sentiment, Fed Policy, Yield Curve, Inflation, Analysis, Forecast Lab, Calendar, and Reports pages
-- Forecast Lab artifact loading, summary panels, diagnostics, and training-progress integration
-- Backend pytest coverage for Forecast Lab, schema, LLM JSON extraction, retrieval, and navigator confidence logic
-- Frontend lint, typecheck, and production build gates passing
-- README, user guide, and frontend architecture guide refreshed for the current product
-- GitHub Actions CI (backend pytest + frontend lint/typecheck/build)
-- Production deployment profile: prod Dockerfiles, `docker-compose.prod.yml`, and a Vercel + Hugging Face Spaces runbook ([DEPLOY.md](DEPLOY.md))
-- Pydantic settings modernized to `SettingsConfigDict` (Pydantic v2/v3-safe)
-- Env-driven CORS and baseline security headers on the API
-
-### In Progress
-
-- Calendar ingestion maturity and replacement of remaining demo-backed calendar screens
-- Forecast Lab artifact lifecycle polish and active-bundle management
-- Broader automated frontend coverage for route smoke tests and visual regressions
-
-### Planned
-
-- Coverage reporting in CI
-- Report export polish and screenshot-driven documentation updates
-- Stronger data freshness monitoring and source-level observability
-
----
 
 ## Operational Notes
 
