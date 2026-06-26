@@ -139,6 +139,24 @@ async def _run_refresh_locked() -> None:
         collector = DataCollector()
         errors: list[str] = []
 
+        # Fail loudly if the FRED key is missing: without it every FRED-backed collector
+        # silently fetches nothing, yet each step still reports "completed". Surface it up
+        # front so the job ends as completed_with_errors instead of a misleading success.
+        if not get_settings().fred_api_key:
+            msg = (
+                "FRED_API_KEY is not set; indicators, yields, Fed and regime data cannot be "
+                "loaded. Set it in the deployment secrets and re-run."
+            )
+            logger.error(msg)
+            errors.append(f"config: {msg}")
+            set_refresh_progress(
+                phase="config_error",
+                percent=0.0,
+                message="FRED_API_KEY missing — FRED data will be empty.",
+                log_line=f"[0%] {msg}",
+                error=msg,
+            )
+
         # Ensure indicators table is seeded (Economic Indicators + inflation data)
         try:
             async with async_session() as db:

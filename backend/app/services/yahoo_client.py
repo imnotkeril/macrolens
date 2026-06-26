@@ -126,7 +126,9 @@ class YahooClient:
         start = start or (date.today() - timedelta(days=365 * self._years)).isoformat()
         try:
             ticker = yf.Ticker(symbol)
-            df = ticker.history(start=start, auto_adjust=True)
+            # Bound each request so a hung/blocked Yahoo endpoint (common on cloud IPs like
+            # HF Spaces) can't stall the whole sequential crawl indefinitely.
+            df = ticker.history(start=start, auto_adjust=True, timeout=15)
             if df.empty:
                 raise ValueError(f"No data returned for {symbol}")
             series = df["Close"].dropna()
