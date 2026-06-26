@@ -192,19 +192,32 @@ class DataCollector:
 
             await db.commit()
 
-        await self._load_historical_fed_data()
-        await self._load_historical_balance_sheet()
-        await self._load_historical_yield_data()
-        await self._load_historical_market_data()
-        await self._load_historical_fx_data()
-        await self._load_historical_sector_data()
-        await self._load_historical_factor_data()
-        await self._load_historical_index_data()
-        await self._load_historical_extra_market_data()
-        await self._load_historical_breadth_data()
-        await self._load_historical_macro_etf_data()
-        await self._load_historical_macro_fred_data()
-        await self._load_historical_regime_data()
+        # Run FRED-backed loads first so the dashboard-critical macro data (fed, yields,
+        # regime) lands fast and is never gated behind the slow Yahoo crawl. On cloud hosts
+        # (e.g. HF Spaces) Yahoo is frequently rate-limited/blocked, so those calls can stall
+        # for minutes; isolating each load in try/except keeps one hang from killing the rest.
+        fred_loaders = [
+            ("fed", self._load_historical_fed_data),
+            ("balance_sheet", self._load_historical_balance_sheet),
+            ("yield", self._load_historical_yield_data),
+            ("macro_fred", self._load_historical_macro_fred_data),
+            ("regime", self._load_historical_regime_data),
+        ]
+        yahoo_loaders = [
+            ("market", self._load_historical_market_data),
+            ("fx", self._load_historical_fx_data),
+            ("sector", self._load_historical_sector_data),
+            ("factor", self._load_historical_factor_data),
+            ("index", self._load_historical_index_data),
+            ("extra_market", self._load_historical_extra_market_data),
+            ("breadth", self._load_historical_breadth_data),
+            ("macro_etf", self._load_historical_macro_etf_data),
+        ]
+        for name, loader in (*fred_loaders, *yahoo_loaders):
+            try:
+                await loader()
+            except Exception:
+                logger.exception("Historical load step '%s' failed; continuing", name)
         logger.info("Historical data load complete")
 
     async def _bulk_insert_values(self, db, indicator_id: int, series: pd.Series):
