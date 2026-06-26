@@ -131,6 +131,64 @@ EXPECTED_RETURNS = {
 class CycleEngine:
     def __init__(self, db: AsyncSession):
         self.db = db
+        # Request-scoped caches of full (date, value) series, keyed by symbol/name/maturity.
+        # get_history() recomputes the cycle score for every month and previously re-queried
+        # ~10y of rows per variable per month (≈1000 range scans for 60 months → timeouts).
+        # Loading each series once and slicing in memory makes it a handful of queries total.
+        self._mkt_cache: dict[str, list[tuple[date, float]]] = {}
+        self._ind_cache: dict[str, list[tuple[date, float]]] = {}
+        self._yld_cache: dict[str, list[tuple[date, float]]] = {}
+
+    async def _full_market(self, symbol: str) -> list[tuple[date, float]]:
+        if symbol not in self._mkt_cache:
+            q = (
+                select(MarketData.date, MarketData.value)
+                .where(MarketData.symbol == symbol)
+                .order_by(MarketData.date)
+            )
+            self._mkt_cache[symbol] = [
+                (r[0], r[1]) for r in (await self.db.execute(q)).all() if r[1] is not None
+            ]
+        return self._mkt_cache[symbol]
+
+    async def _full_indicator(self, name: str) -> list[tuple[date, float]]:
+        if name not in self._ind_cache:
+            q = (
+                select(IndicatorValue.date, IndicatorValue.value)
+                .join(Indicator)
+                .where(Indicator.name == name)
+                .order_by(IndicatorValue.date)
+            )
+            self._ind_cache[name] = [
+                (r[0], r[1]) for r in (await self.db.execute(q)).all() if r[1] is not None
+            ]
+        return self._ind_cache[name]
+
+    async def _full_yield(self, maturity: str) -> list[tuple[date, float]]:
+        if maturity not in self._yld_cache:
+            q = (
+                select(YieldData.date, YieldData.nominal_yield)
+                .where(YieldData.maturity == maturity)
+                .order_by(YieldData.date)
+            )
+            self._yld_cache[maturity] = [
+                (r[0], r[1]) for r in (await self.db.execute(q)).all() if r[1] is not None
+            ]
+        return self._yld_cache[maturity]
+
+    @staticmethod
+    def _latest_before(series: list[tuple[date, float]], target: date) -> float | None:
+        val = None
+        for d, v in series:
+            if d <= target:
+                val = v
+            else:
+                break
+        return val
+
+    @staticmethod
+    def _window(series: list[tuple[date, float]], lo: date, hi: date) -> list[float]:
+        return [v for d, v in series if lo <= d <= hi]
 
     # ================================================================
     # PUBLIC API
@@ -282,13 +340,7 @@ class CycleEngine:
         return (await self.db.execute(q)).scalar_one_or_none()
 
     async def _get_market_at(self, symbol: str, target: date) -> float | None:
-        q = (
-            select(MarketData.value)
-            .where(MarketData.symbol == symbol, MarketData.date <= target)
-            .order_by(desc(MarketData.date))
-            .limit(1)
-        )
-        return (await self.db.execute(q)).scalar_one_or_none()
+        return self._latest_before(await self._full_market(symbol), target)
 
     async def _get_market_series(self, symbol: str, days: int = 365 * 10) -> list[float]:
         since = date.today() - timedelta(days=days)
@@ -303,18 +355,7 @@ class CycleEngine:
     async def _get_market_series_before(
         self, symbol: str, target: date, days: int = 365 * 10
     ) -> list[float]:
-        since = target - timedelta(days=days)
-        q = (
-            select(MarketData.value)
-            .where(
-                MarketData.symbol == symbol,
-                MarketData.date >= since,
-                MarketData.date <= target,
-            )
-            .order_by(MarketData.date)
-        )
-        rows = (await self.db.execute(q)).all()
-        return [r[0] for r in rows]
+        return self._window(await self._full_market(symbol), target - timedelta(days=days), target)
 
     async def _get_market_pct_change(self, symbol: str, days: int) -> float | None:
         latest = await self._get_market_latest(symbol)
@@ -342,14 +383,7 @@ class CycleEngine:
         return (await self.db.execute(q)).scalar_one_or_none()
 
     async def _get_indicator_at(self, name: str, target: date) -> float | None:
-        q = (
-            select(IndicatorValue.value)
-            .join(Indicator)
-            .where(Indicator.name == name, IndicatorValue.date <= target)
-            .order_by(desc(IndicatorValue.date))
-            .limit(1)
-        )
-        return (await self.db.execute(q)).scalar_one_or_none()
+        return self._latest_before(await self._full_indicator(name), target)
 
     async def _get_indicator_series(self, name: str, days: int = 365 * 10) -> list[float]:
         since = date.today() - timedelta(days=days)
@@ -365,19 +399,7 @@ class CycleEngine:
     async def _get_indicator_series_before(
         self, name: str, target: date, days: int = 365 * 10
     ) -> list[float]:
-        since = target - timedelta(days=days)
-        q = (
-            select(IndicatorValue.value)
-            .join(Indicator)
-            .where(
-                Indicator.name == name,
-                IndicatorValue.date >= since,
-                IndicatorValue.date <= target,
-            )
-            .order_by(IndicatorValue.date)
-        )
-        rows = (await self.db.execute(q)).all()
-        return [r[0] for r in rows]
+        return self._window(await self._full_indicator(name), target - timedelta(days=days), target)
 
     async def _get_yield_spread(self, long: str, short: str) -> float | None:
         long_q = (
@@ -399,20 +421,8 @@ class CycleEngine:
         return None
 
     async def _get_yield_spread_at(self, long: str, short: str, target: date) -> float | None:
-        long_q = (
-            select(YieldData.nominal_yield)
-            .where(YieldData.maturity == long, YieldData.date <= target)
-            .order_by(desc(YieldData.date))
-            .limit(1)
-        )
-        short_q = (
-            select(YieldData.nominal_yield)
-            .where(YieldData.maturity == short, YieldData.date <= target)
-            .order_by(desc(YieldData.date))
-            .limit(1)
-        )
-        l_val = (await self.db.execute(long_q)).scalar_one_or_none()
-        s_val = (await self.db.execute(short_q)).scalar_one_or_none()
+        l_val = self._latest_before(await self._full_yield(long), target)
+        s_val = self._latest_before(await self._full_yield(short), target)
         if l_val is not None and s_val is not None:
             return (l_val - s_val) * 100
         return None
@@ -605,26 +615,12 @@ class CycleEngine:
                 )
             elif key == "yield_curve_10y2y":
                 since = target - timedelta(days=lookback_days)
-                long_q = (
-                    select(YieldData.date, YieldData.nominal_yield)
-                    .where(
-                        YieldData.maturity == "10Y",
-                        YieldData.date >= since,
-                        YieldData.date <= target,
-                    )
-                    .order_by(YieldData.date)
-                )
-                short_q = (
-                    select(YieldData.date, YieldData.nominal_yield)
-                    .where(
-                        YieldData.maturity == "2Y",
-                        YieldData.date >= since,
-                        YieldData.date <= target,
-                    )
-                    .order_by(YieldData.date)
-                )
-                lr = {r[0]: r[1] for r in (await self.db.execute(long_q)).all()}
-                sr = {r[0]: r[1] for r in (await self.db.execute(short_q)).all()}
+                lr = {
+                    d: v for d, v in await self._full_yield("10Y") if since <= d <= target
+                }
+                sr = {
+                    d: v for d, v in await self._full_yield("2Y") if since <= d <= target
+                }
                 common = sorted(set(lr) & set(sr))
                 series = [(lr[d] - sr[d]) * 100 for d in common]
             elif key == "hy_spread":
