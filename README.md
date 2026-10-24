@@ -3,7 +3,7 @@
 **Professional macro trading terminal** for regime analysis, Fed policy, yield curves, inflation, cross-asset confirmation, Forecast Lab diagnostics, and report-ready market intelligence.
 
 <p align="center">
-  <a href="https://macrolenz.vercel.app/dashboard"><strong>Live app</strong></a>
+  <a href="https://macrolens-terminal.vercel.app/dashboard"><strong>Live app</strong></a>
   &nbsp;·&nbsp;
   <a href="DEPLOY.md">Deploy</a>
   &nbsp;·&nbsp;
@@ -190,7 +190,7 @@ The core decision model is the **Trading Navigator**: a regime matrix that combi
 
 - **Docker** and Docker Compose for the recommended full-stack setup
 - **Python** 3.12 for backend container parity, or Python 3.11+ for local development
-- **Node.js** 20+ for frontend local development
+- **Node.js** 20.9+ for frontend local development (Next.js 16)
 - **FRED API key** for full macro data ingestion
 - **Network access** for external macro and market data sources
 - **RAM** 4GB+ recommended; more is useful for Forecast Lab training and large artifacts
@@ -239,7 +239,9 @@ Copy the environment template first:
 Copy-Item .env.example .env
 ```
 
-Set at least `FRED_API_KEY` in `.env` for full macro ingestion.
+Set at least `FRED_API_KEY` in `.env` for full macro ingestion. Write/train/refresh/LLM
+endpoints require `X-API-Key: <ADMIN_API_KEY>`; for local dev either set `ADMIN_API_KEY` or
+`ALLOW_UNAUTHENTICATED_ADMIN=true` (never in production). The UI asks for the key on first use.
 
 Start the stack:
 
@@ -252,8 +254,10 @@ Open:
 - **Frontend**: <http://localhost:3000>
 - **Backend API**: <http://localhost:8000>
 - **Health check**: <http://localhost:8000/api/health>
-- **PostgreSQL**: `localhost:5432`
-- **Redis**: `localhost:6379`
+- **PostgreSQL**: `127.0.0.1:5432`
+- **Redis**: `127.0.0.1:6379`
+
+All published ports bind to `127.0.0.1` only.
 
 If the project was moved and Docker bind mounts resolve incorrectly, set `PROJECT_ROOT` in `.env`.
 
@@ -298,7 +302,7 @@ scheduler refreshes data and ML models train in-process) and therefore is not se
 | Postgres | **Supabase** / **Neon** |
 | Redis | **Upstash** |
 
-The Next.js frontend proxies `/api/*` to the backend (`BACKEND_URL`), so the browser stays
+The Next.js frontend proxies `/api/*` to the backend (`BACKEND_URL`, resolved at **build** time), so the browser stays
 same-origin and CORS is a non-issue on the happy path. For prod, set `CORS_ALLOW_ORIGINS`
 on the backend to your Vercel URL as defense-in-depth.
 
@@ -306,7 +310,7 @@ Full step-by-step runbook (including the all-in-one self-hosted Docker option) i
 **[DEPLOY.md](DEPLOY.md)**.
 
 ```powershell
-# Self-host the whole stack on one box:
+# Self-host the whole stack on one box (needs POSTGRES_PASSWORD, REDIS_PASSWORD, ADMIN_API_KEY in .env):
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
@@ -319,6 +323,11 @@ Main configuration is copied from `.env.example` into `.env`.
 | Variable | Purpose |
 |----------|---------|
 | `FRED_API_KEY` | FRED macro data access |
+| `ADMIN_API_KEY` | Required `X-API-Key` for write/train/refresh/LLM endpoints (fail-closed when unset) |
+| `ALLOW_UNAUTHENTICATED_ADMIN` | Local dev only: skip the key check |
+| `RATE_LIMIT_PER_MINUTE` / `RATE_LIMIT_ADMIN_PER_MINUTE` | Per-IP request budgets (`0` disables) |
+| `MAX_REQUEST_BODY_BYTES` | Request body size limit (default 1 MiB) |
+| `POSTGRES_PASSWORD` / `REDIS_PASSWORD` | Docker credentials (required by the prod overlay) |
 | `CORS_ALLOW_ORIGINS` | Comma-separated allowed origins (set to the frontend URL in prod) |
 | `HISTORICAL_YEARS` | Rolling FRED/Yahoo history window |
 | `FORECAST_LAB_DATE_FROM` | First month-end included in Forecast Lab training features |
@@ -380,8 +389,9 @@ Current verification status:
 | Backend lint | `ruff check app tests` | Passing |
 | Backend format | `black --check` / `isort --check-only` | Passing |
 | Backend types | `mypy app` | Passing (129 files) |
-| Backend tests | `pytest` | Passing: 29 tests |
+| Backend tests | `pytest` | Passing: 35 tests |
 | Backend coverage | Forecast Lab core | ~68% (gate ≥ 60%) |
+| Dependency audit | `pip-audit`, `npm audit --omit=dev` | 0 known vulnerabilities |
 | Frontend lint / typecheck / build | `npm run …` | Passing |
 
 ---
