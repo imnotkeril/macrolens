@@ -615,12 +615,8 @@ class CycleEngine:
                 )
             elif key == "yield_curve_10y2y":
                 since = target - timedelta(days=lookback_days)
-                lr = {
-                    d: v for d, v in await self._full_yield("10Y") if since <= d <= target
-                }
-                sr = {
-                    d: v for d, v in await self._full_yield("2Y") if since <= d <= target
-                }
+                lr = {d: v for d, v in await self._full_yield("10Y") if since <= d <= target}
+                sr = {d: v for d, v in await self._full_yield("2Y") if since <= d <= target}
                 common = sorted(set(lr) & set(sr))
                 series = [(lr[d] - sr[d]) * 100 for d in common]
             elif key == "hy_spread":
