@@ -35,5 +35,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
 url='http://127.0.0.1:%s/api/health'%os.environ.get('PORT','7860'); \
 sys.exit(0 if urllib.request.urlopen(url,timeout=4).status==200 else 1)" || exit 1
 
-# Applies migrations (best-effort) then starts the API on $PORT.
-CMD ["sh", "-c", "alembic upgrade head || true; exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860}"]
+# Applies migrations (fails fast if they error) then starts the API on $PORT.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860}"]
