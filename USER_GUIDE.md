@@ -1,110 +1,140 @@
 # MacroLens User Guide
 
-MacroLens is a macro trading dashboard for monitoring business-cycle conditions, Fed policy, yield curve risk, inflation pressure, cross-asset confirmation, and model-driven regime forecasts.
+MacroLens is a macro trading terminal. It shows the business-cycle regime, recession risk, Fed policy,
+yield curve, inflation, market confirmation (cross-asset, breadth, indices) and model-driven forecasts
+from the Forecast Lab. Data comes from FRED and market data providers and is refreshed by the backend
+on a daily and monthly schedule.
 
-## Getting Started
+Each number on a page is explained by the page's own labels and the notes in this guide.
 
-1. Open the app at `http://localhost:3000`.
-2. Use the left sidebar to move between dashboard sections.
-3. Use the refresh control in the header after loading or updating macro data.
-4. Review error banners first. They show which backend data source failed and provide a retry action where available.
+## Getting started
 
-## Main Workflow
+1. Open the app. Local default: `http://localhost:3000`. Production: the Vercel URL you were given.
+2. The root address `/` opens the Dashboard.
+3. The top navigation has six entries: **Dashboard**, **Forecast Lab**, **Analysis**, **Indicators**,
+   **Calendar**, **Reports**. Other pages (Radar, Macro Sentiment, Fed Policy, Yield Curve, Inflation)
+   are opened from the links on the pages above or by URL: `/radar`, `/macro-sentiment`, `/fed-policy`,
+   `/yield-curve`, `/inflation`.
+4. Read error banners first. They name the backend request that failed. If a card is empty, check the
+   backend health (`/api/health`) and the data freshness (see the troubleshooting section).
 
-1. Start on **Dashboard** for the current macro regime, recession risk, Fed stance, yield curve snapshot, allocation summary, and trading ideas.
-2. Open **Radar** to inspect the cycle score, recession probability, checklist, and historical cycle context.
-3. Open **Macro Sentiment** to drill into leading, coincident, lagging, and inflation indicator groups.
-4. Open **Fed Policy** to review policy score, rate path, FOMC probabilities, rate decisions, and balance sheet metrics.
-5. Open **Yield Curve** to inspect curve shape, spreads, momentum, percentiles, and curve-pattern interpretation.
-6. Open **Inflation** to compare CPI/PCE/PPI measures, breakevens, expectations, and component contribution.
-7. Use **Analysis** for relative performance, major indices and Bitcoin, market breadth, and macro overview charts.
-8. Use **Forecast Lab** after model artifacts are trained to compare phase probabilities, macro forecasts, stress diagnostics, and ensemble evidence.
-9. Use **Calendar** for event briefings, economic calendar views, FOMC minutes, events exploration, and news.
-10. Use **Reports** to prepare printable report views and previews.
+### Admin actions and the API key
 
-## Page Guide
+Some actions change data or start jobs: refreshing data, training Forecast Lab, writing snapshots,
+running agents. These need the admin key. When you trigger one, the app asks
+`Admin API key required for this action`. Enter the `ADMIN_API_KEY` set for your deployment. The key is
+kept in this browser's local storage, so you enter it once per browser. Reading pages does not need it.
+Marking alerts as read does not need it either.
+
+## Main workflow
+
+1. **Dashboard**: the current navigator quadrant, cycle score, Fed policy score, recession probability,
+   yield curve snapshot, cross-asset signals, allocation, factor tilts and trading ideas.
+2. **Radar**: cycle score history, recession probability, the recession checklist and the signals
+   behind them.
+3. **Macro Sentiment**: leading, coincident, lagging and inflation indicator groups.
+4. **Fed Policy**: policy score and stance, FOMC probabilities, rate decisions, rate path and balance sheet.
+5. **Yield Curve**: spreads, curve momentum, tenor snapshot, percentiles and curve-pattern labels.
+6. **Inflation**: CPI, Core CPI, PCE, Core PCE, PPI, Core PPI, breakevens, expectations and components.
+7. **Analysis**: relative performance, major indices and Bitcoin, market breadth, macro overview ratios.
+8. **Forecast Lab**: phase probabilities, ensemble weights, macro forecasts, stress bands and diagnostics.
+   Empty or stale output means the active model bundle needs training or refresh.
+9. **Calendar**: briefings, economic calendar, events, FOMC minutes and news.
+10. **Reports**: report hub and print-ready previews.
+
+## Page guide
 
 ### Dashboard
 
-Dashboard is the executive view. It combines the active navigator quadrant, cycle score, Fed policy score, recession risk, yield curve, cross-asset signals, allocation, factor tilts, sectors, geography, and trading ideas.
-
-Use it when you need a fast answer to: "What regime are we in and what should I watch next?"
+The executive view. It combines the navigator quadrant with the cycle score, Fed policy score,
+recession probability, yield curve, cross-asset confirmation, allocation, factor tilts, sector and
+geography bias, and trading ideas. Use it for "what regime are we in and what should I watch next?"
 
 ### Radar
 
-Radar focuses on cycle and recession risk. It includes current cycle score, recession probability, recession checklist, historical cycle-score chart, recession probability history, and tables for underlying signals.
-
-Use it to validate whether the dashboard regime is backed by recession evidence.
+Cycle score and recession probability, with the recession checklist and historical timelines.
+Use it to check whether the dashboard regime is backed by recession evidence.
 
 ### Macro Sentiment
 
-Macro Sentiment breaks the macro score into indicator families. It separates the cycle-sensitive categories from inflation so the user can see whether macro conditions are broad-based or concentrated in one group.
-
-Use it to inspect the data behind the growth side of the navigator.
+Indicator categories (leading, coincident, lagging, inflation) with category scores, KPI history and
+indicator details. Use it to see whether conditions are broad-based or concentrated in one group.
+The `/indicators` route redirects here.
 
 ### Fed Policy
 
-Fed Policy shows policy stance, rate decision history, FOMC probabilities, rate path/dot plot, policy score, and balance sheet metrics.
-
-Use it to inspect the policy side of the navigator and identify whether the Fed backdrop is easing, neutral, or tightening.
+Policy score and stance, FOMC probabilities, rate-decision history, the rate path and dot plot,
+and Fed balance sheet metrics. An AI context card appears only when the agent services are configured.
 
 ### Yield Curve
 
-Yield Curve shows spread history, curve dynamics, tenor snapshots, percentiles, SOFR/EFFR context, and curve-pattern labels.
-
-Use it to separate growth stress, policy pressure, and curve-shape signals.
+Treasury tenor snapshot, key spreads (for example 2Y10Y) and their history, curve momentum, percentile
+tables, curve dynamics and pattern labels, with SOFR/EFFR context where available.
 
 ### Inflation
 
-Inflation shows CPI, Core CPI, PCE, Core PCE, PPI, Core PPI, breakevens, expectations, and component contribution charts.
-
-Use it to check whether inflation pressure supports or contradicts Fed and cycle signals.
+CPI, Core CPI, PCE, Core PCE, PPI and Core PPI, breakevens and expectations, and component
+contribution. Use it to check whether inflation supports or contradicts the Fed and cycle signals.
 
 ### Analysis
 
-Analysis provides market confirmation screens:
+- **Relative Performance**: sector, currency and sentiment-relative charts.
+- **Major Indices & Bitcoin**: index trend context, Bitcoin, dominance and breadth overlays.
+- **Market Breadth**: participation, highs and lows, moving-average breadth.
+- **Macro Overview**: macro ratios and cross-check charts (liquidity, inflation, spreads, leading indicators).
 
-- **Relative Performance** compares sectors, currencies, and sentiment-sensitive baskets.
-- **Major Indices & Bitcoin** tracks index trends, Bitcoin, dominance, and major market context.
-- **Market Breadth** monitors internal participation and breadth metrics.
-- **Macro Overview** combines ratios and macro cross-check charts.
-
-Use these pages to confirm macro conclusions with price action.
+Use these to confirm macro conclusions with price action.
 
 ### Forecast Lab
 
-Forecast Lab is the model and diagnostics workspace. It reads trained backend artifacts and displays phase probabilities, ensemble weights, macro forecasts, stress bands, feature importances, and historical phase alignment.
-
-If the page is empty or stale, train or refresh Forecast Lab artifacts from the backend before relying on the output.
+Model and diagnostics workspace. It reads the trained artifacts in the backend and shows phase
+probabilities, ensemble evidence, macro forecasts by series and horizon, stress bands, feature
+importances and historical phase alignment. Output is only as current as the active bundle.
 
 ### Calendar
 
-Calendar contains event-focused pages:
+- **Briefings** (`/calendar/briefings`): daily and archived macro briefings. `/calendar-alerts` redirects here.
+- **Economic Calendar**: scheduled releases and event details.
+- **Events**: event exploration.
+- **FOMC Minutes**: FOMC archive review.
+- **News**: curated macro news.
 
-- **Briefings** for summarized daily or archived macro briefings.
-- **Economic Calendar** for scheduled releases and event details.
-- **Events** for event exploration.
-- **FOMC Minutes** for FOMC archive review.
-- **News** for curated macro news views.
-
-Some calendar screens currently use demo data while the calendar ingestion layer matures.
+Some calendar screens still show demo data while calendar ingestion matures. Check the source note on
+each screen before relying on it.
 
 ### Reports
 
-Reports provides report hub and preview pages for print-ready output. Use the browser print command or the in-app print action where available.
+Report hub and preview pages for print-ready output. Use the browser print command.
 
-## Data And Refresh Notes
+### Legacy and redirect routes
 
-- FRED is the primary macro data source.
-- Yahoo/CoinGecko-style market feeds support cross-asset and market pages where configured.
-- Forecast Lab depends on trained artifacts in `backend/data/forecast_lab_artifacts`.
-- Optional LLM and memory features require Anthropic/OpenAI keys.
-- Telegram ingestion is optional and disabled by default.
+- `/` redirects to `/dashboard`.
+- `/compare` redirects to `/dashboard`.
+- `/indicators` redirects to `/macro-sentiment`.
+- `/next` redirects to `/dashboard`; `/next/<path>` redirects to `/<path>`.
+
+## Data and refresh
+
+- **FRED** is the primary macro source: rates, yield curve, inflation, labor and activity series.
+- **Yahoo** market data supplies indices, ETFs, commodities, FX and volatility.
+- **CoinGecko** public endpoints supply crypto market data; an optional Pro key extends history.
+- Refresh runs on a schedule (daily market and yield data, weekly claims and balance sheet, monthly
+  macro data, then alert checks, intelligence and memory jobs). The admin refresh action runs a
+  collection on demand.
+- Forecast Lab depends on trained artifacts under `backend/data/forecast_lab_artifacts`.
+- Agent cards and memory search need `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` respectively; without
+  them the app uses rule-based text and hash embeddings.
+- Telegram news ingestion is off by default (`TELEGRAM_INGESTION_ENABLED=false`).
 
 ## Troubleshooting
 
-- If the frontend loads but data cards fail, confirm the backend is reachable at `http://localhost:8000/api/health`.
-- If Docker paths fail after moving the project, set `PROJECT_ROOT` in `.env`.
-- If macro history looks too short, adjust `HISTORICAL_YEARS`, reload data, and rebuild derived analytics.
-- If Forecast Lab is unavailable, check the active bundle id and training progress files under `backend/data`.
-- If a chart has no observations, verify that the corresponding backend endpoint returns data before debugging the UI.
+- **Cards show errors**: open `http://localhost:8000/api/health` (or the deployed `/api/health`). If it fails, the
+  backend or database is down.
+- **Docker paths fail after moving the project**: set `PROJECT_ROOT` in `.env`.
+- **Macro history looks too short**: check `HISTORICAL_YEARS`, run the admin backfill, then refresh.
+- **Forecast Lab is empty**: check the active bundle id in `backend/data/forecast_lab_artifacts/active_bundle_id.txt`
+  and the training progress files in `backend/data`.
+- **A chart has no points**: call the endpoint behind it (see `llms.txt`); if it returns no data,
+  the problem is the data, not the page.
+- **Actions return "Admin API key required" or 401**: enter the current `ADMIN_API_KEY` when prompted.
+  If the prompt never appears, the deployment has no `ADMIN_API_KEY` set (writes return 503).
