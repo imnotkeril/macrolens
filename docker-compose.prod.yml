@@ -21,7 +21,7 @@ services:
   backend:
     restart: unless-stopped
     # Drop the dev bind mount + --reload from the base file.
-    volumes: []
+    volumes: !override []
     environment:
       PORT: 8000
       DEBUG_LOG_PATH: ""
@@ -41,7 +41,7 @@ services:
         # Next.js bakes rewrites at build time: /api/* goes to the backend container.
         BACKEND_INTERNAL_URL: http://backend:8000
     # Production standalone server replaces the dev volumes + npm run dev.
-    volumes: []
+    volumes: !override []
     environment:
       NODE_ENV: production
       BACKEND_INTERNAL_URL: http://backend:8000
