@@ -83,11 +83,33 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
 Postgres + Redis + backend + frontend all run as containers with `restart: unless-stopped`.
+The backend container runs `alembic upgrade head` before uvicorn, so a migration error stops the
+container and it restarts in a loop until fixed.
+
+> **Changing `POSTGRES_PASSWORD` on an existing install.** The `postgres` image sets the password
+> only when the `pgdata` volume is first created. If you change `POSTGRES_PASSWORD` in `.env` later,
+> the database keeps the old password, the backend cannot connect, `alembic upgrade head` fails on
+> boot and the backend restart-loops. Pick one of:
+> - keep the original password in `.env`;
+> - change the role password inside Postgres to match the new value:
+>   `docker compose exec db psql -U macrolens -d macrolens -c "ALTER USER macrolens PASSWORD '<new>';"`,
+>   then restart the backend;
+> - or wipe the volume (destroys all data): `docker compose down -v`, then start again.
+
+Schema creation differs by environment: the **prod overlay and the HF image** run
+`alembic upgrade head` on boot. The **dev compose file** starts uvicorn directly, so tables are created
+by the app at startup (`Base.metadata.create_all` plus memory schema bootstrap); run
+`alembic upgrade head` manually there if you need migration history.
+
+The scheduler (`backend/app/tasks/scheduler.py`) uses the process timezone for its cron times. The
+Docker image has no `TZ` set, so times are UTC inside the container; a host-run backend uses the
+machine's local timezone.
 Ports bind to `127.0.0.1` (frontend `:3000`, backend `:8000`): terminate TLS with a reverse proxy
 (Caddy/nginx) in front of the frontend, or set `FRONTEND_BIND=0.0.0.0` on a firewalled host. The
 frontend image proxies `/api/*` to `http://backend:8000` (build arg `BACKEND_INTERNAL_URL`).
 
 ## Verify a deployment
 
-- Backend: `curl https://<backend>/api/health` → `{"status":"ok"}`
+- Backend: `curl https://<backend>/api/health` → `{"status":"ok","service":"MacroLens API"}`
+- Interactive API reference: `https://<backend>/docs` (FastAPI Swagger UI). The Markdown API summary is `llms.txt` in the repo root (no `/llms.txt` route on the API yet).
 - Frontend: open the Vercel URL; the dashboard should load live data via `/api/*`.
