@@ -5,10 +5,10 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: macrolens
-      POSTGRES_PASSWORD: macrolens_secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-macrolens_secret}
       POSTGRES_DB: macrolens
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -19,10 +19,14 @@ services:
 
   redis:
     image: redis:7-alpine
+    # Password is optional for local dev (REDIS_PASSWORD empty) and required in the prod overlay.
+    command: ["sh", "-c", "exec redis-server $${REDIS_PASSWORD:+--requirepass \"$$REDIS_PASSWORD\"}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli $${REDIS_PASSWORD:+-a \"$$REDIS_PASSWORD\"} ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -32,10 +36,14 @@ services:
       context: ${PROJECT_ROOT:-.}/backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://macrolens:macrolens_secret@db:5432/macrolens
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://macrolens:${POSTGRES_PASSWORD:-macrolens_secret}@db:5432/macrolens
+      REDIS_URL: redis://${REDIS_PASSWORD:+:$REDIS_PASSWORD@}redis:6379/0
+      # Write/train/LLM endpoints need X-API-Key; ALLOW_UNAUTHENTICATED_ADMIN=true is for local dev only.
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      ALLOW_UNAUTHENTICATED_ADMIN: ${ALLOW_UNAUTHENTICATED_ADMIN:-false}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       FRED_API_KEY: ${FRED_API_KEY:-}
       # Optional CoinGecko Pro: enables long market_chart history (days=max); without key, capped at 365 days.
       COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
@@ -81,7 +89,7 @@ services:
       context: ${PROJECT_ROOT:-.}/frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "${FRONTEND_BIND:-127.0.0.1}:3000:3000"
     environment:
       # Next rewrites /api to backend (browser uses same-origin; do not rely on localhost:8000 in the client).
       BACKEND_INTERNAL_URL: http://backend:8000

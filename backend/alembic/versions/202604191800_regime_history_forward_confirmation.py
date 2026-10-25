@@ -16,8 +16,17 @@ branch_labels = None
 depends_on = None
 
 
+def _existing_columns(table: str) -> set[str]:
+    return {c["name"] for c in sa.inspect(op.get_bind()).get_columns(table)}
+
+
+def _add_column_if_missing(table: str, column: sa.Column) -> None:
+    if column.name not in _existing_columns(table):
+        op.add_column(table, column)
+
+
 def upgrade() -> None:
-    op.add_column(
+    _add_column_if_missing(
         "regime_history_monthly",
         sa.Column(
             "forward_confirmation_score",
@@ -26,7 +35,7 @@ def upgrade() -> None:
             server_default="-1",
         ),
     )
-    op.add_column(
+    _add_column_if_missing(
         "regime_history_monthly",
         sa.Column(
             "forward_regime_confirmed",
@@ -35,7 +44,7 @@ def upgrade() -> None:
             server_default=sa.false(),
         ),
     )
-    op.add_column(
+    _add_column_if_missing(
         "regime_history_monthly",
         sa.Column("confirmed_regime_quadrant", sa.String(length=32), nullable=True),
     )

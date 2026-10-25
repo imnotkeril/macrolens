@@ -41,11 +41,14 @@ Then in the Space **Settings → Variables and secrets**, set:
 | `DATABASE_URL` | Supabase/Neon asyncpg DSN |
 | `REDIS_URL` | Upstash `rediss://` URL |
 | `FRED_API_KEY` | your FRED key |
+| `ADMIN_API_KEY` | long random string; required for write/train/refresh/LLM endpoints (`X-API-Key`) |
+| `RATE_LIMIT_TRUST_PROXY` | `true` only if the platform proxy sets a trustworthy `X-Forwarded-For` |
 | `CORS_ALLOW_ORIGINS` | `https://<your-app>.vercel.app` |
 | `ANTHROPIC_API_KEY` | optional (LLM agents) |
 | `OPENAI_API_KEY` | optional (embeddings) |
 
-The container runs `alembic upgrade head` on boot, then starts uvicorn. Confirm health at
+The container runs `alembic upgrade head` on boot (the container fails fast if a migration errors;
+the baseline revision creates the schema on an empty DB), then starts uvicorn. Confirm health at
 `https://imnotkeril-macrolens-api.hf.space/api/health`.
 
 > **Free-tier limits:** the Space sleeps after inactivity and disk is ephemeral. The active
@@ -64,7 +67,8 @@ Set one environment variable in Vercel (Project → Settings → Environment Var
 |---|---|
 | `BACKEND_URL` | `https://imnotkeril-macrolens-api.hf.space` |
 
-`next.config.js` rewrites `/api/*` to `BACKEND_URL`, so the browser only ever talks to the
+`next.config.js` rewrites `/api/*` to `BACKEND_URL` (read at build time, so set it *before* the
+build; it defaults to `http://127.0.0.1:8000`, never to production), so the browser only ever talks to the
 Vercel origin (no CORS round-trips). Deploy — done.
 
 ---
@@ -74,12 +78,14 @@ Vercel origin (no CORS round-trips). Deploy — done.
 One box (VPS / Oracle Cloud Always Free), everything in Docker:
 
 ```bash
-cp .env.example .env          # fill secrets
+cp .env.example .env          # fill secrets: POSTGRES_PASSWORD, REDIS_PASSWORD, ADMIN_API_KEY (alphanumeric)
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
 Postgres + Redis + backend + frontend all run as containers with `restart: unless-stopped`.
-Frontend on `:3000`, backend on `:8000`.
+Ports bind to `127.0.0.1` (frontend `:3000`, backend `:8000`): terminate TLS with a reverse proxy
+(Caddy/nginx) in front of the frontend, or set `FRONTEND_BIND=0.0.0.0` on a firewalled host. The
+frontend image proxies `/api/*` to `http://backend:8000` (build arg `BACKEND_INTERNAL_URL`).
 
 ## Verify a deployment
 

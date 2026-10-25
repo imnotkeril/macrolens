@@ -3,31 +3,45 @@
 #
 # Differences from the dev compose: no source bind mounts, no --reload, restart policies,
 # the frontend runs the production standalone server, and the backend listens on 8000.
+# Ports bind to 127.0.0.1; put a TLS reverse proxy in front, or set FRONTEND_BIND=0.0.0.0 on a firewalled host.
+# POSTGRES_PASSWORD, REDIS_PASSWORD and ADMIN_API_KEY are required (alphanumeric, no URL-special chars).
 # (For Hugging Face Spaces the backend deploys on its own — see DEPLOY.md. There Postgres
 #  and Redis are external managed services, not these containers.)
 services:
   db:
     restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
 
   redis:
     restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
 
   backend:
     restart: unless-stopped
     # Drop the dev bind mount + --reload from the base file.
-    volumes: []
+    volumes: !override []
     environment:
       PORT: 8000
       DEBUG_LOG_PATH: ""
-    command: sh -c "alembic upgrade head || true; exec uvicorn app.main:app --host 0.0.0.0 --port 8000"
+      DATABASE_URL: postgresql+asyncpg://macrolens:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/macrolens
+      REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}@redis:6379/0
+      ADMIN_API_KEY: ${ADMIN_API_KEY:?set ADMIN_API_KEY in .env}
+      ALLOW_UNAUTHENTICATED_ADMIN: "false"
+      RATE_LIMIT_TRUST_PROXY: ${RATE_LIMIT_TRUST_PROXY:-false}
+    command: sh -c "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   frontend:
     restart: unless-stopped
     build:
       context: ${PROJECT_ROOT:-.}/frontend
       dockerfile: Dockerfile.prod
+      args:
+        # Next.js bakes rewrites at build time: /api/* goes to the backend container.
+        BACKEND_INTERNAL_URL: http://backend:8000
     # Production standalone server replaces the dev volumes + npm run dev.
-    volumes: []
+    volumes: !override []
     environment:
       NODE_ENV: production
       BACKEND_INTERNAL_URL: http://backend:8000

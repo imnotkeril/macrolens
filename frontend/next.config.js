@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
+// Rewrites are resolved at BUILD time (baked into routes-manifest), so set BACKEND_URL /
+// BACKEND_INTERNAL_URL when running `next build` (Vercel env, or the Docker build arg).
+// The default is local only: a build without them must never silently proxy to production.
 const backend =
-  process.env.BACKEND_INTERNAL_URL ||
-  process.env.BACKEND_URL ||
-  "https://imnotkeril-macrolens-api.hf.space";
+  process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000";
 
 const nextConfig = {
   output: "standalone",

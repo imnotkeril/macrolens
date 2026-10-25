@@ -57,6 +57,7 @@ import type {
   FedRhetoricPoint,
 } from "@/types";
 
+import { adminFetch } from "@/lib/adminFetch";
 import { apiFetchOrigin } from "@/lib/apiFetchOrigin";
 
 /** @deprecated Prefer `apiFetchOrigin()` — in the browser it is "" for same-origin `/api` rewrites. */
@@ -286,7 +287,7 @@ export async function postMLBuildDataset(
     `${apiFetchOrigin()}/api/ml/build-dataset` +
     (params.toString() ? `?${params.toString()}` : "");
   try {
-    const res = await fetch(url, {
+    const res = await adminFetch(url, {
       method: "POST",
       signal: controller.signal,
     });
@@ -315,7 +316,7 @@ export async function postMLRegimeTrain(): Promise<MLTrainResponse> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TRAIN_START_TIMEOUT_MS);
   try {
-    const res = await fetch(`${apiFetchOrigin()}/api/ml/regime-train`, {
+    const res = await adminFetch(`${apiFetchOrigin()}/api/ml/regime-train`, {
       method: "POST",
       signal: controller.signal,
     });
@@ -347,7 +348,7 @@ export function getMLTrainProgress(): Promise<TaskProgress> {
 
 // ML2
 export const postML2Train = async () => {
-  const res = await fetch(`${apiFetchOrigin()}/api/ml2/train`, { method: "POST" });
+  const res = await adminFetch(`${apiFetchOrigin()}/api/ml2/train`, { method: "POST" });
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   return res.json() as Promise<ML2Metrics>;
 };
@@ -363,7 +364,7 @@ export const getML2LatestStored = () =>
 
 // Agents / Master
 export const postRunAgents = async () => {
-  const res = await fetch(`${apiFetchOrigin()}/api/agents/run`, { method: "POST" });
+  const res = await adminFetch(`${apiFetchOrigin()}/api/agents/run`, { method: "POST" });
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   return res.json() as Promise<{ status: string; runs: Record<string, string> }>;
 };
@@ -401,13 +402,13 @@ export const getMemoryProvenance = (query: string, domain?: string, topK = 5) =>
   );
 
 export const postSnapshotDashboardRadar = async () => {
-  const res = await fetch(`${apiFetchOrigin()}/api/memory/snapshot/dashboard-radar`, { method: "POST" });
+  const res = await adminFetch(`${apiFetchOrigin()}/api/memory/snapshot/dashboard-radar`, { method: "POST" });
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   return res.json();
 };
 
 export const postSnapshotAnalysisIndicators = async () => {
-  const res = await fetch(`${apiFetchOrigin()}/api/memory/snapshot/analysis-indicators`, { method: "POST" });
+  const res = await adminFetch(`${apiFetchOrigin()}/api/memory/snapshot/analysis-indicators`, { method: "POST" });
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   return res.json();
 };
@@ -416,7 +417,7 @@ export async function refreshAllData(): Promise<{ status: string; errors: string
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REFRESH_POST_TIMEOUT_MS);
   try {
-    const res = await fetch(`${apiFetchOrigin()}/api/data/refresh`, {
+    const res = await adminFetch(`${apiFetchOrigin()}/api/data/refresh`, {
       method: "POST",
       signal: controller.signal,
     });
