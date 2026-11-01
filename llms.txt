@@ -105,7 +105,7 @@ Latest Signals.
 ### `POST /api/alerts/{alert_id}/read`
 
 Mark Alert Read.
-- Auth: X-API-Key required
+- Auth: public
 - Parameters:
   - `alert_id` (path, integer, required)
 - Response 200 (application/json): `object`
