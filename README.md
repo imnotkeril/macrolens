@@ -388,7 +388,7 @@ for local runs. Variables never have a value committed in this README; secrets g
 | `TELEGRAM_CHANNEL_WHITELIST` | empty | Comma-separated `@channel` names or numeric ids |
 | `TELEGRAM_INGESTION_ENABLED` | `false` | Turn Telegram news ingestion on |
 | `TELEGRAM_INGEST_MAX_MESSAGES` | `80` | Messages read per ingestion run |
-| `DEBUG_LOG_PATH` | empty | Dev-only NDJSON debug sink; leave empty in production |
+| `DEBUG_LOG_PATH` | empty | Dev-only NDJSON debug sink; leave empty in production. Read from the process environment only (not from a `.env` file); compose forwards it |
 | `BACKEND_INTERNAL_URL` | `http://backend:8000` in compose | Frontend `/api` rewrite target at build and run time (not used in `.env` locally) |
 
 Variables read by the code but not in the root `.env.example` (`DATABASE_URL` and `REDIS_URL` are in `backend/.env.example`; the other rows are in neither file):
