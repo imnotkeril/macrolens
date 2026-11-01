@@ -350,13 +350,13 @@ for local runs. Variables never have a value committed in this README; secrets g
 | `FORECAST_LAB_AUXILIARY_ASSET_WEIGHT` | `0.35` | GBDT sample weight from asset pair agreement; `0` turns it off |
 | `FORECAST_LAB_ENSEMBLE_INCLUDE_CYCLE` | `true` | Add Cycle Radar as the fourth ensemble expert |
 | `FORECAST_LAB_TRAIN_RECESSION_MODEL` | `true` | Train the forward 12-month recession model |
-| `FORECAST_LAB_ARTIFACTS_DIR` | `data/forecast_lab_artifacts` | Artifact directory, relative to `backend/` |
-| `FORECAST_LAB_TRAIN_PROGRESS_FILE` | `data/forecast_lab_train_progress.json` | Training progress file |
-| `FORECAST_LAB_ENABLE_TRAIN_ENDPOINT` | `true` | Allow `POST /api/forecast-lab/train` |
-| `FORECAST_LAB_HMM_STATES` | `4` | Number of HMM regime states |
-| `FORECAST_LAB_RANDOM_SEED` | `42` | Random seed for training |
-| `FORECAST_LAB_TRAIN_END` | `2018-12` | End of the training split (YYYY-MM) |
-| `FORECAST_LAB_VAL_END` | `2021-12` | End of the validation split (YYYY-MM); test is after it |
+| `FORECAST_LAB_ARTIFACTS_DIR` | `data/forecast_lab_artifacts` | Artifact directory, relative to `backend/`. Not forwarded by compose. |
+| `FORECAST_LAB_TRAIN_PROGRESS_FILE` | `data/forecast_lab_train_progress.json` | Training progress file. Not forwarded by compose. |
+| `FORECAST_LAB_ENABLE_TRAIN_ENDPOINT` | `true` | Allow `POST /api/forecast-lab/train`. Not forwarded by compose. |
+| `FORECAST_LAB_HMM_STATES` | `4` | Number of HMM regime states. Not forwarded by compose. |
+| `FORECAST_LAB_RANDOM_SEED` | `42` | Random seed for training. Not forwarded by compose. |
+| `FORECAST_LAB_TRAIN_END` | `2018-12` | End of the training split (YYYY-MM). Not forwarded by compose. |
+| `FORECAST_LAB_VAL_END` | `2021-12` | End of the validation split (YYYY-MM); test is after it. Not forwarded by compose. |
 | `ML_DATASET_PATH` | `data/ml_navigator_dataset.parquet` | Legacy ML regime dataset file. Not forwarded by compose |
 | `ML_ARTIFACTS_DIR` | `data/ml_artifacts` | Legacy ML artifacts directory. Not forwarded by compose |
 | `ML_TRAIN_PROGRESS_FILE` | `data/ml_train_progress.json` | Legacy ML progress file (also set internally for the worker). Not forwarded by compose |
