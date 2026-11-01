@@ -391,7 +391,7 @@ for local runs. Variables never have a value committed in this README; secrets g
 | `DEBUG_LOG_PATH` | empty | Dev-only NDJSON debug sink; leave empty in production |
 | `BACKEND_INTERNAL_URL` | `http://backend:8000` in compose | Frontend `/api` rewrite target at build and run time (not used in `.env` locally) |
 
-Variables read by the code but not in the example files:
+Variables read by the code but not in the root `.env.example` (`DATABASE_URL` and `REDIS_URL` are in `backend/.env.example`; the other rows are in neither file):
 
 | Variable | Read by | Purpose |
 |---|---|---|
