@@ -11,10 +11,10 @@ Each number on a page is explained by the page's own labels and the notes in thi
 
 1. Open the app. Local default: `http://localhost:3000`. Production: the Vercel URL you were given.
 2. The root address `/` opens the Dashboard.
-3. The top navigation has six entries: **Dashboard**, **Forecast Lab**, **Analysis**, **Indicators**,
-   **Calendar**, **Reports**. Other pages (Radar, Macro Sentiment, Fed Policy, Yield Curve, Inflation)
-   are opened from the links on the pages above or by URL: `/radar`, `/macro-sentiment`, `/fed-policy`,
-   `/yield-curve`, `/inflation`.
+3. The left sidebar lists the pages, in this order: **Dashboard** (`/dashboard`), **Radar**, **Macro
+   Sentiment**, **Fed Policy**, **Yield Curve**, **Inflation**, **Analysis** (Relative Performance,
+   Major Indices & Bitcoin, Market Breadth, Macro Overview), **Forecast Lab**, **Calendar**, **Reports**.
+   There is no Indicators entry in the sidebar; `/indicators` redirects to Macro Sentiment.
 4. Read error banners first. They name the backend request that failed. If a card is empty, check the
    backend health (`/api/health`) and the data freshness (see the troubleshooting section).
 
