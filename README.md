@@ -35,6 +35,8 @@ Supabase. See [DEPLOY.md](DEPLOY.md) for the hosting setup.
 ## Contents
 
 - [Screenshots](#screenshots)
+- [Quick start](#quick-start)
+- [Architecture](#architecture)
 - [What MacroLens does](#what-macrolens-does)
 - [Features](#features)
 - [Stack](#stack)
@@ -56,43 +58,49 @@ Supabase. See [DEPLOY.md](DEPLOY.md) for the hosting setup.
 
 ## Screenshots
 
-Captures from 2026-05-31. They show the UI as of that date; the current UI may differ.
+Captured from the local stack on 2026-11-02 (real FRED and market data, 1440×900).
 
-### Dashboard
+| | |
+|---|---|
+| **Dashboard and Navigator**<br><img src="assets/screenshots/dashboard.png" alt="Dashboard" width="480"> | **Cycle Radar**<br><img src="assets/screenshots/radar.png" alt="Radar" width="480"> |
+| **Yield Curve**<br><img src="assets/screenshots/yield-curve.png" alt="Yield curve" width="480"> | **Fed Policy**<br><img src="assets/screenshots/fed-policy.png" alt="Fed policy" width="480"> |
+| **Forecast Lab**<br><img src="assets/screenshots/forecast-lab.png" alt="Forecast Lab" width="480"> | |
 
-<img width="2269" height="1264" alt="Dashboard" src="https://github.com/user-attachments/assets/3094f32d-4586-47ab-af8a-b51d3307238b" />
+---
 
-### Radar
+## Quick start
 
-<img width="2291" height="1265" alt="Radar" src="https://github.com/user-attachments/assets/5241b1ff-d6e2-4c01-a6d6-3e47f18776cc" />
+The shortest path to a running terminal (Docker, Compose v2):
 
-### Macro Sentiment
+```powershell
+Copy-Item .env.example .env                      # then set FRED_API_KEY (free key from fred.stlouisfed.org)
+docker compose up --build                        # http://localhost:3000
+```
 
-<img width="2294" height="1262" alt="Macro Sentiment" src="https://github.com/user-attachments/assets/1d7d5498-784a-454f-abf2-7fadf1fbdcd3" />
+Open <http://localhost:3000>. The first screens are empty until data is loaded: set
+`ALLOW_UNAUTHENTICATED_ADMIN=true` in `.env` (local only) or `ADMIN_API_KEY`, then press the refresh
+control in the UI (or `POST /api/data/refresh` with `X-API-Key`). Details: [Install and run with Docker](#install-and-run-with-docker),
+[Install and run locally](#install-and-run-locally), [Environment variables](#environment-variables).
 
-### Fed Policy
+---
 
-<img width="2267" height="1254" alt="Fed Policy" src="https://github.com/user-attachments/assets/c9220f52-aaa5-4c6f-85ca-69f541bf41af" />
+## Architecture
 
-### Yield Curve
+```text
+Browser ──> Next.js 16 (frontend, :3000)
+              │  rewrites /api/* (resolved at build time: BACKEND_URL / BACKEND_INTERNAL_URL)
+              v
+          FastAPI (backend, :8000) ── SecurityMiddleware (X-API-Key, rate limit, body limit)
+              │        │
+              │        └── APScheduler jobs: FRED / Yahoo / Fed / calendar ingestion, alerts, memory
+              v
+   PostgreSQL 16 (+ pgvector if present)      Redis 7 (cache)
+              ^
+   Forecast Lab artifacts (HMM + XGBoost bundle, backend/data/forecast_lab_artifacts)
+```
 
-<img width="2279" height="1257" alt="Yield Curve" src="https://github.com/user-attachments/assets/fb7540d7-aa11-4313-b254-47c3d6948db3" />
-
-### Inflation
-
-<img width="2241" height="1265" alt="Inflation" src="https://github.com/user-attachments/assets/b605c4ef-7938-4921-b021-ab771117433c" />
-
-### Analysis: Relative Performance
-
-<img width="2266" height="1256" alt="Relative Performance" src="https://github.com/user-attachments/assets/fceb089d-d9c1-4f24-8090-a8c162549f8f" />
-
-### Forecast Lab
-
-<img width="2270" height="1260" alt="Forecast Lab" src="https://github.com/user-attachments/assets/3cf81019-6a5c-49b5-be75-dab5d3607c9b" />
-
-### Calendar
-
-<img width="2276" height="1253" alt="Calendar" src="https://github.com/user-attachments/assets/3b4f1be6-108d-4e16-8f17-ee30447b866f" />
+The backend owns all data and models; the frontend is a thin read-mostly client. Reads are public;
+state-changing, training and LLM endpoints require an admin key (see [Security model](#security-model)).
 
 ---
 
