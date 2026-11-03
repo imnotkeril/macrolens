@@ -1,18 +1,18 @@
 # Handoff
 status: active
-date: 2026-11-02
+date: 2026-11-03
 from-chat-tokens: ~300k
 
 ## Goal
 Bring MacroLens (FastAPI + Next.js 16 macro terminal, router webapp/dashboard) to release-ready per coding-brain: security/correctness fixes from docs/AUDIT_2026-10-24.md, framework steps, accurate docs. No push/PR/deploy without owner yes.
 
 ## State
-- Done: audit; Alembic baseline; admin API key + rate/body limit (backend/app/security.py); deps bump (fastapi 0.162, Next 16.4.3); compose hardening; B1 concurrent-train fix; review (reviewer, security-reviewer), qa-tester, tech-writer, docs auditor; README quick start/architecture/5 screenshots (assets/screenshots, tracked).
-- Not run yet: design-reviewer, devops (release-prep), Playwright MCP browser QA/a11y/perf. docs/RELEASE_CHECKLIST.md was written by the session, not devops.
-- Running: nothing (all audit-macrolens* containers/ports cleaned).
-- Branch/commit: chore/audit @ 99fc62a, tree clean, 27 commits ahead of origin/main, NOT pushed.
-- Counts at HEAD: pytest 59 passed + 1 skipped (needs MACROLENS_TEST_DATABASE_URL), cov 67.74%; ruff/black/isort/mypy clean; lint 0 errors/12 warnings; tsc 0; build ok; pip-audit and npm audit --omit=dev clean.
-- docs/ is in .gitignore: STATE.md, plan.md, QA.md, KPI_DICTIONARY.md, RELEASE_CHECKLIST.md, AUDIT_*.md, review/*.md, HANDOFF.md exist only on disk (untracked). Tracked copy of this note: HANDOFF.md at repo root. Tracked docs: README, DEPLOY, USER_GUIDE, CHANGELOG, llms.txt, CLAUDE.md, AGENTS.md.
+- Done: everything in the previous handoff plus (2026-11-03): safe P2 fixes (failed-key rate bucket, memory query max 256), /llms.txt via frontend/public, provisional CHANGELOG [1.1.0] - 2026-11-03 (best guess, owner confirms), devops release-prep (docs/RELEASE.md, local).
+- Branch: chore/audit, pushed to origin up to f9876b7; PR imnotkeril/macrolens#3 OPEN, CI green at 99fc62a. Later local commits may be unpushed (check git status). Do NOT merge/deploy.
+- Checks at HEAD: pytest 60 passed + 1 skipped, ruff/black/isort/mypy clean (venv in session scratchpad; PYTHONUTF8=1 needed).
+- Not done: design-reviewer + browser QA (375/768/1440). Blocked: Playwright MCP is in .mcp.json but needs a `claude -c` restart; Docker Desktop daemon unresponsive; native Postgres refuses app login.
+- Skipped on purpose: S-02 (GET /api/ml2/predict mutates; needs GET->POST + frontend change), S-04 (dev-mode Host/Origin check), trusted-hops config for X-Forwarded-For.
+- docs/ is gitignored (local: STATE, plan, RELEASE*, review/, HANDOFF).
 
 ## Decisions
 - Python backend kept (not Next+Drizzle): data/ML core is Python.
@@ -20,12 +20,11 @@ Bring MacroLens (FastAPI + Next.js 16 macro terminal, router webapp/dashboard) t
 - docs/ stays untracked until the owner decides.
 
 ## Next
-1. Run devops agent for release-prep (reconcile docs/RELEASE_CHECKLIST.md); `node E:/Main/Dev/coding-brain/scripts/step-brief.mjs --project . --step release-prep` first.
-2. If Playwright MCP is wired (`apply-router.mjs --mcp playwright`), run design-reviewer + browser QA (375/768/1440, console, a11y) on a local stack with audit ports.
-3. With owner yes: fix P2 (rate-limit identity behind proxy, GET /api/ml2/predict and memory search paid/writing GETs), serve /llms.txt, forward compose vars.
+1. Restart with `claude -c`, start Docker (or a local PG), run the stack on audit ports, run design-reviewer + browser QA.
+2. Bump manifests to the chosen version once the owner confirms; S-02 fix with owner yes.
 
 ## Open questions
-- CHANGELOG version number/date; track docs/ in git?; push chore/audit + PR?; ADMIN_API_KEY/BACKEND_URL/CORS for Vercel+HF.
+- Version/date for CHANGELOG (provisional 1.1.0); waive secrets-scan hits (false positives); track docs/ in git?; ADMIN_API_KEY/BACKEND_URL/CORS values for Vercel+HF; DB snapshot before first alembic upgrade head; Sentry yes/no; stale-ingest monitor.
 
 ## Traps
 - Docker default ports 3000/5432/6379/8000 are taken (native Postgres, other sessions): use `-p audit-macrolens-*` with `ports: !override`.
