@@ -75,3 +75,10 @@ def test_body_limit():
     )
     assert c.post("/api/echo", content=b"x" * 50).json() == {"n": 50}
     assert c.post("/api/echo", content=b"x" * 500).status_code == 413
+
+
+def test_failed_keys_do_not_exhaust_valid_key_bucket():
+    c = _client(rate_limit_per_minute=100, rate_limit_admin_per_minute=2, admin_api_key="k")
+    assert [c.post("/api/data/refresh").status_code for _ in range(3)] == [401, 401, 429]
+    h = {"X-API-Key": "k"}
+    assert c.post("/api/data/refresh", headers=h).status_code == 200

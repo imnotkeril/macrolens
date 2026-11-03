@@ -67,16 +67,11 @@ class SecurityMiddleware:
         admin = is_admin_request(method, path)
 
         if method != "OPTIONS" and path.startswith("/api/"):
-            if cfg.rate_limit_per_minute > 0 and path not in _RATE_EXEMPT:
-                client = (scope.get("client") or ("unknown", 0))[0]
-                if cfg.rate_limit_trust_proxy and headers.get("x-forwarded-for"):
-                    client = headers["x-forwarded-for"].split(",")[0].strip()
-                now = time.monotonic()
-                limit = cfg.rate_limit_admin_per_minute if admin else cfg.rate_limit_per_minute
-                bucket = f"{'a' if admin else 'g'}:{client}"
-                if not self._window.allow(bucket, limit, now):
-                    await _json(send, 429, "Too many requests", {"retry-after": "60"})
-                    return
+            limited = cfg.rate_limit_per_minute > 0 and path not in _RATE_EXEMPT
+            client = (scope.get("client") or ("unknown", 0))[0]
+            if cfg.rate_limit_trust_proxy and headers.get("x-forwarded-for"):
+                client = headers["x-forwarded-for"].split(",")[0].strip()
+            now = time.monotonic()
             if admin and not cfg.allow_unauthenticated_admin:
                 if not cfg.admin_api_key:
                     await _json(
@@ -85,7 +80,20 @@ class SecurityMiddleware:
                     return
                 supplied = headers.get("x-api-key", "")
                 if not hmac.compare_digest(supplied.encode(), cfg.admin_api_key.encode()):
+                    # Failed attempts get their own budget so anonymous traffic cannot
+                    # exhaust the bucket that valid-key requests use.
+                    if limited and not self._window.allow(
+                        f"f:{client}", cfg.rate_limit_admin_per_minute, now
+                    ):
+                        await _json(send, 429, "Too many requests", {"retry-after": "60"})
+                        return
                     await _json(send, 401, "Missing or invalid API key")
+                    return
+            if limited:
+                limit = cfg.rate_limit_admin_per_minute if admin else cfg.rate_limit_per_minute
+                bucket = f"{'a' if admin else 'g'}:{client}"
+                if not self._window.allow(bucket, limit, now):
+                    await _json(send, 429, "Too many requests", {"retry-after": "60"})
                     return
 
         max_bytes = cfg.max_request_body_bytes

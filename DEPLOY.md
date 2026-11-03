@@ -111,5 +111,5 @@ frontend image proxies `/api/*` to `http://backend:8000` (build arg `BACKEND_INT
 ## Verify a deployment
 
 - Backend: `curl https://<backend>/api/health` → `{"status":"ok","service":"MacroLens API"}`
-- Interactive API reference: `https://<backend>/docs` (FastAPI Swagger UI). The Markdown API summary is `llms.txt` in the repo root (no `/llms.txt` route on the API yet).
+- Interactive API reference: `https://<backend>/docs` (FastAPI Swagger UI). The Markdown API summary is `llms.txt` in the repo root (also served as `/llms.txt` by the frontend, from `frontend/public/llms.txt`; keep the two copies in sync when regenerating).
 - Frontend: open the Vercel URL; the dashboard should load live data via `/api/*`.
