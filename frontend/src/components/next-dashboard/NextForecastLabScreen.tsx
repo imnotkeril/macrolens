@@ -429,7 +429,7 @@ export function NextForecastLabScreen() {
                     </button>
                   </div>
                 </div>
-                <div className="min-h-0 w-full min-w-0 flex-1 overflow-auto">
+                <div className="min-h-[120px] w-full min-w-0 flex-1 overflow-auto">
                   {regimeHistEmpty ? (
                     <NextNoData hint="Use Materialize from DB after the first data refresh." />
                   ) : (
