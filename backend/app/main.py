@@ -96,7 +96,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="MacroLens API",
     description="Macro Trading & Analysis Framework",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 
