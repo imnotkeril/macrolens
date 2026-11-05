@@ -142,8 +142,8 @@ export function NextYieldCurveScreen({ omitShell = false }: { omitShell?: boolea
 
   const updatedAt = useMemo(() => {
     const d = curveQ.data?.date;
-    if (d) return `${d}T16:00:00.000Z`;
-    return "—";
+    if (d) return d;
+    return "No data";
   }, [curveQ.data?.date]);
 
   const queryErrors = useMemo(() => {

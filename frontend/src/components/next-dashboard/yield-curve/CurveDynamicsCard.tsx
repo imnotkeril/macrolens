@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { NextShellThemeContextValue } from "@/components/next-dashboard/nextShellTheme";
 import type { CurveDynamics, RatioPoint } from "@/types";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import { normalizeYieldCurvePattern, YIELD_CURVE_PATTERN_UI } from "./yieldCurvePatternUi";
 
 type C = NextShellThemeContextValue["colors"];
@@ -52,10 +53,13 @@ export function CurveDynamicsCard({
     );
   }
 
-  if (!dynamics) {
+  if (!dynamics || dynamics.insufficient_data) {
     return (
-      <div className="flex flex-1 items-center justify-center py-8 text-[12px]" style={{ color: "var(--nd-muted)" }}>
-        No dynamics data.
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
+          Curve dynamics
+        </div>
+        <NextNoData />
       </div>
     );
   }

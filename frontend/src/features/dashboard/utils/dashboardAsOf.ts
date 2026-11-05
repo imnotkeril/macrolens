@@ -25,14 +25,17 @@ export function deriveDashboardUpdatedAtLabel(opts: {
   regimePending: boolean;
   navigatorPending: boolean;
 }): string {
+  // Insufficient-data payloads carry no real observation date: never fall back to a timestamp (= today).
+  const regimeStamp = opts.regime?.insufficient_data ? null : opts.regime?.timestamp?.trim();
+  const navEmpty = opts.navigator?.insufficient_data === true;
   const raw =
-    opts.regime?.timestamp?.trim() ??
-    opts.navigator?.position?.date?.trim() ??
-    opts.navigator?.phase_context?.as_of_date?.trim() ??
-    opts.navigator?.ensemble?.as_of_date?.trim() ??
+    regimeStamp ??
+    (navEmpty ? null : opts.navigator?.position?.date?.trim()) ??
+    (navEmpty ? null : opts.navigator?.phase_context?.as_of_date?.trim()) ??
+    (navEmpty ? null : opts.navigator?.ensemble?.as_of_date?.trim()) ??
     null;
 
   if (raw) return formatDashboardAsOfLabel(raw);
   if (opts.regimePending && opts.navigatorPending) return "…";
-  return "—";
+  return "No data";
 }

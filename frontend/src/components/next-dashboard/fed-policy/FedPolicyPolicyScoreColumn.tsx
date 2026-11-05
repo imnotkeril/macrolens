@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { FedPolicyScaleBar, fmtNumber } from "@/features/dashboard/components/dashboardVisuals";
 import type { NextShellThemeContextValue } from "@/components/next-dashboard/nextShellTheme";
 import type { FedPolicyStatus } from "@/types";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import {
   balanceSheetScoreLabel,
   directionScoreLabel,
@@ -20,6 +21,31 @@ const STANCE_LABELS: Record<string, string> = {
 };
 
 type Colors = NextShellThemeContextValue["colors"];
+
+/** Status with every observation present (D-05: the backend returns nulls when there is no FedRate row). */
+type FedStatusOk = FedPolicyStatus & {
+  current_rate_upper: number;
+  current_rate_lower: number;
+  policy_score: number;
+  stance: string;
+  rate_direction: string;
+  balance_sheet_direction: string;
+};
+
+function asFedStatusOk(s: FedPolicyStatus | undefined): FedStatusOk | null {
+  if (!s || s.insufficient_data) return null;
+  if (
+    s.current_rate_upper == null ||
+    s.current_rate_lower == null ||
+    s.policy_score == null ||
+    s.stance == null ||
+    s.rate_direction == null ||
+    s.balance_sheet_direction == null
+  ) {
+    return null;
+  }
+  return s as FedStatusOk;
+}
 
 type Sentiment = { score: number; pct: number; label: string; fromRhetoric?: boolean };
 
@@ -38,40 +64,41 @@ export function FedPolicyPolicyScoreColumn({
   sentiment: Sentiment | null;
   hawkColor: string;
 }) {
+  const ok = asFedStatusOk(status);
   const neutralNominal =
-    status && status.neutral_rate_nominal != null && Number.isFinite(status.neutral_rate_nominal)
-      ? status.neutral_rate_nominal
+    ok && ok.neutral_rate_nominal != null && Number.isFinite(ok.neutral_rate_nominal)
+      ? ok.neutral_rate_nominal
       : R_STAR_FALLBACK;
-  const mid = status ? (status.current_rate_upper + status.current_rate_lower) / 2 : null;
+  const mid = ok ? (ok.current_rate_upper + ok.current_rate_lower) / 2 : null;
   const rateComp = mid != null ? rateVsRStarComponent(mid, neutralNominal) : null;
-  const dirS = status ? directionScoreLabel(status.rate_direction) : null;
-  const bsS = status ? balanceSheetScoreLabel(status.balance_sheet_direction) : null;
+  const dirS = ok ? directionScoreLabel(ok.rate_direction) : null;
+  const bsS = ok ? balanceSheetScoreLabel(ok.balance_sheet_direction) : null;
 
   return (
     <div className="flex min-h-0 flex-col gap-3 xl:col-span-3 print:col-span-3" style={panelStyle}>
-      {status ? (
+      {ok ? (
         <>
           <div className="flex items-start justify-between gap-3">
             <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
               Policy score
             </div>
-            {status.last_change_date ? (
+            {ok.last_change_date ? (
               <div className="max-w-[55%] shrink-0 text-right text-[9px] normal-case leading-snug" style={{ color: "var(--nd-muted)" }}>
-                Last rate change: {String(status.last_change_date)}
+                Last rate change: {String(ok.last_change_date)}
               </div>
             ) : null}
           </div>
           <div className="flex min-w-0 items-center gap-3">
             <div className="shrink-0">
               <div className="text-[28px] font-extralight leading-none tabular-nums" style={{ color: "var(--nd-text)" }}>
-                {fmtNumber(status.policy_score)}
+                {fmtNumber(ok.policy_score)}
               </div>
               <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.08em]" style={{ color: C.green }}>
-                {STANCE_LABELS[status.stance] ?? status.stance}
+                {STANCE_LABELS[ok.stance] ?? ok.stance}
               </div>
             </div>
             <div className="min-w-0 flex-1 pt-0.5">
-              <FedPolicyScaleBar value={status.policy_score} />
+              <FedPolicyScaleBar value={ok.policy_score} />
             </div>
           </div>
           {(() => {
@@ -95,7 +122,7 @@ export function FedPolicyPolicyScoreColumn({
                     ? C.green
                     : "var(--nd-soft)";
 
-            const rd = status.rate_direction?.toLowerCase() ?? "";
+            const rd = ok.rate_direction?.toLowerCase() ?? "";
             const dirLabelColor = rd === "cutting" ? C.green : rd === "hiking" ? C.red : "var(--nd-text)";
             const dirDeltaTone =
               dirS == null
@@ -106,7 +133,7 @@ export function FedPolicyPolicyScoreColumn({
                     ? C.green
                     : "var(--nd-soft)";
 
-            const bsDir = status.balance_sheet_direction?.toLowerCase() ?? "";
+            const bsDir = ok.balance_sheet_direction?.toLowerCase() ?? "";
             const bsLabelColor =
               bsDir === "shrinking" ? C.yellow : bsDir === "expanding" ? C.green : "var(--nd-soft)";
             const bsDeltaTone =
@@ -241,8 +268,8 @@ export function FedPolicyPolicyScoreColumn({
           <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
             Policy score
           </div>
-          <div className="py-8 text-center text-[13px]" style={{ color: "var(--nd-muted)" }}>
-            {statusPending ? "Loading…" : "—"}
+          <div className="py-4 text-center text-[13px]" style={{ color: "var(--nd-muted)" }}>
+            {statusPending ? "Loading…" : <NextNoData compact />}
           </div>
         </>
       )}

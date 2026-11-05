@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ComponentType } from "react";
 import type { CrossAssetSignal } from "@/types";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 
 type Palette = {
   borderSoft: string;
@@ -15,6 +16,7 @@ type CrossAssetDisplaySignal = {
   signal: CrossAssetSignal["signal"];
   value: number | null;
   unit?: string;
+  has_data?: boolean;
 };
 
 type QuickRowData = {
@@ -36,14 +38,18 @@ type QuickRowData = {
 type Props = {
   basePanelStyle: CSSProperties;
   colors: Palette;
-  growthScore: number;
-  fedPolicy: number;
+  growthScore: number | null;
+  fedPolicy: number | null;
   ensembleGrowth: number | null;
   ensembleFed: number | null;
-  confidence: number;
+  confidence: number | null;
   confidenceText: string;
+  /** Navigator has no inputs (insufficient_data): show the empty state instead of defaults. */
+  navigatorEmpty: boolean;
+  /** Every cross-asset cell lacks a value. */
+  signalsEmpty: boolean;
   signals: CrossAssetDisplaySignal[];
-  activeRegimeLabel: string;
+  activeRegimeLabel: string | null;
   activeRegimeColor: string;
   inflationLatest: number | null;
   coreInflationLatest: number | null;
@@ -77,6 +83,8 @@ export function DashboardTopRowSection({
   ensembleFed,
   confidence,
   confidenceText,
+  navigatorEmpty,
+  signalsEmpty,
   signals,
   activeRegimeLabel,
   activeRegimeColor,
@@ -106,12 +114,16 @@ export function DashboardTopRowSection({
           </div>
           {/* flex-1 + min-h-0 alone can collapse this slot to 0 height (SVG max-h-full → invisible). */}
           <div className="mt-0.5 flex min-h-[220px] flex-1 flex-col overflow-hidden pb-2 print:min-h-[280px] print:overflow-visible">
-            <MacroNavigatorSvgComponent
-              growthScore={growthScore}
-              fedPolicy={fedPolicy}
-              ensembleGrowth={ensembleGrowth}
-              ensembleFed={ensembleFed}
-            />
+            {navigatorEmpty || growthScore == null || fedPolicy == null ? (
+              <NextNoData />
+            ) : (
+              <MacroNavigatorSvgComponent
+                growthScore={growthScore}
+                fedPolicy={fedPolicy}
+                ensembleGrowth={ensembleGrowth}
+                ensembleFed={ensembleFed}
+              />
+            )}
           </div>
         </div>
         <div className="mt-auto shrink-0 border-t pt-[10px]" style={{ borderColor: colors.borderSoft }}>
@@ -123,8 +135,8 @@ export function DashboardTopRowSection({
             >
               ?
             </span>
-            <ConfidenceSegmentsComponent value={confidence} />
-            <span className="text-[18px]">{confidenceText}</span>
+            <ConfidenceSegmentsComponent value={confidence ?? 0} />
+            <span className="text-[18px]">{confidence == null ? "—" : confidenceText}</span>
           </div>
         </div>
       </div>
@@ -136,9 +148,9 @@ export function DashboardTopRowSection({
         <SectionTitleComponent label="Cross-Asset Signals" />
         <div
           className="mt-2 grid min-h-0 flex-1"
-          style={{ gridTemplateRows: `repeat(${Math.max(1, signals.length)}, minmax(0, 1fr))` }}
+          style={signalsEmpty ? undefined : { gridTemplateRows: `repeat(${Math.max(1, signals.length)}, minmax(0, 1fr))` }}
         >
-          {signals.map((s) => <SignalRowComponent key={s.name} signal={s} />)}
+          {signalsEmpty ? <NextNoData /> : signals.map((s) => <SignalRowComponent key={s.name} signal={s} />)}
         </div>
       </div>
 
@@ -150,14 +162,19 @@ export function DashboardTopRowSection({
           <div>
             <div className="text-[18px] uppercase leading-none tracking-[0.08em]">Active Regime</div>
           </div>
-          <span
-            className="max-w-[220px] truncate rounded-[2px] border px-3 py-2 text-[11px] uppercase tracking-[0.08em]"
-            style={{ borderColor: activeRegimeColor, color: activeRegimeColor }}
-          >
-            {activeRegimeLabel}
-          </span>
+          {navigatorEmpty || !activeRegimeLabel ? (
+            <span className="text-[13px]" style={{ color: "var(--nd-muted)" }} title="No data yet. Data loads after the first refresh.">—</span>
+          ) : (
+            <span
+              className="max-w-[220px] truncate rounded-[2px] border px-3 py-2 text-[11px] uppercase tracking-[0.08em]"
+              style={{ borderColor: activeRegimeColor, color: activeRegimeColor }}
+            >
+              {activeRegimeLabel}
+            </span>
+          )}
         </div>
         <div className="mt-4 w-full min-w-0 space-y-4">
+          {navigatorEmpty ? <NextNoData compact /> : null}
           <InflationQuickRowComponent
             cpiValue={inflationLatest}
             coreValue={coreInflationLatest}

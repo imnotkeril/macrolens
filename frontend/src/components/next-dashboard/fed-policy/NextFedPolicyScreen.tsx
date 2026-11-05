@@ -8,6 +8,7 @@ import { QueryErrorBanner } from "@/components/next-dashboard/QueryErrorBanner";
 import { useNextShellTheme } from "@/components/next-dashboard/nextShellTheme";
 import { nextPanelSurfaceStyle } from "@/components/next-dashboard/nextPanelSurface";
 import { useDataRefresh } from "@/lib/useDataRefresh";
+import { formatDashboardAsOfLabel } from "@/features/dashboard/utils/dashboardAsOf";
 import {
   getBalanceSheetHistory,
   getFedStatus,
@@ -120,6 +121,7 @@ export function NextFedPolicyScreen({ omitShell = false }: { omitShell?: boolean
       return { score, pct, label, fromRhetoric: true as const };
     }
     const score = status.policy_score;
+    if (status.insufficient_data || score == null) return null;
     const pct = ((score + 2) / 4) * 100;
     const label =
       score <= -1
@@ -143,11 +145,11 @@ export function NextFedPolicyScreen({ omitShell = false }: { omitShell?: boolean
   }, [sentiment, C]);
 
   const updatedAt = useMemo(() => {
-    if (status?.last_change_date) return `${status.last_change_date}T12:00:00.000Z`;
+    if (status?.last_change_date) return formatDashboardAsOfLabel(status.last_change_date);
     const d = rateHistQ.data?.[0]?.date;
-    if (d) return `${d}T12:00:00.000Z`;
-    return "—";
-  }, [status?.last_change_date, rateHistQ.data]);
+    if (d) return formatDashboardAsOfLabel(d);
+    return statusQ.isPending ? "…" : "No data";
+  }, [status?.last_change_date, rateHistQ.data, statusQ.isPending]);
 
   const queryErrors = useMemo(() => {
     const errs: Array<{ label: string; message: string }> = [];

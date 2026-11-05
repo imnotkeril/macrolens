@@ -38,6 +38,7 @@ type CrossAssetDisplaySignal = {
   signal: CrossAssetSignal["signal"];
   value: number | null;
   unit?: string;
+  has_data: boolean;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -66,6 +67,7 @@ function buildCrossAssetSignals(radar?: CrossAssetRadarCell[] | null): CrossAsse
     const value = a?.value != null && b?.value != null ? Number((a.value - b.value).toFixed(1)) : null;
     return {
       name,
+      has_data: value != null,
       description: `${a?.name ?? "First leg"} minus ${b?.name ?? "second leg"} 30D momentum`,
       signal: value == null ? "neutral" : value > 0 ? "bullish" : value < 0 ? "bearish" : "neutral",
       value,
@@ -76,6 +78,7 @@ function buildCrossAssetSignals(radar?: CrossAssetRadarCell[] | null): CrossAsse
     const cell = get(source);
     return {
       name: displayName,
+      has_data: cell != null && cell.value != null && cell.has_data !== false,
       description,
       signal: cell?.signal ?? "neutral",
       value: cell?.value ?? null,
@@ -115,7 +118,13 @@ export function useDashboardData() {
   const yieldHistoryQ = useQuery({ queryKey: dashboardQueryKeys.yieldHistory, queryFn: getYieldCurveHistory, staleTime: 120_000 });
   const curveDynamicsQ = useQuery({ queryKey: dashboardQueryKeys.curveDynamics, queryFn: getCurveDynamics, staleTime: 120_000 });
 
-  const fedPolicy = fedQ.data?.policy_score ?? navigatorQ.data?.position?.fed_policy_score ?? 0.46;
+  // D-05: never substitute defaults for missing observations; null renders as a dash / "No data yet".
+  const regimeEmpty = regimeQ.data?.insufficient_data === true;
+  const navigatorEmpty = navigatorQ.data?.insufficient_data === true;
+  const fedEmpty = fedQ.data?.insufficient_data === true;
+  const yieldEmpty = yieldCurveQ.data?.insufficient_data === true;
+  const signalsEmpty = !!signalsQ.data && signalsQ.data.every((c) => c.has_data === false || c.value == null);
+  const fedPolicy: number | null = fedQ.data?.policy_score ?? navigatorQ.data?.position?.fed_policy_score ?? null;
   const cycleScore =
     regimeQ.data?.cycle_score != null && Number.isFinite(regimeQ.data.cycle_score)
       ? regimeQ.data.cycle_score
@@ -126,17 +135,18 @@ export function useDashboardData() {
       ? null
       : normalizeProbabilityPercent(rawRecessionProb);
   const recessionRisk = recessionRiskStyle(recessionProbPct);
-  const growthScore = navigatorQ.data?.position?.growth_score ?? 0.21;
-  const confidence = clamp((navigatorQ.data?.position?.confidence ?? 0.72) * 100, 0, 100);
+  const growthScore: number | null = navigatorQ.data?.position?.growth_score ?? null;
+  const rawConfidence = navigatorQ.data?.position?.confidence;
+  const confidence: number | null = rawConfidence == null ? null : clamp(rawConfidence * 100, 0, 100);
   const updatedAt = deriveDashboardUpdatedAtLabel({
     regime: regimeQ.data,
     navigator: navigatorQ.data,
     regimePending: regimeQ.isPending,
     navigatorPending: navigatorQ.isPending,
   });
-  const activeRegime =
+  const activeRegime: string | null =
     navigatorQ.data?.position?.quadrant_label ??
-    (navigatorQ.data?.position?.quadrant ? QMAP[navigatorQ.data.position.quadrant] ?? navigatorQ.data.position.quadrant : "RISK ON");
+    (navigatorQ.data?.position?.quadrant ? QMAP[navigatorQ.data.position.quadrant] ?? navigatorQ.data.position.quadrant : null);
 
   const inflationLatest =
     inflationQ.data?.find((row) => row.name.toUpperCase().includes("CPI"))?.yoy ??
@@ -195,7 +205,10 @@ export function useDashboardData() {
   }, [regimeHistoryQ.data]);
   const fedRateSeries = useMemo(() => {
     const rates = fedRateHistoryQ.data;
-    if (!rates?.length) return [fedQ.data?.current_rate_upper ?? 0];
+    if (!rates?.length) {
+      const upper = fedQ.data?.current_rate_upper;
+      return upper == null ? [] : [upper];
+    }
     const sorted = [...rates]
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((r) => (r.effr ?? (r.target_upper + r.target_lower) / 2))
@@ -263,7 +276,8 @@ export function useDashboardData() {
     const cycleBlend = normalizeProbabilityPercent(
       ((recessionQ.data?.score ?? 1) / Math.max(1, recessionQ.data?.total ?? 7)) * 100,
     );
-    const base = recessionProbPct ?? 0;
+    if (recessionProbPct == null) return [];
+    const base = recessionProbPct;
     return [
       { name: "Cycle Score Model", pct: cycleBlend, dot: RECESSION_MODEL_DOT_COLORS[0] },
       { name: "NY Fed 10Y-3M Model", pct: clamp(base * 0.92, 0, 100), dot: RECESSION_MODEL_DOT_COLORS[1] },
@@ -277,13 +291,15 @@ export function useDashboardData() {
   const factors = fullFactors.slice(0, 7);
   const sectors = fullSectors.slice(0, 6);
   const aa = navigatorQ.data?.asset_allocation;
-  const alloc = [
-    { label: "Equities", value: aa?.equities_pct ?? 55, color: "#679963" },
-    { label: "Bonds", value: aa?.bonds_pct ?? 25, color: "#587eb2" },
-    { label: "Commodities", value: aa?.commodities_pct ?? 10, color: "#c9a349" },
-    { label: "Cash", value: aa?.cash_pct ?? 5, color: "#8b8b85" },
-    { label: "Gold", value: aa?.gold_pct ?? 5, color: "#7a5a9b" },
-  ];
+  const alloc = aa
+    ? [
+        { label: "Equities", value: aa.equities_pct, color: "#679963" },
+        { label: "Bonds", value: aa.bonds_pct, color: "#587eb2" },
+        { label: "Commodities", value: aa.commodities_pct, color: "#c9a349" },
+        { label: "Cash", value: aa.cash_pct, color: "#8b8b85" },
+        { label: "Gold", value: aa.gold_pct, color: "#7a5a9b" },
+      ]
+    : [];
   const geographySource = navigatorQ.data?.geographic ?? {};
 
   const fedRateVsNeutralPp = fedQ.data?.rate_vs_neutral_pp ?? null;
@@ -306,6 +322,11 @@ export function useDashboardData() {
   })();
 
   return {
+    regimeEmpty,
+    navigatorEmpty,
+    fedEmpty,
+    yieldEmpty,
+    signalsEmpty,
     queryErrors,
     navigatorQ,
     regimeQ,

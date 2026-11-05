@@ -3,9 +3,19 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Grid2X2, Menu, RefreshCw, Settings, Sparkles, X, type LucideIcon } from "lucide-react";
+import { Grid2X2, Menu, RefreshCw, Sparkles, X, type LucideIcon } from "lucide-react";
 import type { TaskProgress } from "@/types";
 import { useOptionalReportStack } from "@/components/next-dashboard/nextReportStack";
+import { formatDashboardAsOfLabel } from "@/features/dashboard/utils/dashboardAsOf";
+
+/** One "Data as of" format for every screen: yyyy-MM-dd, or a short status word ("…", "No data"). */
+function normalizeAsOf(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "No data";
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return formatDashboardAsOfLabel(t);
+  if (t === "—") return "No data";
+  return t;
+}
 
 function sidebarRefreshHint(progress: TaskProgress | null) {
   if (!progress) return "Starting…";
@@ -57,7 +67,7 @@ export function NextDashboardShell({
   navItems,
   colors,
   shellThemeVars,
-  updatedAt,
+  updatedAt: updatedAtRaw,
   refreshing,
   refreshResult,
   progress,
@@ -67,6 +77,7 @@ export function NextDashboardShell({
   reportLayout = false,
   variablePdfPages = false,
 }: NextDashboardShellProps) {
+  const updatedAt = normalizeAsOf(updatedAtRaw);
   const reportStack = useOptionalReportStack();
   const embedded = reportStack?.embedded ?? false;
   const effectiveReportLayout = reportLayout || (reportStack?.reportLayout ?? false);
@@ -376,26 +387,11 @@ export function NextDashboardShell({
                 </>
               )}
             </div>
-            <div className="mt-[28px] border-y py-[24px]" style={{ borderColor: colors.borderSoft }}>
-              <div className={`flex items-center ${sidebarCollapsed ? "justify-center" : "gap-3"}`}>
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[22px]" style={{ background: colors.text, color: colors.bg }}>U</span>
-                {!sidebarCollapsed && <div>
-                  <div className="text-[13px] uppercase">User</div>
-                  <div className="text-[12px]" style={{ color: colors.soft }}>Portfolio Manager</div>
-                </div>}
-              </div>
-            </div>
-            <div className={`mt-[24px] flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"}`} style={{ color: colors.soft }}>
+            <div className={`mt-[28px] flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"}`} style={{ color: colors.soft }}>
               {!sidebarCollapsed && (
                 <>
                   <button type="button" className="nd-focus" title="Toggle theme" aria-label="Toggle theme" onClick={onThemeToggle}>
                     <Sparkles size={20} />
-                  </button>
-                  <button type="button" className="nd-focus" title="Settings" aria-label="Settings">
-                    <Settings size={20} />
-                  </button>
-                  <button type="button" className="nd-focus" title="Notifications" aria-label="Notifications">
-                    <Bell size={20} />
                   </button>
                 </>
               )}

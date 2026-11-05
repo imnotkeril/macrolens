@@ -245,7 +245,7 @@ export function NextForecastLabScreen() {
         navItems={NEXT_DASHBOARD_NAV_ITEMS}
         colors={C}
         shellThemeVars={shellThemeVars}
-        updatedAt={summaryQ.data?.as_of_date ? `FL ${summaryQ.data.as_of_date}` : "—"}
+        updatedAt={summaryQ.data?.as_of_date ?? "No data"}
         refreshing={refreshing}
         refreshResult={refreshResult}
         progress={progress}

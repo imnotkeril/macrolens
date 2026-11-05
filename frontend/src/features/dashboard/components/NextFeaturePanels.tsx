@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ComponentType, CSSProperties } from "react";
 import type { CategoryScore } from "@/types";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 
 type Palette = {
   borderSoft: string;
@@ -20,7 +21,7 @@ type SharedDeps = {
   RiskSegmentDonutComponent: ComponentType<{ value: number | null | undefined }>;
   MacroSentimentSparkBlockComponent: ComponentType<{ values: number[] }>;
   MacroCategoryRowComponent: ComponentType<{ row: CategoryScore }>;
-  FedPolicyScaleBarComponent: ComponentType<{ value: number }>;
+  FedPolicyScaleBarComponent: ComponentType<{ value: number | null }>;
   FedRateHistorySparkComponent: ComponentType<{ values: number[] }>;
 };
 
@@ -74,12 +75,14 @@ export function FedPolicySinglePanel({
   formatNumber,
   FedPolicyScaleBarComponent,
   FedRateHistorySparkComponent,
+  fedEmpty = false,
 }: SharedDeps & {
-  fedPolicy: number;
-  fedStance: string;
+  fedPolicy: number | null;
+  fedStance: string | null;
   fedRateSeries: number[];
-  rateDirection: string;
-  balanceSheetDirection: string;
+  rateDirection: string | null;
+  balanceSheetDirection: string | null;
+  fedEmpty?: boolean;
 }) {
   return (
     <Link
@@ -91,13 +94,14 @@ export function FedPolicySinglePanel({
       <div className="mb-1 text-[18px] uppercase leading-none tracking-[0.08em]" style={{ color: colors.text }}>
         Fed Policy Score
       </div>
+      {fedEmpty ? <NextNoData /> : (<>
       <div className="mt-2 grid min-w-0 shrink-0 items-start gap-y-0 overflow-hidden" style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}>
         <div className="min-w-0">
           <div className="text-[24px] leading-none tabular-nums">{formatNumber(fedPolicy)}</div>
-          <div className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: colors.green }}>{fedStance}</div>
+          <div className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: colors.green }}>{fedStance ?? "—"}</div>
         </div>
         <div className="min-w-0 px-1 py-0.5">
-          <FedPolicyScaleBarComponent value={fedPolicy ?? 0} />
+          <FedPolicyScaleBarComponent value={fedPolicy} />
         </div>
         <div className="col-span-2 mt-2 border-t pt-3" style={{ borderColor: colors.borderSoft }}>
           <div className="grid min-w-0 items-start" style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}>
@@ -116,16 +120,17 @@ export function FedPolicySinglePanel({
       <div className="mt-auto flex shrink-0 flex-col border-t pt-3 text-[11px] uppercase tracking-[0.06em]" style={{ color: colors.soft, borderColor: colors.borderSoft }}>
         <div className="flex items-center justify-between py-2">
           <span>Rate direction</span>
-          <span style={{ color: colors.text }}>{rateDirection}</span>
+          <span style={{ color: colors.text }}>{rateDirection ?? "—"}</span>
         </div>
         <div className="flex items-center justify-between py-2">
           <span>Balance sheet</span>
-          <span style={{ color: colors.text }}>{balanceSheetDirection}</span>
+          <span style={{ color: colors.text }}>{balanceSheetDirection ?? "—"}</span>
         </div>
         <span className="mt-auto shrink-0 pt-2 text-[11px] normal-case tracking-[0.03em]" style={{ color: colors.soft }}>
           Open Fed Policy {"->"}
         </span>
       </div>
+      </>)}
     </Link>
   );
 }

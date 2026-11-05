@@ -1,5 +1,6 @@
 "use client";
 
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import { useMemo } from "react";
 import {
   CartesianGrid,
@@ -155,7 +156,7 @@ export function YieldCurveSnapshotCard({
         } ${fillHeight ? "h-full" : ""}`}
         style={{ color: "var(--nd-muted)", background: "rgba(255,255,255,0.02)" }}
       >
-        No yield curve data.
+        <NextNoData compact />
       </div>
     );
   }

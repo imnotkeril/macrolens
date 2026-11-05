@@ -46,6 +46,8 @@ export type CrossAssetDisplaySignal = {
   signal: CrossAssetSignal["signal"];
   value: number | null;
   unit?: string;
+  /** False when the underlying series is missing: show a dash instead of a signal chip. */
+  has_data?: boolean;
 };
 
 export function SectionTitle({ label, sub, centered = false }: { label: string; sub?: string; centered?: boolean }) {
@@ -146,7 +148,8 @@ export function MacroNavigatorSvg({
 }
 
 export function SignalRow({ signal }: { signal: CrossAssetDisplaySignal }) {
-  const value = signal.value == null ? "N/A" : `${signal.value > 0 ? "+" : ""}${signal.value.toFixed(1)}${signal.unit ?? "%"}`;
+  const hasData = signal.has_data !== false && signal.value != null;
+  const value = !hasData ? "—" : signal.value == null ? "N/A" : `${signal.value > 0 ? "+" : ""}${signal.value.toFixed(1)}${signal.unit ?? "%"}`;
   return (
     <div
       className="grid items-center border-b"
@@ -162,10 +165,12 @@ export function SignalRow({ signal }: { signal: CrossAssetDisplaySignal }) {
         <div className="mt-0.5 truncate text-[10px]" style={{ color: C.soft }}>{signal.description}</div>
       </div>
       <div className="min-w-0 pr-0.5">
-        <Sparkline points={series(signal.name, signal.signal, 22)} color={signalColor(signal.signal)} width={280} height={22} responsive responsiveMode="fixed-height" />
+        {hasData ? (
+          <Sparkline points={series(signal.name, signal.signal, 22)} color={signalColor(signal.signal)} width={280} height={22} responsive responsiveMode="fixed-height" />
+        ) : null}
       </div>
       <div className="flex items-center justify-end gap-1.5">
-        <span className="min-w-[88px] whitespace-nowrap rounded-[2px] px-2 py-1 text-center text-[9px] uppercase tracking-[0.06em]" style={{ background: badgeColor(signal.signal), color: badgeTextColor(signal.signal) }}>{badgeText(signal.signal)}</span>
+        <span className="min-w-[88px] whitespace-nowrap rounded-[2px] px-2 py-1 text-center text-[9px] uppercase tracking-[0.06em]" style={{ background: hasData ? badgeColor(signal.signal) : "transparent", color: hasData ? badgeTextColor(signal.signal) : C.muted }}>{hasData ? badgeText(signal.signal) : "—"}</span>
         <div className="min-w-[56px] whitespace-nowrap text-right text-[12px] tabular-nums">{value}</div>
       </div>
     </div>
@@ -206,7 +211,7 @@ export function QuickRow({
   const ratio = clamp((safe - min) / (max - min), 0, 1);
   const secondaryRatio = secondarySafe == null ? null : clamp((secondarySafe - min) / (max - min), 0, 1);
   const display = value == null ? "N/A" : format === "percent" ? fmtPct(value, 1) : format === "basis_points" ? `${value.toFixed(0)}bp` : value.toFixed(2);
-  const deltaDisplay = formatDeltaByFormat(delta ?? null, format);
+  const deltaDisplay = value == null ? "—" : formatDeltaByFormat(delta ?? null, format);
   const deltaArrow = delta == null ? "→" : delta > 0 ? "↑" : delta < 0 ? "↓" : "→";
   const deltaColor = delta == null ? C.soft : higherIsWorse ? (delta > 0 ? C.red : delta < 0 ? C.green : C.soft) : (delta > 0 ? C.green : delta < 0 ? C.red : C.soft);
   const midRatio = clamp((mid - min) / (max - min), 0, 1);
@@ -222,10 +227,10 @@ export function QuickRow({
           <div className={`${titleSize} uppercase tracking-[0.06em]`} style={{ color: C.text }}>{label}</div>
           <div className={`mt-1 ${subSize} uppercase`} style={{ color: C.soft }}>{sub ?? (format === "percent" ? "composite" : "z-score")}</div>
         </div>
-        <div className={`${valueSize} leading-none tabular-nums whitespace-nowrap`}>{deltaDisplay} <span style={{ color: deltaColor }}>{deltaArrow}</span></div>
+        <div className={`${valueSize} leading-none tabular-nums whitespace-nowrap`}>{deltaDisplay}{value == null ? null : <> <span style={{ color: deltaColor }}>{deltaArrow}</span></>}</div>
       </div>
       <div className="relative h-[6px] w-full max-w-none rounded" style={{ background: C.border }}>
-        <div className="h-[6px] rounded" style={{ width: `${ratio * 100}%`, background: gradient ?? C.green }} />
+        <div className="h-[6px] rounded" style={{ width: value == null ? 0 : `${ratio * 100}%`, background: gradient ?? C.green }} />
         {secondaryRatio != null ? (
           <div
             className="absolute inset-y-0 left-0 rounded"
@@ -234,6 +239,7 @@ export function QuickRow({
         ) : null}
         <span
           className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-shadow hover:shadow-[0_0_0_2px_rgba(215,208,199,0.35)]"
+          hidden={value == null}
           style={{ left: `${ratio * 100}%`, background: pointColorFromPalette(ratio, palette, higherIsWorse), borderColor: C.panel }}
           title={`${label}: ${display}`}
         />
@@ -282,14 +288,15 @@ export function InflationQuickRow({
           <div className="mt-1 text-[10px] uppercase" style={{ color: C.soft }}>CPI YoY</div>
         </div>
         <div className="text-right text-[18px] leading-none tabular-nums">
-          {displayDelta.value} <span style={{ color: displayDelta.color }}>{deltaArrow}</span>
+          {cpiValue == null ? "—" : displayDelta.value}
+          {cpiValue == null ? null : <> <span style={{ color: displayDelta.color }}>{deltaArrow}</span></>}
         </div>
       </div>
       <div className="relative h-[6px] w-full max-w-none rounded" style={{ background: C.border }}>
         <div
           className="h-[6px] rounded"
           style={{
-            width: `${ratio * 100}%`,
+            width: cpiValue == null ? 0 : `${ratio * 100}%`,
             background: "linear-gradient(90deg, rgba(80,168,106,0.9) 0%, rgba(130,186,86,0.86) 52%, rgba(211,171,73,0.9) 78%, rgba(194,84,97,0.92) 100%)",
           }}
         />
@@ -307,6 +314,7 @@ export function InflationQuickRow({
         <span className="absolute top-[-6px] h-[22px] w-px" style={{ left: `${midRatio * 100}%`, background: "rgba(220,214,205,0.6)" }} />
         <span
           className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-shadow hover:shadow-[0_0_0_2px_rgba(215,208,199,0.35)]"
+          hidden={cpiValue == null}
           style={{ left: `${ratio * 100}%`, background: pointColor, borderColor: C.panel }}
           title={`Current CPI: ${cpiDisplay} (${displayDelta.value})\nCore CPI: ${coreDisplay} (${coreDeltaDisplay.value})`}
         />
@@ -321,8 +329,8 @@ export function InflationQuickRow({
   );
 }
 
-export function FedPolicyScaleBar({ value }: { value: number }) {
-  const safe = clamp(value, -2, 2);
+export function FedPolicyScaleBar({ value }: { value: number | null }) {
+  const safe = clamp(value ?? 0, -2, 2);
   const ratio = clamp((safe + 2) / 4, 0, 1);
   const pointerColor = pointColorFromPalette(ratio, ["#6db77a", "#c9b55d", "#c66b74"], true);
   return (
@@ -343,6 +351,7 @@ export function FedPolicyScaleBar({ value }: { value: number }) {
         <span className="absolute top-[-5px] h-4 w-px" style={{ left: "50%", background: "rgba(220,214,205,0.6)" }} />
         <span
           className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-shadow hover:shadow-[0_0_0_2px_rgba(215,208,199,0.35)]"
+          hidden={value == null}
           style={{ left: `${ratio * 100}%`, background: pointerColor, borderColor: C.panel }}
           title={`Fed policy score: ${fmtNumber(safe)}`}
         />
@@ -673,12 +682,12 @@ export function formatRealYield10y(snapshot: YieldCurveSnapshot | null | undefin
 }
 
 export function fmtNumber(value: number | null | undefined, digits = 2) {
-  if (value == null || Number.isNaN(value)) return "N/A";
+  if (value == null || Number.isNaN(value)) return "—";
   return value.toFixed(digits);
 }
 
 export function fmtPct(value: number | null | undefined, digits = 0) {
-  if (value == null || Number.isNaN(value)) return "N/A";
+  if (value == null || Number.isNaN(value)) return "—";
   return `${value.toFixed(digits)}%`;
 }
 
