@@ -153,3 +153,23 @@ async def test_feature_row_availability_from_real_rows():
     db = _empty_db()
     db.execute.return_value.scalar_one_or_none.return_value = date(2026, 10, 1)
     assert await features_pit.has_fed_rate_at_date(db, date(2026, 10, 31)) is True
+
+
+@pytest.mark.asyncio
+async def test_regime_history_empty():
+    engine = CycleEngine(_empty_db())
+    engine._fetch_cycle_variables_at = AsyncMock(
+        return_value={"ism_new_orders": None, "gdp_gap": None}
+    )
+    assert await engine.get_history(12) == []
+
+
+@pytest.mark.asyncio
+async def test_regime_history_keeps_months_with_data():
+    engine = CycleEngine(_empty_db())
+    engine._fetch_cycle_variables_at = AsyncMock(
+        return_value={"ism_new_orders": 50.0, "gdp_gap": None}
+    )
+    engine._normalize_variables_at = AsyncMock(return_value={"ism_new_orders": 0.5})
+    points = await engine.get_history(6)
+    assert len(points) == 7

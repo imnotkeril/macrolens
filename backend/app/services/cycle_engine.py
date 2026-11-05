@@ -272,6 +272,8 @@ class CycleEngine:
         for m in range(months, -1, -1):
             target = today - timedelta(days=30 * m)
             raw = await self._fetch_cycle_variables_at(target)
+            if all(v is None for v in raw.values()):
+                continue  # no inputs for this month: skip instead of a default point (D-23)
             normalized = await self._normalize_variables_at(raw, target)
             score, _ = self._compute_cycle_score(normalized, raw)
             phase, _ = self._map_phase(score)
