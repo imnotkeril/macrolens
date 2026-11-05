@@ -72,9 +72,14 @@ class ForecastLabSummaryResponse(BaseModel):
     as_of_date: date
     bundle_id: str
     trained: bool
-    phase_class: str
-    phase_probabilities: PhaseProbabilities
-    confidence: float
+    insufficient_data: bool = Field(
+        default=False,
+        description="True when there are no real inputs (no indicator category, Fed rate or yield "
+        "spread); phase_class, phase_probabilities and confidence are then null.",
+    )
+    phase_class: str | None = None
+    phase_probabilities: PhaseProbabilities | None = None
+    confidence: float | None = None
     ensemble_weights: dict[str, float] | None = None
     experts: ExpertPhaseBreakdown | None = None
     macro_forecasts: list[MacroForecastRow] = Field(default_factory=list)

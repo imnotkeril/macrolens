@@ -121,3 +121,35 @@ async def test_fed_status_with_data_unchanged():
     assert status.current_rate_upper == 4.0
     assert status.rate_vs_neutral_pp == pytest.approx(0.875)
     assert status.policy_score == 0.5
+
+
+# ---- D-22 / D-23 -------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_forecast_lab_summary_empty():
+    from app.services.forecast_lab.inference import build_summary
+
+    summary = await build_summary(_empty_db(), date(2026, 10, 31), align_month_end=False)
+    assert summary.insufficient_data is True
+    assert summary.phase_class is None
+    assert summary.phase_probabilities is None
+    assert summary.confidence is None
+    assert summary.experts is None and summary.macro_forecasts == []
+    assert summary.recession_prob_12m is None and summary.dashboard_context is None
+    assert summary.data_availability["categories_used"] == []
+    assert summary.data_availability["fed"] is False
+    assert summary.data_availability["yield_spread"] is False
+    assert summary.stress.insufficient_history is True
+
+
+@pytest.mark.asyncio
+async def test_feature_row_availability_from_real_rows():
+    from app.services.forecast_lab import features_pit
+
+    assert await features_pit.has_fed_rate_at_date(_empty_db(), date(2026, 10, 31)) is False
+    assert await features_pit.yield_spread_10y_2y_or_none(_empty_db(), date(2026, 10, 31)) is None
+    assert await features_pit.yield_spread_10y_2y_at_date(_empty_db(), date(2026, 10, 31)) == 0.0
+    db = _empty_db()
+    db.execute.return_value.scalar_one_or_none.return_value = date(2026, 10, 1)
+    assert await features_pit.has_fed_rate_at_date(db, date(2026, 10, 31)) is True

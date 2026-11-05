@@ -569,6 +569,8 @@ class NavigatorEngine:
             # as_of already month-end aligned; do not re-shift via settings
             fl = await build_summary(self.db, as_of, align_month_end=False)
             pp = fl.phase_probabilities
+            if fl.insufficient_data or pp is None or fl.phase_class is None:
+                raise ValueError("forecast lab has no inputs")
             eg_mix, ef_mix = scores_from_phase_probs(
                 [pp.Q1_GOLDILOCKS, pp.Q2_REFLATION, pp.Q3_OVERHEATING, pp.Q4_STAGFLATION]
             )

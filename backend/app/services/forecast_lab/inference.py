@@ -165,11 +165,31 @@ async def build_summary(
     as_of = _effective_as_of(as_of, align_month_end)
     settings = get_settings()
     row = await features_pit.build_feature_row(db, as_of)
-    pr = rule_probs(row.growth_score, row.fed_policy_score)
-
     bundle_path = active_bundle_dir()
     meta = load_meta(bundle_path)
     trained = meta is not None and (bundle_path / "xgb.json").exists()
+
+    av = row.availability
+    if not av.get("categories_used") and not av.get("fed") and not av.get("yield_spread"):
+        # No real inputs: do not present model output on zeros as a fact (D-22).
+        stress_empty = await compute_stress(db, as_of)
+        return ForecastLabSummaryResponse(
+            as_of_date=as_of,
+            bundle_id=meta.get("bundle_id", "untrained") if meta else "untrained",
+            trained=trained,
+            insufficient_data=True,
+            stress=StressBlock(
+                stress_score=stress_empty.score,
+                stress_band=stress_empty.band,
+                drivers=stress_empty.drivers,
+                universe_symbols=stress_empty.universe_symbols,
+                insufficient_history=True,
+            ),
+            data_availability=av,
+            training_label_mode=meta.get("label_mode") if meta else None,
+        )
+
+    pr = rule_probs(row.growth_score, row.fed_policy_score)
     feature_names = features_pit.resolve_feature_names_from_meta(meta)
 
     scaler, clf, hmm, state_map, wts = _load_bundle_models(bundle_path)
