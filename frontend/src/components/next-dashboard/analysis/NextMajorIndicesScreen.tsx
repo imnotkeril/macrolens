@@ -286,7 +286,8 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
       btc: filterRowsByLookback(rowsFromSeries(domHistory.btc_dominance_pct), days),
       stable: filterRowsByLookback(rowsFromSeries(domHistory.stable_dominance_pct), days),
       source: domHistory.source,
-      message: domHistory.message,
+      // Raw provider errors (e.g. "CoinGecko usd-coin failed (429)") stay in backend logs only.
+      message: domHistory.source === "error" ? "Data source temporarily unavailable" : domHistory.message,
     };
   }, [domHistory, colDays]);
 
@@ -474,7 +475,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                       </div>
                     )}
                   </div>
-                  {dominancePrepared.source ? (
+                  {dominancePrepared.source && dominancePrepared.source !== "error" ? (
                     <div className="shrink-0 pt-0.5 text-[8px] leading-tight" style={{ color: "var(--nd-muted)", opacity: 0.85 }}>
                       {dominancePrepared.source === "coingecko_market_caps"
                         ? "Source: CoinGecko (market caps, calibrated to /global)"
