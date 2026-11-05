@@ -6,16 +6,18 @@ from app.schemas.forecast_lab import ExpertPhaseBreakdown, PhaseProbabilities
 
 
 class NavigatorPosition(BaseModel):
-    growth_score: float  # -2 to +2
-    fed_policy_score: float  # -2 to +2
-    quadrant: str  # Q1_GOLDILOCKS, Q2_REFLATION, Q3_OVERHEATING, Q4_STAGFLATION
-    quadrant_label: str
+    # All of growth_score / fed_policy_score / quadrant / quadrant_label / confidence / direction /
+    # date are null when the recommendation is `insufficient_data` (no axis inputs).
+    growth_score: float | None  # -2 to +2
+    fed_policy_score: float | None  # -2 to +2
+    quadrant: str | None  # Q1_GOLDILOCKS, Q2_REFLATION, Q3_OVERHEATING, Q4_STAGFLATION
+    quadrant_label: str | None
     matrix_quadrant: str | None = (
         None  # axes-only quadrant; canonical `quadrant` = FL phase when trained
     )
-    confidence: float  # 0-1 based on cross-asset confirmation
-    direction: str  # direction of travel
-    date: date
+    confidence: float | None  # 0-1 based on cross-asset confirmation
+    direction: str | None  # direction of travel
+    date: date | None
     # Soft-rule barycenter on the same axes (for past/future dots); full ensemble only on current via `ensemble`.
     ensemble_growth_score: float | None = None
     ensemble_fed_policy_score: float | None = None
@@ -94,10 +96,11 @@ class TradingState(BaseModel):
 
 
 class NavigatorRecommendation(BaseModel):
+    insufficient_data: bool = False
     position: NavigatorPosition
     factor_tilts: list[FactorAllocation]
     sector_allocations: list[SectorAllocation]
-    asset_allocation: AssetAllocation
+    asset_allocation: AssetAllocation | None
     geographic: dict[str, str]  # {"DM": "overweight", "EM": "underweight"}
     trading_recommendations: list[TradingRecommendation] = []
     phase_context: NavigatorPhaseContext | None = None
@@ -110,6 +113,7 @@ class CrossAssetSignal(BaseModel):
     signal: str  # "bullish", "bearish", "neutral"
     value: float | None = None
     description: str
+    has_data: bool = True  # False: the underlying input is missing, `signal` is a placeholder
 
 
 class RecessionCheckItem(BaseModel):
@@ -119,10 +123,12 @@ class RecessionCheckItem(BaseModel):
     threshold: str
     description: str
     data_as_of: str | None = None  # ISO date of underlying observation when known
+    has_data: bool = True  # False: input missing (current_value "N/A"); `triggered` is not a fact
 
 
 class RecessionCheck(BaseModel):
     score: int  # count of triggered items (need 5+ of 8 for high confidence)
     total: int  # always 8 checklist slots
-    confidence: str  # "low", "moderate", "high"
+    confidence: str  # "low", "moderate", "high", or "insufficient_data"
     items: list[RecessionCheckItem]
+    insufficient_data: bool = False  # True when no checklist item has data

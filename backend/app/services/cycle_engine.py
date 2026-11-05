@@ -196,6 +196,8 @@ class CycleEngine:
 
     async def get_current_snapshot(self) -> RegimeSnapshot:
         raw = await self._fetch_cycle_variables()
+        if all(v is None for v in raw.values()):
+            return self._empty_snapshot()
         normalized = await self._normalize_variables(raw)
         cycle_score, drivers = self._compute_cycle_score(normalized, raw)
         phase, phase_label = self._map_phase(cycle_score)
@@ -237,6 +239,28 @@ class CycleEngine:
             tactical_allocation=allocation,
             expected_returns=expected,
             data_completeness=round(completeness, 2),
+            timestamp=datetime.now(UTC),
+        )
+
+    @staticmethod
+    def _empty_snapshot() -> RegimeSnapshot:
+        """Explicit empty state: no cycle input exists, so no score, phase or probability."""
+        return RegimeSnapshot(
+            insufficient_data=True,
+            cycle_score=None,
+            phase=None,
+            phase_label=None,
+            recession_prob_12m=None,
+            recession_models=[],
+            top_drivers=[],
+            fci_score=None,
+            fci_gdp_impact=None,
+            fci_components=[],
+            phase_signals=[],
+            narrative="Insufficient data: no cycle inputs have been ingested yet.",
+            tactical_allocation=[],
+            expected_returns=[],
+            data_completeness=0.0,
             timestamp=datetime.now(UTC),
         )
 

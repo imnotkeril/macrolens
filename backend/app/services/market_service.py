@@ -572,7 +572,13 @@ class MarketService:
         overview = await self.get_macro_overview(180)
 
         def cell(name: str, value: float | None, unit: str, signal: str) -> dict:
-            return {"name": name, "value": value, "unit": unit, "signal": signal}
+            return {
+                "name": name,
+                "value": value,
+                "unit": unit,
+                "signal": signal,
+                "has_data": value is not None,
+            }
 
         cells: list[dict] = []
         # Row 1: Yields and credit

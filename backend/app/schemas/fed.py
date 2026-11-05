@@ -27,20 +27,22 @@ class BalanceSheetResponse(BaseModel):
 
 
 class FedPolicyStatus(BaseModel):
-    current_rate_upper: float
-    current_rate_lower: float
+    #: True when no Fed target-rate observation exists: rate/score/stance/direction fields are null.
+    insufficient_data: bool = False
+    current_rate_upper: float | None
+    current_rate_lower: float | None
     effr: float | None
-    policy_score: float  # -2 (very easy) to +2 (very tight)
-    stance: str  # "very_easy", "easy", "neutral", "tight", "very_tight"
-    rate_direction: str  # "hiking", "paused", "cutting"
-    balance_sheet_direction: str  # "expanding" (QE), "stable", "shrinking" (QT)
+    policy_score: float | None  # -2 (very easy) to +2 (very tight)
+    stance: str | None  # "very_easy", "easy", "neutral", "tight", "very_tight"
+    rate_direction: str | None  # "hiking", "paused", "cutting"
+    balance_sheet_direction: str | None  # "expanding" (QE), "stable", "shrinking" (QT)
     last_change_date: date | None
     #: FOMC SEP longer-run median (FRED FEDTARMDLR) or configured fallback — nominal % policy anchor.
     neutral_rate_nominal: float
     #: Latest Fed/CB agent rhetoric score (−1 dovish … +1 hawkish), when intelligence pipeline has run.
     rhetoric_score: float | None = None
     #: Midpoint of target range minus neutral, in percentage points (not percent of neutral).
-    rate_vs_neutral_pp: float
+    rate_vs_neutral_pp: float | None
 
 
 class FomcMeetingProb(BaseModel):

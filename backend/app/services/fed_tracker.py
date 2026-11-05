@@ -58,18 +58,30 @@ class FedTracker:
     async def get_current_status(self) -> FedPolicyStatus:
         neutral = await self._neutral_nominal()
         latest_rate = await self._get_latest_rate()
+        if latest_rate is None:
+            return FedPolicyStatus(
+                insufficient_data=True,
+                current_rate_upper=None,
+                current_rate_lower=None,
+                effr=None,
+                policy_score=None,
+                stance=None,
+                rate_direction=None,
+                balance_sheet_direction=None,
+                last_change_date=None,
+                neutral_rate_nominal=round(neutral, 3),
+                rhetoric_score=None,
+                rate_vs_neutral_pp=None,
+            )
         rate_direction = await self._get_rate_direction()
         bs_direction = await self._get_balance_sheet_direction()
         policy_score = await self._compute_policy_score(neutral)
         last_change = await self._get_last_rate_change_date()
         rhetoric = await self._latest_rhetoric_score()
 
-        if latest_rate:
-            upper = latest_rate.target_upper
-            lower = latest_rate.target_lower
-            effr = latest_rate.effr
-        else:
-            upper, lower, effr = 0, 0, None
+        upper = latest_rate.target_upper
+        lower = latest_rate.target_lower
+        effr = latest_rate.effr
 
         midpoint = (upper + lower) / 2 if upper or lower else 0.0
         # Percentage points: e.g. 3.625% mid vs 3.1% neutral → 0.525 pp

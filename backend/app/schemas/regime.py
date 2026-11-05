@@ -57,10 +57,12 @@ class ExpectedReturn(BaseModel):
 
 
 class RegimeSnapshot(BaseModel):
-    cycle_score: float
-    phase: str
-    phase_label: str
-    recession_prob_12m: float
+    #: True when none of the cycle inputs exist (empty DB): numeric/regime fields are null.
+    insufficient_data: bool = False
+    cycle_score: float | None
+    phase: str | None
+    phase_label: str | None
+    recession_prob_12m: float | None
     recession_models: list[RecessionModelResult]
     top_drivers: list[CycleDriverContribution]
     fci_score: float | None
