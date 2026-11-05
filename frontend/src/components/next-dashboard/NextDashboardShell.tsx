@@ -90,6 +90,8 @@ export function NextDashboardShell({
   const setDrawerOpen = (open: boolean) => setDrawerOpenPath(open ? pathname : null);
   const [isDesktop, setIsDesktop] = useState(true);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   // The rail only exists from lg; below lg the sidebar is an off-canvas drawer and always shows in full.
   const sidebarCollapsed = sidebarCollapsedPref && (isDesktop || effectiveReportLayout);
   const drawerMode = !effectiveReportLayout;
@@ -121,10 +123,33 @@ export function NextDashboardShell({
 
   useEffect(() => {
     if (!drawerOpen) return;
+    // Move focus into the drawer, then trap Tab inside it while it is open (D-31).
+    closeButtonRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setDrawerOpen(false);
         menuButtonRef.current?.focus();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const root = sidebarRef.current;
+      if (!root) return;
+      const items = Array.from(
+        root.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'),
+      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (!root.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -204,7 +229,11 @@ export function NextDashboardShell({
           />
         )}
         <aside
+          ref={sidebarRef}
           id="nd-sidebar"
+          {...(drawerMode && drawerOpen && !isDesktop
+            ? { role: "dialog", "aria-modal": true, "aria-label": "Navigation menu" }
+            : {})}
           className={`flex min-h-screen flex-col border-r px-[24px] py-[34px]${
             drawerMode
               ? ` fixed inset-y-0 left-0 z-[69] w-[min(320px,85vw)] overflow-y-auto transition-[transform,visibility] duration-200 lg:visible lg:static lg:z-auto lg:w-auto lg:translate-x-0 lg:overflow-visible lg:transition-none ${
@@ -216,6 +245,7 @@ export function NextDashboardShell({
         >
           {drawerMode && (
             <button
+              ref={closeButtonRef}
               type="button"
               aria-label="Close navigation menu"
               onClick={() => {

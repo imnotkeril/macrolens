@@ -633,7 +633,7 @@ export function MacroCategoryRow({ row }: { row: CategoryScore }) {
       <span className="min-w-0 flex-1 truncate" style={{ color: C.text }}>
         {label} <span style={{ color: C.muted }}>({phase})</span>
       </span>
-      <span className="shrink-0 tabular-nums" style={{ color: C.text }}>{fmtNumber(row.score)}</span>
+      <span className="shrink-0 tabular-nums" style={{ color: C.text }}>{row.indicator_count > 0 ? fmtNumber(row.score) : "—"}</span>
       <TrendIcon size={14} strokeWidth={2.5} className="shrink-0" style={{ color: arrowColor }} />
     </div>
   );

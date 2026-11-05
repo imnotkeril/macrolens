@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import type { BalanceSheetMetricsSnapshot } from "@/components/next-dashboard/fed-policy/fedPolicyUtils";
 import { FedPolicyCompactMetric } from "@/components/next-dashboard/fed-policy/FedPolicyCompactMetric";
 
@@ -63,7 +64,7 @@ export function FedPolicyBalanceMetricsColumn({
         </div>
       ) : (
         <div className="py-6 text-center text-[12px]" style={{ color: "var(--nd-muted)" }}>
-          {bsPending ? "Loading…" : "—"}
+          {bsPending ? "Loading…" : <NextNoData compact />}
         </div>
       )}
     </div>

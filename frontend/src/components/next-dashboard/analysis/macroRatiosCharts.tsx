@@ -271,7 +271,7 @@ export function DualAxisMacroChart({
         </ResponsiveContainer>
       </div>
       {annotation ? (
-        <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+        <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
           {annotation}
         </p>
       ) : null}

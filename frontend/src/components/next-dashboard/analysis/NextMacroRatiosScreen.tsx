@@ -558,7 +558,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(2)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Rising = inflation expectations rising.
                   </p>
                 </div>
@@ -577,7 +577,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(2)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     High = tight financial conditions, pressure on growth assets.
                   </p>
                 </div>
@@ -596,7 +596,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(2)}
                     references={[{ y: 0, stroke: String(C.red), dash: "4 3", label: "0" }]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Below 0 = inversion, recession signal.
                   </p>
                 </div>
@@ -615,7 +615,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(2)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Where the market expects the Fed Funds rate.
                   </p>
                 </div>
@@ -634,7 +634,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => `${v.toFixed(1)}T`}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Rising = global liquidity expansion, tailwind for risk assets.
                   </p>
                 </div>
@@ -653,7 +653,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => `${v.toFixed(2)}T`}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Higher = more liquidity in the system.
                   </p>
                 </div>
@@ -675,7 +675,7 @@ export function NextMacroRatiosScreen({
                       { y: 80, stroke: String(C.green), dash: "4 3", label: "80" },
                     ]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Elevated bond vol above ~100 · ~80 closer to normal conditions.
                   </p>
                 </div>
@@ -694,7 +694,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => `${Math.round(v)}B`}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Declining = liquidity leaving RRP and flowing into markets.
                   </p>
                 </div>
@@ -713,7 +713,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(1)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Leading indicator for US economy.
                   </p>
                 </div>
@@ -732,7 +732,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(1)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Leading indicator for China activity / EM tilt.
                   </p>
                 </div>
@@ -751,7 +751,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => `${v.toFixed(1)} pp`}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Leads recessions by ~9–12 months when momentum rolls over.
                   </p>
                 </div>
@@ -770,7 +770,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(2)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Rising = expansion ahead · Falling = inventory buildup / slowdown.
                   </p>
                 </div>

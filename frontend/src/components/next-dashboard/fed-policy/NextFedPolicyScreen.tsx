@@ -19,6 +19,7 @@ import {
 } from "@/lib/api";
 import { balanceStackFromRows, buildRateChangeRows, computeBsMetrics } from "@/components/next-dashboard/fed-policy/fedPolicyUtils";
 import { NEXT_FED_POLICY_QUERY_ROOT } from "@/components/next-dashboard/fed-policy/fedPolicyQueryKeys";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import { FedRatePathDotPlot } from "@/components/next-dashboard/fed-policy/FedRatePathDotPlot";
 import { NextFedPolicyAiCard } from "@/components/next-dashboard/fed-policy/NextFedPolicyAiCard";
 import { FedPolicyPolicyScoreColumn } from "@/components/next-dashboard/fed-policy/FedPolicyPolicyScoreColumn";
@@ -195,6 +196,7 @@ export function NextFedPolicyScreen({ omitShell = false }: { omitShell?: boolean
               meetings={fomcQ.data?.meetings}
               isPending={fomcQ.isPending}
               meetingsSource={fomcQ.data?.meetings_source}
+              inputsMissing={status?.insufficient_data === true}
             />
             <FedPolicyBalanceMetricsColumn panelStyle={panel} bsMetrics={bsMetrics} bsPending={bsQ.isPending} />
           </div>
@@ -202,10 +204,10 @@ export function NextFedPolicyScreen({ omitShell = false }: { omitShell?: boolean
           <div className="grid grid-cols-1 gap-2 xl:grid-cols-12 xl:items-stretch xl:min-h-0 xl:h-[340px] print:grid-cols-12 print:items-stretch print:min-h-0 print:h-[340px]">
             <div className="flex min-h-0 min-w-0 flex-col overflow-hidden xl:col-span-4 print:col-span-4" style={panel}>
               {fomcQ.data ? (
-                <FedRatePathDotPlot fomc={fomcQ.data} palette={C} />
+                <FedRatePathDotPlot fomc={fomcQ.data} palette={C} inputsMissing={status?.insufficient_data === true} />
               ) : (
                 <div className="flex flex-1 items-center justify-center py-6 text-center text-[12px]" style={{ color: "var(--nd-muted)" }}>
-                  {fomcQ.isPending ? "Loading…" : "—"}
+                  {fomcQ.isPending ? "Loading…" : <NextNoData />}
                 </div>
               )}
             </div>

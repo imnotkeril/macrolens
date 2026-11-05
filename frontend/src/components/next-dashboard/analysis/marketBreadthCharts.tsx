@@ -215,7 +215,7 @@ export function BreadthDualRefChart({
         </ResponsiveContainer>
       </div>
       {footnote ? (
-        <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+        <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
           {footnote}
         </p>
       ) : null}
@@ -559,7 +559,7 @@ export function LineMetricChart({
               strokeWidth={1}
               label={
                 r.label
-                  ? { value: r.label, position: "insideTopLeft", fill: "var(--nd-muted)", fontSize: 8 }
+                  ? { value: r.label, position: "insideTopLeft", fill: "var(--nd-muted)", fontSize: 11 }
                   : undefined
               }
             />

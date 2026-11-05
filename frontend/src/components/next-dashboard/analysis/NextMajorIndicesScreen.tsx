@@ -352,7 +352,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                       className={`flex ${MACRO_ROW_H} shrink-0 flex-col overflow-hidden border-t pt-1`}
                       style={{ borderColor: "var(--nd-border-soft)" }}
                     >
-                      <div className="shrink-0 text-[8px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+                      <div className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
                         % of stocks above 200MA
                       </div>
                       <div className="relative min-h-[48px] w-full flex-1">
@@ -377,7 +377,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                       className={`flex ${MACRO_ROW_H} shrink-0 flex-col overflow-hidden border-t pt-1`}
                       style={{ borderColor: "var(--nd-border-soft)" }}
                     >
-                      <div className="shrink-0 text-[8px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+                      <div className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
                         % of stocks above 50MA
                       </div>
                       <div className="relative min-h-[48px] w-full flex-1">
@@ -447,7 +447,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                   className={`flex ${MACRO_ROW_H} shrink-0 flex-col overflow-hidden border-t pt-1`}
                   style={{ borderColor: "var(--nd-border-soft)" }}
                 >
-                  <div className="shrink-0 text-[8px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+                  <div className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
                     BTC dominance (%)
                   </div>
                   <div className="relative min-h-[56px] w-full flex-1">
@@ -472,7 +472,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                     )}
                   </div>
                   {dominancePrepared.source && dominancePrepared.source !== "error" ? (
-                    <div className="shrink-0 pt-0.5 text-[8px] leading-tight" style={{ color: "var(--nd-muted)", opacity: 0.85 }}>
+                    <div className="shrink-0 pt-0.5 text-[11px] leading-tight" style={{ color: "var(--nd-muted)", opacity: 0.85 }}>
                       {dominancePrepared.source === "coingecko_market_caps"
                         ? "Source: CoinGecko (market caps, calibrated to /global)"
                         : dominancePrepared.source}
@@ -484,7 +484,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                   className={`flex ${MACRO_ROW_H} shrink-0 flex-col overflow-hidden border-t pt-1`}
                   style={{ borderColor: "var(--nd-border-soft)" }}
                 >
-                  <div className="shrink-0 text-[8px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+                  <div className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
                     Stablecoin dominance (%)
                   </div>
                   <div className="relative min-h-[56px] w-full flex-1">

@@ -266,7 +266,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
                 <div className="flex min-h-0 flex-1 flex-col">
                   <HighsLowsBarChart data={prepared.highsLows} colors={{ high: String(C.green), low: String(C.red) }} />
                 </div>
-                <p className="mt-1 shrink-0 text-[8px]" style={{ color: "var(--nd-muted)" }}>
+                <p className="mt-1 shrink-0 text-[11px]" style={{ color: "var(--nd-muted)" }}>
                   Source: NYSE (^NYHGH / ^NYLOW) via Yahoo
                 </p>
               </div>
@@ -283,7 +283,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
                     colors={{ nysi: String(C.blue), spx: "rgba(180,170,160,0.65)" }}
                   />
                 </div>
-                <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                   NYSI is a cumulative breadth oscillator — proxy when raw NYSE A/D line is not loaded.
                 </p>
               </div>

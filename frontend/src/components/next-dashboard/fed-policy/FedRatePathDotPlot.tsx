@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import type { NextShellThemeContextValue } from "@/components/next-dashboard/nextShellTheme";
 import type { FomcDashboard } from "@/types";
 
@@ -95,7 +96,16 @@ function DotShape({ cx, cy, fill, r = 4.5 }: { cx: number; cy: number; fill: str
 /** Plot height inside card (legend + axes fit in margins below). */
 const CHART_H = 248;
 
-export function FedRatePathDotPlot({ fomc, palette: C }: { fomc: FomcDashboard; palette: Palette }) {
+export function FedRatePathDotPlot({
+  fomc,
+  palette: C,
+  inputsMissing = false,
+}: {
+  fomc: FomcDashboard;
+  palette: Palette;
+  /** True when the Fed status reports no rate inputs: the path is a fallback, not an observation. */
+  inputsMissing?: boolean;
+}) {
   const { fomcMembers, fedMedian, market, yDomain } = useMemo(() => buildSeries(fomc), [fomc]);
   // Recharts 3: root chart `data` drives axis ticks; per-Scatter `data` alone can leave ticks empty → blank chart.
   const chartData = useMemo(
@@ -110,17 +120,14 @@ export function FedRatePathDotPlot({ fomc, palette: C }: { fomc: FomcDashboard; 
   const green = String(C.green);
   const yellow = String(C.yellow);
 
-  if (!chartData.length) {
+  if (inputsMissing || !chartData.length) {
     return (
       <div className="flex h-full min-h-0 min-w-0 flex-col gap-2">
         <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-text)" }}>
           Rate path — dot plot vs market
         </div>
-        <div
-          className="mt-1 flex w-full items-center justify-center rounded-[2px] text-[12px]"
-          style={{ height: CHART_H, color: "var(--nd-muted)", background: "rgba(255,255,255,0.02)" }}
-        >
-          No rate path data.
+        <div className="flex w-full items-center justify-center" style={{ height: CHART_H }}>
+          <NextNoData />
         </div>
       </div>
     );

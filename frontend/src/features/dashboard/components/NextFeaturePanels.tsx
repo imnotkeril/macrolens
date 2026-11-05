@@ -54,9 +54,11 @@ export function MacroSentimentSinglePanel({
         </div>
         <div className="mt-3 flex min-h-0 flex-1 flex-col border-t pt-2 text-[11px]" style={{ borderColor: colors.borderSoft }}>
           <div className="min-h-0 flex-1 space-y-0 overflow-y-auto overflow-x-hidden overscroll-contain pr-0.5">
-            {categories.map((row) => (
-              <MacroCategoryRowComponent key={row.category} row={row} />
-            ))}
+            {!categories.some((row) => row.indicator_count > 0) ? (
+              <NextNoData compact />
+            ) : (
+              categories.map((row) => <MacroCategoryRowComponent key={row.category} row={row} />)
+            )}
           </div>
         </div>
       </div>

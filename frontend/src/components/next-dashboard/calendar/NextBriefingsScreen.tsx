@@ -63,10 +63,10 @@ function KeyEventsTable({
   colors: ReturnType<typeof useNextShellTheme>["colors"];
   importancePalette: { high: string; mid: string; low: string };
 }) {
-  const th = "text-left text-[11px] uppercase tracking-[0.1em] pb-2 pr-3";
+  const th = "text-left text-[11px] uppercase tracking-[0.1em] pb-2 pr-2";
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] border-collapse text-[12px] tabular-nums">
+      <table className="w-full min-w-[560px] border-collapse text-[12px] tabular-nums">
         <thead>
           <tr style={{ color: colors.muted }}>
             <th className={th} style={{ width: 56 }}>
@@ -90,14 +90,14 @@ function KeyEventsTable({
                 <td className="py-2 pr-2 align-middle">
                   <span className="inline-block h-2 w-2 rounded-full" style={{ background: dot }} />
                 </td>
-                <td className="py-2 pr-3 align-middle">{r.time}</td>
-                <td className="py-2 pr-3 align-middle">{r.currency}</td>
-                <td className="py-2 pr-3 align-middle" style={{ color: colors.text }}>
+                <td className="py-2 pr-2 align-middle">{r.time}</td>
+                <td className="py-2 pr-2 align-middle">{r.currency}</td>
+                <td className="py-2 pr-2 align-middle" style={{ color: colors.text }}>
                   {r.event}
                 </td>
-                <td className="py-2 pr-3 align-middle">{r.est}</td>
-                <td className="py-2 pr-3 align-middle">{r.prev}</td>
-                <td className="py-2 pr-3 align-middle">{r.act}</td>
+                <td className="py-2 pr-2 align-middle">{r.est}</td>
+                <td className="py-2 pr-2 align-middle">{r.prev}</td>
+                <td className="py-2 pr-2 align-middle">{r.act}</td>
                 <td className="py-2 align-middle">
                   {r.beatMiss === "pending" ? (
                     <span style={{ color: colors.muted }}>—</span>

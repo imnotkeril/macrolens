@@ -630,11 +630,11 @@ function MacroIndicatorRow({
       className="flex h-full min-h-[52px] min-w-0 flex-col border-t pt-1"
       style={{ borderColor: "var(--nd-border-soft)" }}
     >
-      <div className="shrink-0 text-[8px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+      <div className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
         {title}
       </div>
       {subtitle ? (
-        <div className="shrink-0 text-[7px] font-light uppercase tracking-[0.06em]" style={{ color: "var(--nd-muted)" }}>
+        <div className="shrink-0 text-[11px] font-light uppercase tracking-[0.06em]" style={{ color: "var(--nd-muted)" }}>
           {subtitle}
         </div>
       ) : null}

@@ -155,7 +155,7 @@ export function DashboardTopRowSection({
       </div>
 
       <div
-        className="nd-dashboard-panel h-[460px] max-xl:h-auto max-xl:min-h-[260px] w-full print:break-inside-avoid"
+        className="nd-dashboard-panel min-h-[460px] h-auto max-xl:min-h-[260px] w-full print:break-inside-avoid"
         style={basePanelStyle}
       >
         <div className="mb-1 flex items-start justify-between gap-3">
