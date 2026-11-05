@@ -413,7 +413,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                   <div className="flex shrink-0 flex-wrap items-start justify-between gap-2">
                     <div>
                       <div className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
-                        4. Bitcoin <span style={{ color: "var(--nd-soft)" }}>(BTC)</span>
+                        Bitcoin <span style={{ color: "var(--nd-soft)" }}>(BTC)</span>
                       </div>
                     </div>
                     <MajorIndicesPeriodStrip selectedDays={colDays[3]} onSelect={(d) => setDaysForCol(3, d)} />
