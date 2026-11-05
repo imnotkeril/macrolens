@@ -353,8 +353,12 @@ export const postML2Train = async () => {
   return res.json() as Promise<ML2Metrics>;
 };
 
-export const getML2Predict = () =>
-  fetchJSON<ML2Predict>("/api/ml2/predict");
+// Admin-only recompute (POST, X-API-Key). The public UI reads getML2LatestStored.
+export const postML2Predict = async () => {
+  const res = await adminFetch(`${apiFetchOrigin()}/api/ml2/predict`, { method: "POST" });
+  if (!res.ok) throw new Error(`ML2 predict failed: ${res.status}`);
+  return res.json() as Promise<ML2Predict>;
+};
 
 export const getML2Metrics = () =>
   fetchJSON<ML2Metrics>("/api/ml2/metrics");

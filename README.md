@@ -255,7 +255,7 @@ frontend/
   Dockerfile.prod                 production image (Next.js standalone server)
   docker-entrypoint.sh            dev entrypoint
   next.config.js                  redirects and /api rewrite to BACKEND_URL / BACKEND_INTERNAL_URL
-llms.txt                          API reference in Markdown (101 operations)
+llms.txt                          API reference in Markdown (102 operations)
 docker-compose.yml                dev stack: db, redis, backend (reload), frontend (dev server)
 docker-compose.prod.yml           production overlay (required secrets, restart policies, standalone frontend)
 compose-up.ps1                    Windows helper: docker compose up --build with BuildKit provenance off
@@ -528,7 +528,7 @@ are in **[DEPLOY.md](DEPLOY.md)**.
 - **[USER_GUIDE.md](USER_GUIDE.md)**: pages, workflows, data notes and troubleshooting
 - **[DEPLOY.md](DEPLOY.md)**: deployment runbook and self-hosting
 - **[backend/README.md](backend/README.md)**: backend layout, migrations, scheduler jobs
-- **[llms.txt](llms.txt)**: API reference in Markdown, all 101 operations
+- **[llms.txt](llms.txt)**: API reference in Markdown, all 102 operations
 - Interactive API docs on a running backend: `/docs` (Swagger UI) and `/openapi.json`
 
 ---

@@ -5,7 +5,7 @@
 > economic calendar, alerts, LLM agents and memory retrieval.
 
 Base URL: `http://127.0.0.1:8000` locally, or the deployed backend origin. All routes are under `/api`.
-Operations: 101. Source of truth: `GET /openapi.json` (Swagger UI at `/docs`). This file was generated
+Operations: 102. Source of truth: `GET /openapi.json` (Swagger UI at `/docs`). This file was generated
 from the FastAPI OpenAPI schema of `backend/app/main.py`; regenerate it when routes change.
 Summaries are derived from handler names when a handler has no docstring; parameter and response
 types are exact.
@@ -43,7 +43,7 @@ types are exact.
 | Health | 1 |
 | Indicators | 9 |
 | ML Regime | 8 |
-| ML2 | 4 |
+| ML2 | 5 |
 | Market | 18 |
 | Memory | 12 |
 | Navigator | 5 |
@@ -500,8 +500,14 @@ Get Ml2 Metrics.
 
 ### `GET /api/ml2/predict`
 
-Predict Ml2.
+Get Ml2 Predict. Read-only: returns the latest stored prediction (same as `/api/ml2/latest-stored`), never recomputes.
 - Auth: public
+- Response 200 (application/json): `ML2PredictResponse`
+
+### `POST /api/ml2/predict`
+
+Predict Ml2. Recomputes the prediction and stores it (DB writes, memory upsert, embedding).
+- Auth: X-API-Key required
 - Response 200 (application/json): `ML2PredictResponse`
 
 ### `POST /api/ml2/train`
