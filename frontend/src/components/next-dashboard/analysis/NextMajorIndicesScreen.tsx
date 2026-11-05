@@ -97,7 +97,6 @@ const BREADTH_SERIES_DAYS = 365 * 5 + 300;
 
 type EquityColumnDef = {
   id: string;
-  rankLabel: string;
   title: string;
   symbol: string;
   priceKey: "spx" | "ndx" | "rut";
@@ -108,7 +107,6 @@ type EquityColumnDef = {
 const EQUITY_COLUMNS: EquityColumnDef[] = [
   {
     id: "spx",
-    rankLabel: "1.",
     title: "S&P 500",
     symbol: "SPX",
     priceKey: "spx",
@@ -117,7 +115,6 @@ const EQUITY_COLUMNS: EquityColumnDef[] = [
   },
   {
     id: "ndx",
-    rankLabel: "2.",
     title: "NASDAQ 100",
     symbol: "NDX",
     priceKey: "ndx",
@@ -126,7 +123,6 @@ const EQUITY_COLUMNS: EquityColumnDef[] = [
   },
   {
     id: "rut",
-    rankLabel: "3.",
     title: "Russell 2000",
     symbol: "RUT",
     priceKey: "rut",
@@ -318,7 +314,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                             className="text-[10px] font-semibold uppercase tracking-[0.1em]"
                             style={{ color: "var(--nd-muted)" }}
                           >
-                            {col.rankLabel} {col.title}{" "}
+                            {col.title}{" "}
                             <span style={{ color: "var(--nd-soft)" }}>({col.symbol})</span>
                           </div>
                         </div>
