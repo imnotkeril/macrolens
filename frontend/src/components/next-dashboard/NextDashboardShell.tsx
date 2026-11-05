@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Grid2X2, RefreshCw, Settings, Sparkles, type LucideIcon } from "lucide-react";
+import { Bell, Grid2X2, Menu, RefreshCw, Settings, Sparkles, X, type LucideIcon } from "lucide-react";
 import type { TaskProgress } from "@/types";
 import { useOptionalReportStack } from "@/components/next-dashboard/nextReportStack";
 
@@ -72,7 +72,13 @@ export function NextDashboardShell({
   const effectiveReportLayout = reportLayout || (reportStack?.reportLayout ?? false);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsedPref, setSidebarCollapsedPref] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  // The rail only exists from lg; below lg the sidebar is an off-canvas drawer and always shows in full.
+  const sidebarCollapsed = sidebarCollapsedPref && (isDesktop || effectiveReportLayout);
+  const drawerMode = !effectiveReportLayout;
   const [expandedNav, setExpandedNav] = useState<string | null>(null);
 
   useEffect(() => {
@@ -92,6 +98,30 @@ export function NextDashboardShell({
   }, [pathname, expandedNav, navItems]);
 
   useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setIsDesktop(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setDrawerOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
+
+  useEffect(() => {
     if (!frameRef.current) return;
     frameRef.current.scrollTo({ left: 0, top: 0 });
   }, []);
@@ -108,13 +138,67 @@ export function NextDashboardShell({
       style={{ ...shellThemeVars, background: colors.bg, color: colors.text, fontFamily: "var(--font-plex-mono), ui-monospace, monospace" }}
     >
       <div
-        className="nd-report-shell-inner-grid grid min-h-screen"
+        className={`nd-report-shell-inner-grid grid min-h-screen${
+          drawerMode ? " grid-cols-1 lg:[grid-template-columns:var(--nd-sidebar-w)_minmax(0,1fr)]" : ""
+        }`}
         style={{
           width: "100%",
-          gridTemplateColumns: `${sidebarCollapsed ? 110 : 320}px minmax(0, 1fr)`,
+          ["--nd-sidebar-w" as string]: `${sidebarCollapsed ? 110 : 320}px`,
+          ...(drawerMode ? {} : { gridTemplateColumns: `${sidebarCollapsed ? 110 : 320}px minmax(0, 1fr)` }),
         }}
       >
-        <aside className="flex min-h-screen flex-col border-r px-[24px] py-[34px]" style={{ borderColor: colors.borderSoft, background: colors.sidebar }}>
+        {drawerMode && (
+          <header
+            className="sticky top-0 z-[50] flex h-[52px] items-center gap-3 border-b px-3 lg:hidden"
+            style={{ borderColor: colors.borderSoft, background: colors.sidebar }}
+          >
+            <button
+              ref={menuButtonRef}
+              type="button"
+              aria-label="Open navigation menu"
+              aria-expanded={drawerOpen}
+              aria-controls="nd-sidebar"
+              onClick={() => setDrawerOpen(true)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-[2px]"
+              style={{ color: colors.text }}
+            >
+              <Menu size={22} />
+            </button>
+            <span className="text-[18px] leading-none tracking-[0.2em]">MACROLENS</span>
+          </header>
+        )}
+        {drawerMode && drawerOpen && (
+          <div
+            className="fixed inset-0 z-[68] bg-black/60 lg:hidden"
+            aria-hidden="true"
+            onClick={() => setDrawerOpen(false)}
+          />
+        )}
+        <aside
+          id="nd-sidebar"
+          className={`flex min-h-screen flex-col border-r px-[24px] py-[34px]${
+            drawerMode
+              ? ` fixed inset-y-0 left-0 z-[69] w-[min(320px,85vw)] overflow-y-auto transition-[transform,visibility] duration-200 lg:visible lg:static lg:z-auto lg:w-auto lg:translate-x-0 lg:overflow-visible lg:transition-none ${
+                  drawerOpen ? "" : "invisible -translate-x-full"
+                }`
+              : ""
+          }`}
+          style={{ borderColor: colors.borderSoft, background: colors.sidebar }}
+        >
+          {drawerMode && (
+            <button
+              type="button"
+              aria-label="Close navigation menu"
+              onClick={() => {
+                setDrawerOpen(false);
+                menuButtonRef.current?.focus();
+              }}
+              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center lg:hidden"
+              style={{ color: colors.soft }}
+            >
+              <X size={20} />
+            </button>
+          )}
           <div className={sidebarCollapsed ? "text-center" : undefined}>
             <div
               className="text-[34px] leading-none"
@@ -292,7 +376,7 @@ export function NextDashboardShell({
                   </button>
                 </>
               )}
-              <button type="button" title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsed((v) => !v)}>
+              <button type="button" className={drawerMode ? "hidden lg:inline-flex" : undefined} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsedPref((v) => !v)}>
                 <Grid2X2 size={20} />
               </button>
             </div>
