@@ -34,7 +34,7 @@ import {
   FlWeightHistoryCard,
   ForecastLabMacroPanelTable,
   ForecastLabStressCard,
-  MACRO_REGIME_HISTORY_MAX_H,
+  MACRO_REGIME_HISTORY_MAX_H_CLASS,
   PhaseEnsembleCard,
   RegimeHistoryQuadrantBadge,
   XL_MEDIA,
@@ -126,6 +126,8 @@ export function NextForecastLabScreen() {
   });
 
   const summary = summaryQ.data;
+  // Empty state lives outside the horizontal scroller so it is never clipped at 375 (D-26).
+  const regimeHistEmpty = !regimeHistQ.isPending && !(regimeHistQ.data?.items ?? []).length;
 
   const macroPanelCardRef = useRef<HTMLDivElement>(null);
   const regimeHistoryCardRef = useRef<HTMLDivElement>(null);
@@ -376,7 +378,7 @@ export function NextForecastLabScreen() {
                   {summary.experts ? (
                     <ExpertProbabilityTable experts={summary.experts} ensemblePhase={summary.phase_probabilities} />
                   ) : (
-                    <p style={{ color: C.muted }}>No expert breakdown.</p>
+                    <NextNoData compact hint="Expert probabilities appear after the first data refresh." />
                   )}
                   <ExpertBreakdownHitRate data={alignQ.data} palette={C} />
                 </div>
@@ -391,7 +393,7 @@ export function NextForecastLabScreen() {
                 className="flex w-full min-w-0 flex-col self-start overflow-hidden"
                 style={denseSurface}
               >
-                <div className="w-full overflow-auto" style={{ maxHeight: MACRO_REGIME_HISTORY_MAX_H }}>
+                <div className={`w-full overflow-auto ${MACRO_REGIME_HISTORY_MAX_H_CLASS}`}>
                   <ForecastLabMacroPanelTable macroRows={summary.macro_forecasts} regimeItems={regimeHistQ.data?.items ?? []} palette={C} />
                 </div>
               </div>
@@ -428,6 +430,9 @@ export function NextForecastLabScreen() {
                   </div>
                 </div>
                 <div className="min-h-0 w-full min-w-0 flex-1 overflow-auto">
+                  {regimeHistEmpty ? (
+                    <NextNoData hint="Use Materialize from DB after the first data refresh." />
+                  ) : (
                   <table
                     className="w-full min-w-[560px] table-fixed border-separate border-spacing-0 font-mono text-[13px]"
                     style={{ border: REGIME_HISTORY_TABLE_BORDER }}
@@ -485,13 +490,6 @@ export function NextForecastLabScreen() {
                       </tr>
                     </thead>
                     <tbody>
-                      {!regimeHistQ.isPending && !(regimeHistQ.data?.items ?? []).length ? (
-                        <tr>
-                          <td colSpan={6} style={{ border: REGIME_HISTORY_TABLE_BORDER }}>
-                            <NextNoData compact hint="Use Materialize from DB after the first data refresh." />
-                          </td>
-                        </tr>
-                      ) : null}
                       {(regimeHistQ.data?.items ?? [])
                         .slice()
                         .reverse()
@@ -558,6 +556,7 @@ export function NextForecastLabScreen() {
                         ))}
                     </tbody>
                   </table>
+                  )}
                 </div>
                 {regimeHistQ.isError && (
                   <p className="text-[11px]" style={{ color: C.red }}>

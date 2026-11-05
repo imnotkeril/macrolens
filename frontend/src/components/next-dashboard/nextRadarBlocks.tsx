@@ -251,9 +251,7 @@ export function RadarCycleTimelinePanel({
           </div>
         </div>
       ) : (
-        <div className="text-[13px]" style={{ color: C.muted }}>
-          No history.
-        </div>
+        <NextNoData />
       )}
     </div>
   );
@@ -298,9 +296,7 @@ export function RadarRecProbHistoryPanel({
           </div>
         </div>
       ) : (
-        <div className="text-[13px]" style={{ color: C.muted }}>
-          No history.
-        </div>
+        <NextNoData />
       )}
     </div>
   );
