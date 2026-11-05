@@ -126,6 +126,24 @@ export function NextDashboardShell({
     frameRef.current.scrollTo({ left: 0, top: 0 });
   }, []);
 
+  const pageTitle = (() => {
+    const segments = pathname.split("/").filter(Boolean);
+    for (const item of navItems) {
+      const child = item.children?.find((c) => pathname === c.href || pathname.startsWith(`${c.href}/`));
+      if (child) return child.label;
+    }
+    const item = navItems.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`));
+    if (!item) return "MacroLens";
+    const itemDepth = item.href.split("/").filter(Boolean).length;
+    if (segments.length > itemDepth) {
+      const last = segments[segments.length - 1].replace(/-/g, " ");
+      return `${item.label} - ${last.charAt(0).toUpperCase()}${last.slice(1)}`;
+    }
+    return item.label;
+  })();
+  // These screens render their own <h1>.
+  const hasOwnH1 = pathname === "/reports" || pathname.startsWith("/calendar/briefings");
+
   const variablePdfClass = variablePdfPages && effectiveReportLayout ? " nd-report-shell--variable-pdf" : "";
   const outerClass = embedded
     ? `relative z-[1] min-h-screen w-full overflow-auto${effectiveReportLayout ? ` nd-report-shell${variablePdfClass}` : ""}`
@@ -159,7 +177,7 @@ export function NextDashboardShell({
               aria-expanded={drawerOpen}
               aria-controls="nd-sidebar"
               onClick={() => setDrawerOpen(true)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-[2px]"
+              className="nd-focus inline-flex h-10 w-10 items-center justify-center rounded-[2px]"
               style={{ color: colors.text }}
             >
               <Menu size={22} />
@@ -193,7 +211,7 @@ export function NextDashboardShell({
                 setDrawerOpen(false);
                 menuButtonRef.current?.focus();
               }}
-              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center lg:hidden"
+              className="nd-focus absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center lg:hidden"
               style={{ color: colors.soft }}
             >
               <X size={20} />
@@ -217,7 +235,7 @@ export function NextDashboardShell({
             )}
           </div>
 
-          <div className={`mt-[30px] space-y-[10px] ${sidebarCollapsed ? "" : "ml-[30px]"}`}>
+          <nav aria-label="Primary" className={`mt-[30px] space-y-[10px] ${sidebarCollapsed ? "" : "ml-[30px]"}`}>
             {navItems.map((item, index) => {
               const Icon = item.icon;
               const isActive =
@@ -230,7 +248,9 @@ export function NextDashboardShell({
                   <Link
                     href={item.href}
                     title={sidebarCollapsed ? item.label : undefined}
-                    className="flex h-[44px] w-full items-center gap-4 rounded-[2px] border px-3 text-left text-[13px] uppercase tracking-[0.06em]"
+                    aria-label={sidebarCollapsed ? item.label : undefined}
+                    aria-current={isActive ? "page" : undefined}
+                    className="nd-focus flex h-[44px] w-full items-center gap-4 rounded-[2px] border px-3 text-left text-[13px] uppercase tracking-[0.06em]"
                     onClick={() => {
                       if (!item.children?.length) {
                         setExpandedNav(null);
@@ -255,7 +275,8 @@ export function NextDashboardShell({
                         <Link
                           key={child.href}
                           href={child.href}
-                          className="block transition-opacity hover:opacity-90"
+                          aria-current={pathname === child.href || pathname.startsWith(`${child.href}/`) ? "page" : undefined}
+                          className="nd-focus block transition-opacity hover:opacity-90"
                           style={{
                             color:
                               pathname === child.href || pathname.startsWith(`${child.href}/`)
@@ -271,7 +292,7 @@ export function NextDashboardShell({
                 </div>
               );
             })}
-          </div>
+          </nav>
 
           <div className={`mt-auto ${sidebarCollapsed ? "" : "ml-[30px]"}`}>
             <div className="border-t pt-[22px]" style={{ borderColor: colors.borderSoft }}>
@@ -305,8 +326,9 @@ export function NextDashboardShell({
                     type="button"
                     onClick={onRefresh}
                     title="Refresh data"
+                    aria-label="Refresh data"
                     aria-busy={refreshing}
-                    className="inline-flex h-8 w-8 items-center justify-center transition-opacity hover:opacity-80 disabled:opacity-50"
+                    className="nd-focus inline-flex h-8 w-8 items-center justify-center transition-opacity hover:opacity-80 disabled:opacity-50"
                     disabled={refreshing}
                   >
                     <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} style={{ color: refreshResult === "error" ? colors.red : refreshResult === "ok" ? colors.green : colors.soft }} />
@@ -323,8 +345,9 @@ export function NextDashboardShell({
                       type="button"
                       onClick={onRefresh}
                       title="Refresh data"
+                      aria-label="Refresh data"
                       aria-busy={refreshing}
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center transition-opacity hover:opacity-80 disabled:opacity-50"
+                      className="nd-focus inline-flex h-8 w-8 shrink-0 items-center justify-center transition-opacity hover:opacity-80 disabled:opacity-50"
                       disabled={refreshing}
                     >
                       <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} style={{ color: refreshResult === "error" ? colors.red : refreshResult === "ok" ? colors.green : colors.soft }} />
@@ -365,18 +388,18 @@ export function NextDashboardShell({
             <div className={`mt-[24px] flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"}`} style={{ color: colors.soft }}>
               {!sidebarCollapsed && (
                 <>
-                  <button type="button" title="Toggle theme" onClick={onThemeToggle}>
+                  <button type="button" className="nd-focus" title="Toggle theme" aria-label="Toggle theme" onClick={onThemeToggle}>
                     <Sparkles size={20} />
                   </button>
-                  <button type="button" title="Settings">
+                  <button type="button" className="nd-focus" title="Settings" aria-label="Settings">
                     <Settings size={20} />
                   </button>
-                  <button type="button" title="Notifications">
+                  <button type="button" className="nd-focus" title="Notifications" aria-label="Notifications">
                     <Bell size={20} />
                   </button>
                 </>
               )}
-              <button type="button" className={drawerMode ? "hidden lg:inline-flex" : undefined} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsedPref((v) => !v)}>
+              <button type="button" className={`nd-focus${drawerMode ? " hidden lg:inline-flex" : ""}`} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!sidebarCollapsed} onClick={() => setSidebarCollapsedPref((v) => !v)}>
                 <Grid2X2 size={20} />
               </button>
             </div>
@@ -396,6 +419,7 @@ export function NextDashboardShell({
           }
           style={{ padding: "14px 18px 20px" }}
         >
+          {hasOwnH1 ? null : <h1 className="sr-only">{pageTitle}</h1>}
           {children}
         </main>
       </div>

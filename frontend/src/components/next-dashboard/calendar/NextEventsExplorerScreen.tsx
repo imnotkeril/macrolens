@@ -218,6 +218,8 @@ function IndicatorCard({
         <button
           type="button"
           onClick={onToggleExpanded}
+          aria-label={`${expanded ? "Collapse" : "Expand"} ${card.title}`}
+          aria-expanded={expanded}
           className="rounded border p-1.5"
           style={{ borderColor: expanded ? C.yellow : C.borderSoft, color: expanded ? C.yellow : C.muted }}
         >

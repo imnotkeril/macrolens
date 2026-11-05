@@ -79,6 +79,7 @@ export function NextEconomicCalendarScreen() {
           />
           <button
             type="button"
+            aria-label="Previous week"
             className="inline-flex h-9 w-9 items-center justify-center rounded border"
             style={{ borderColor: C.borderSoft, color: C.muted }}
             onClick={() => setRangeIndex((i) => Math.max(0, i - 1))}
@@ -90,6 +91,7 @@ export function NextEconomicCalendarScreen() {
           </div>
           <button
             type="button"
+            aria-label="Next week"
             className="inline-flex h-9 w-9 items-center justify-center rounded border"
             style={{ borderColor: C.borderSoft, color: C.muted }}
             onClick={() => setRangeIndex((i) => Math.min(CALENDAR_WEEK_RANGES.length - 1, i + 1))}
