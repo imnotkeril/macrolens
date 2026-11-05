@@ -73,7 +73,10 @@ export function NextDashboardShell({
   const frameRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const [sidebarCollapsedPref, setSidebarCollapsedPref] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // Drawer is open only for the route it was opened on, so a route change closes it without an effect.
+  const [drawerOpenPath, setDrawerOpenPath] = useState<string | null>(null);
+  const drawerOpen = drawerOpenPath === pathname;
+  const setDrawerOpen = (open: boolean) => setDrawerOpenPath(open ? pathname : null);
   const [isDesktop, setIsDesktop] = useState(true);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   // The rail only exists from lg; below lg the sidebar is an off-canvas drawer and always shows in full.
@@ -106,10 +109,6 @@ export function NextDashboardShell({
   }, []);
 
   useEffect(() => {
-    setDrawerOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
     if (!drawerOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -119,6 +118,7 @@ export function NextDashboardShell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setDrawerOpen only wraps the state setter
   }, [drawerOpen]);
 
   useEffect(() => {
