@@ -1,6 +1,6 @@
 # Handoff
 status: active
-date: 2026-11-03
+date: 2026-11-05
 from-chat-tokens: ~300k
 
 ## Goal
@@ -10,7 +10,7 @@ Bring MacroLens (FastAPI + Next.js 16 macro terminal, router webapp/dashboard) t
 - Done: everything in the previous handoff plus (2026-11-03): safe P2 fixes (failed-key rate bucket, memory query max 256), /llms.txt via frontend/public, provisional CHANGELOG [1.1.0] - 2026-11-03 (best guess, owner confirms), devops release-prep (docs/RELEASE.md, local).
 - Branch: chore/audit, pushed to origin up to f9876b7; PR imnotkeril/macrolens#3 OPEN, CI green at 99fc62a. Later local commits may be unpushed (check git status). Do NOT merge/deploy.
 - Checks at HEAD: pytest 60 passed + 1 skipped, ruff/black/isort/mypy clean (venv in session scratchpad; PYTHONUTF8=1 needed).
-- Not done: design-reviewer + browser QA (375/768/1440). Blocked: Playwright MCP is in .mcp.json but needs a `claude -c` restart; Docker Desktop daemon unresponsive; native Postgres refuses app login.
+- Design review r1 done (docs/review/design.md, local): 6 P1/10 P2 found; fixed D-01,02,03,04,06,07,12,13,16 (8 commits). Backlog: D-05 (empty-DB defaults shown as facts; needs backend null/insufficient_data decision), D-08..D-11, D-14, D-15, D-17..D-21. Playwright MCP works (.mcp.json, gitignored globally). Stray `next start` procs may still run on ports 3100-3104.
 - Skipped on purpose: S-02 (GET /api/ml2/predict mutates; needs GET->POST + frontend change), S-04 (dev-mode Host/Origin check), trusted-hops config for X-Forwarded-For.
 - docs/ is gitignored (local: STATE, plan, RELEASE*, review/, HANDOFF).
 
@@ -20,11 +20,11 @@ Bring MacroLens (FastAPI + Next.js 16 macro terminal, router webapp/dashboard) t
 - docs/ stays untracked until the owner decides.
 
 ## Next
-1. Restart with `claude -c`, start Docker (or a local PG), run the stack on audit ports, run design-reviewer + browser QA.
+1. Owner decisions below; then D-05 (backend null/insufficient_data + UI empty state), design round 2.
 2. Bump manifests to the chosen version once the owner confirms; S-02 fix with owner yes.
 
 ## Open questions
-- Version/date for CHANGELOG (provisional 1.1.0); waive secrets-scan hits (false positives); track docs/ in git?; ADMIN_API_KEY/BACKEND_URL/CORS values for Vercel+HF; DB snapshot before first alembic upgrade head; Sentry yes/no; stale-ingest monitor.
+- D-05: how to show 'no data' instead of default values (RISK ON, 74%, checkmarks)?; version/date for CHANGELOG (provisional 1.1.0); waive secrets-scan hits (false positives); track docs/ in git?; ADMIN_API_KEY/BACKEND_URL/CORS values for Vercel+HF; DB snapshot before first alembic upgrade head; Sentry yes/no; stale-ingest monitor.
 
 ## Traps
 - Docker default ports 3000/5432/6379/8000 are taken (native Postgres, other sessions): use `-p audit-macrolens-*` with `ports: !override`.
