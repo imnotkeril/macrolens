@@ -109,24 +109,11 @@ function GeographySplitBar({
 }
 
 function LegTag({ label, tone }: { label: string; tone: "long" | "short" | "neutral" }) {
-  const color =
-    tone === "long"
-      ? "#c2f2c9"
-      : tone === "short"
-        ? "#ffd4dc"
-        : "#d8d2c7";
-  const background =
-    tone === "long"
-      ? "rgba(114,173,102,0.2)"
-      : tone === "short"
-        ? "rgba(212,93,114,0.2)"
-        : "rgba(126,126,120,0.22)";
-  const borderColor =
-    tone === "long"
-      ? "rgba(114,173,102,0.35)"
-      : tone === "short"
-        ? "rgba(212,93,114,0.35)"
-        : "rgba(148,148,140,0.34)";
+  // Theme tokens only: text uses the semantic colour, fill/border are tints of it (readable in both themes).
+  const base = tone === "long" ? "var(--nd-green)" : tone === "short" ? "var(--nd-red)" : "var(--nd-soft)";
+  const color = base;
+  const background = `color-mix(in srgb, ${base} 16%, transparent)`;
+  const borderColor = `color-mix(in srgb, ${base} 45%, transparent)`;
   return (
     <span
       className="inline-flex h-5 items-center rounded-[2px] px-1.5 text-[10px] uppercase tracking-[0.03em]"

@@ -28,25 +28,25 @@ type QuadrantKey = (typeof QUADRANT_ORDER)[number];
 
 /** Expert breakdown heatmap — column tints; cell gutters like confusion matrix (borderSpacing, no solid grid). */
 const EXPERT_REGIME_HEADER_COLOR: Record<QuadrantKey, string> = {
-  Q1_GOLDILOCKS: "#79A87D",
-  Q2_REFLATION: "#8FB6FF",
-  Q3_OVERHEATING: "#E6C06A",
-  Q4_STAGFLATION: "#E67D7D",
+  Q1_GOLDILOCKS: "var(--nd-green)",
+  Q2_REFLATION: "var(--nd-blue)",
+  Q3_OVERHEATING: "var(--nd-yellow)",
+  Q4_STAGFLATION: "var(--nd-red)",
 };
 
 /** Fixed per-column wash — solid tint (no gradient). */
 const EXPERT_REGIME_COLUMN_BG: Record<QuadrantKey, string> = {
-  Q1_GOLDILOCKS: "rgba(76, 110, 85, 0.30)",
-  Q2_REFLATION: "rgba(62, 95, 118, 0.33)",
-  Q3_OVERHEATING: "rgba(135, 108, 58, 0.33)",
-  Q4_STAGFLATION: "rgba(125, 72, 72, 0.33)",
+  Q1_GOLDILOCKS: "color-mix(in srgb, var(--nd-green) 24%, transparent)",
+  Q2_REFLATION: "color-mix(in srgb, var(--nd-blue) 24%, transparent)",
+  Q3_OVERHEATING: "color-mix(in srgb, var(--nd-yellow) 24%, transparent)",
+  Q4_STAGFLATION: "color-mix(in srgb, var(--nd-red) 24%, transparent)",
 };
 
 /** Gutter between heatmap cells — same as panel surface. */
 const EXPERT_TABLE_GAP_BG = "var(--nd-panel)";
 
 /** Hit-rate row: framed cells, no regime tint fills. */
-const HITRATE_CELL_BORDER = "1px solid rgba(255,255,255,0.15)";
+const HITRATE_CELL_BORDER = "1px solid color-mix(in srgb, var(--nd-text) 15%, transparent)";
 
 const REGIME_MAP_GRID_ORDER: { key: QuadrantKey; corner: "tl" | "tr" | "bl" | "br" }[] = [
   { key: "Q2_REFLATION", corner: "tl" },
@@ -60,28 +60,28 @@ const REGIME_MAP_QUADRANT_VISUAL: Record<
   { cellFill: string; accent: string; bubble: string; frame: string }
 > = {
   Q2_REFLATION: {
-    cellFill: "rgba(68, 95, 128, 0.22)",
-    accent: "#8FB6FF",
-    bubble: "rgba(140,170,220,0.8)",
-    frame: "1px solid rgba(143,182,255,0.42)",
+    cellFill: "color-mix(in srgb, var(--nd-blue) 18%, transparent)",
+    accent: "var(--nd-blue)",
+    bubble: "color-mix(in srgb, var(--nd-blue) 80%, transparent)",
+    frame: "1px solid color-mix(in srgb, var(--nd-blue) 45%, transparent)",
   },
   Q1_GOLDILOCKS: {
-    cellFill: "rgba(68, 112, 88, 0.22)",
-    accent: "#7FD7A4",
-    bubble: "rgba(130,200,160,0.8)",
-    frame: "1px solid rgba(127,215,164,0.42)",
+    cellFill: "color-mix(in srgb, var(--nd-green) 18%, transparent)",
+    accent: "var(--nd-green)",
+    bubble: "color-mix(in srgb, var(--nd-green) 80%, transparent)",
+    frame: "1px solid color-mix(in srgb, var(--nd-green) 45%, transparent)",
   },
   Q4_STAGFLATION: {
-    cellFill: "rgba(125, 72, 72, 0.23)",
-    accent: "#E78D8D",
-    bubble: "rgba(220,130,130,0.85)",
-    frame: "1px solid rgba(231,141,141,0.45)",
+    cellFill: "color-mix(in srgb, var(--nd-red) 18%, transparent)",
+    accent: "var(--nd-red)",
+    bubble: "color-mix(in srgb, var(--nd-red) 80%, transparent)",
+    frame: "1px solid color-mix(in srgb, var(--nd-red) 45%, transparent)",
   },
   Q3_OVERHEATING: {
-    cellFill: "rgba(148, 122, 72, 0.23)",
-    accent: "#E6C06A",
-    bubble: "rgba(230,195,120,0.9)",
-    frame: "1px solid rgba(230,192,106,0.45)",
+    cellFill: "color-mix(in srgb, var(--nd-yellow) 18%, transparent)",
+    accent: "var(--nd-yellow)",
+    bubble: "color-mix(in srgb, var(--nd-yellow) 80%, transparent)",
+    frame: "1px solid color-mix(in srgb, var(--nd-yellow) 45%, transparent)",
   },
 };
 
@@ -131,15 +131,15 @@ function quadrantBgTint(key: QuadrantKey, intensity: number): string {
   const a = Math.min(0.35, 0.06 + intensity * 0.28);
   switch (key) {
     case "Q1_GOLDILOCKS":
-      return `rgba(114, 173, 102, ${a})`;
+      return `color-mix(in srgb, var(--nd-green) ${Math.round(a * 100)}%, transparent)`;
     case "Q2_REFLATION":
-      return `rgba(93, 130, 190, ${a})`;
+      return `color-mix(in srgb, var(--nd-blue) ${Math.round(a * 100)}%, transparent)`;
     case "Q3_OVERHEATING":
-      return `rgba(212, 169, 59, ${a})`;
+      return `color-mix(in srgb, var(--nd-yellow) ${Math.round(a * 100)}%, transparent)`;
     case "Q4_STAGFLATION":
-      return `rgba(212, 93, 114, ${a})`;
+      return `color-mix(in srgb, var(--nd-red) ${Math.round(a * 100)}%, transparent)`;
     default:
-      return `rgba(255,255,255,${a * 0.3})`;
+      return `color-mix(in srgb, var(--nd-text) ${Math.round(a * 30)}%, transparent)`;
   }
 }
 
@@ -227,7 +227,7 @@ function EnsembleModelWeightsRows({
     { label: "HMM", key: "hmm" },
     { label: "CYCLE", key: "cycle" },
   ] as const;
-  const barFill = "rgba(255,255,255,0.22)";
+  const barFill = "color-mix(in srgb, var(--nd-text) 22%, transparent)";
 
   return (
     <div className="flex flex-col gap-2">
@@ -625,7 +625,7 @@ function ForecastLabMacroPanelTable({
     [palette.green, palette.yellow, palette.blue, palette.red],
   );
 
-  const rowBorder = "1px solid rgba(255,255,255,0.06)";
+  const rowBorder = "1px solid color-mix(in srgb, var(--nd-text) 6%, transparent)";
   const headMuted = { color: palette.muted, fontSize: 10, letterSpacing: "0.1em", fontWeight: 600 as const };
 
   if (!macroRows.length) {
@@ -652,7 +652,7 @@ function ForecastLabMacroPanelTable({
           <col style={{ width: "13.5%" }} />
         </colgroup>
         <thead>
-          <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.14)" }}>
+          <tr style={{ borderBottom: "1px solid color-mix(in srgb, var(--nd-text) 14%, transparent)" }}>
             <th className="py-2 pr-2 text-left uppercase" style={headMuted}>
               Asset
             </th>
@@ -702,7 +702,7 @@ function ForecastLabMacroPanelTable({
           ))}
           <tr>
             <td colSpan={6} style={{ padding: "4px 0", border: "none", background: "transparent" }}>
-              <div style={{ borderTop: "1px dashed rgba(255,255,255,0.14)" }} />
+              <div style={{ borderTop: "1px dashed color-mix(in srgb, var(--nd-text) 14%, transparent)" }} />
             </td>
           </tr>
           {MACRO_PANEL_ASSETS.map((sid) => {
@@ -798,7 +798,7 @@ const REGIME_MAP_H = 300;
 
 function RegimeMapChart({ probabilities }: { probabilities: PhaseProbabilities }) {
   const g = REGIME_MAP_CROSS_GUTTER_PX;
-  const axisDash = "1px dashed rgba(255,255,255,0.38)";
+  const axisDash = "1px dashed color-mix(in srgb, var(--nd-text) 38%, transparent)";
 
   return (
     <div className="min-w-0 w-full">
@@ -917,7 +917,7 @@ function RegimeMapChart({ probabilities }: { probabilities: PhaseProbabilities }
                 width: 10,
                 height: 10,
                 borderRadius: "50%",
-                background: "#d6d6d6",
+                background: "var(--nd-text)",
               }}
             />
           </div>
@@ -1048,7 +1048,7 @@ function ExpertProbabilityTable({
   const modelText: CSSProperties = {
     fontSize: 14,
     fontWeight: 500,
-    color: "rgba(255,255,255,0.82)",
+    color: "color-mix(in srgb, var(--nd-text) 82%, transparent)",
     textAlign: "left",
   };
   const valueTextBase: CSSProperties = {
@@ -1089,7 +1089,7 @@ function ExpertProbabilityTable({
               style={{
                 ...cellPad,
                 ...neutralHead,
-                color: "rgba(255,255,255,0.45)",
+                color: "color-mix(in srgb, var(--nd-text) 45%, transparent)",
                 textAlign: "left",
               }}
             >
@@ -1152,7 +1152,7 @@ function ExpertProbabilityTable({
                 <td colSpan={1 + QUADRANT_ORDER.length} style={{ padding: 0, border: "none", background: "transparent" }}>
                   <div
                     style={{
-                      borderTop: "1px dashed rgba(255,255,255,0.15)",
+                      borderTop: "1px dashed color-mix(in srgb, var(--nd-text) 15%, transparent)",
                       margin: "8px 0",
                     }}
                   />
@@ -1338,7 +1338,7 @@ function FlConfusionMatrixCard({ trainMetrics, palette }: { trainMetrics: Record
                         ),
                       );
                       const intensity = Math.min(1, Math.max(0, v / maxCell));
-                      const fg = diag ? "rgba(255,255,255,0.96)" : "rgba(255,255,255,0.86)";
+                      const fg = diag ? "color-mix(in srgb, var(--nd-text) 96%, transparent)" : "color-mix(in srgb, var(--nd-text) 86%, transparent)";
                       return (
                         <td
                           key={`${r}-${c}`}
@@ -1389,7 +1389,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
   const yTitleX = 10;
   const mapX = (p: number) => padL + p * plotW;
   const mapY = (a: number) => plotBottom - a * plotH;
-  const axisStroke = "rgba(255,255,255,0.14)";
+  const axisStroke = "color-mix(in srgb, var(--nd-text) 14%, transparent)";
   const axisW = 1.75;
   const tickLen = 6;
   const tickVals = [0, 0.25, 0.5, 0.75, 1];
@@ -1492,7 +1492,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
             <path
               d={perfect}
               fill="none"
-              stroke="rgba(255,255,255,0.42)"
+              stroke="color-mix(in srgb, var(--nd-text) 42%, transparent)"
               strokeWidth={2}
               strokeDasharray="7 5"
               strokeLinecap="round"
@@ -1518,7 +1518,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
             style={{ color: palette.muted }}
           >
             <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block h-0 w-6 border-t-2 border-dashed" style={{ borderColor: "rgba(255,255,255,0.42)" }} />{" "}
+              <span className="inline-block h-0 w-6 border-t-2 border-dashed" style={{ borderColor: "color-mix(in srgb, var(--nd-text) 42%, transparent)" }} />{" "}
               Perfect
             </span>
             <span className="inline-flex items-center gap-1.5">
@@ -1531,7 +1531,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
   );
 }
 
-const FI_BAR_COLORS = ["#79A87D", "#E6C06A", "#8FB6FF", "#E67D7D", "#B794F6"];
+const FI_BAR_COLORS = ["var(--nd-green)", "var(--nd-yellow)", "var(--nd-blue)", "var(--nd-red)", "var(--nd-purple)"];
 
 function FlFeatureImportanceCard({ trainMetrics, palette }: { trainMetrics: Record<string, unknown>; palette: ShellPalette }) {
   const raw = trainMetrics.feature_importance_top;
@@ -1619,8 +1619,8 @@ function FlWeightHistoryCard({ trainMetrics, palette }: { trainMetrics: Record<s
   const plotBottom = H - padB;
   const plotTop = padT;
   const plotH = plotBottom - plotTop;
-  const axisStroke = "rgba(255,255,255,0.14)";
-  const gridStroke = "rgba(255,255,255,0.06)";
+  const axisStroke = "color-mix(in srgb, var(--nd-text) 14%, transparent)";
+  const gridStroke = "color-mix(in srgb, var(--nd-text) 6%, transparent)";
   const tickLen = 6;
   const yTicks = [0, 0.25, 0.5, 0.75, 1] as const;
   const series: { key: "rule" | "hmm" | "gbdt" | "cycle"; label: string; stroke: string }[] = [
