@@ -63,13 +63,6 @@ export function NextNewsScreen() {
     <section className="flex flex-col gap-2">
       <div style={filterBarStyle}>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="rounded border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em]" style={{ borderColor: C.borderSoft, color: C.green }}>
-            <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full" style={{ background: C.green }} />
-            Live
-          </div>
-          <span className="text-[10px] uppercase tracking-[0.12em]" style={{ color: C.muted }}>
-            just now
-          </span>
           <div className="ml-1 flex flex-wrap items-center gap-1.5">
             {IMPACTS.map((item) => (
               <button

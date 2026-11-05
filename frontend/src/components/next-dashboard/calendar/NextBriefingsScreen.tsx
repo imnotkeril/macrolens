@@ -271,20 +271,6 @@ function MorningPanels({
                 <p className="mt-2 text-[12px] leading-snug" style={{ color: colors.soft }}>
                   {t.rationale}
                 </p>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] tabular-nums">
-                  <div>
-                    <div style={{ color: colors.muted }}>Entry</div>
-                    <div style={{ color: colors.text }}>{t.entry}</div>
-                  </div>
-                  <div>
-                    <div style={{ color: colors.muted }}>TP</div>
-                    <div style={{ color: colors.text }}>{t.tp}</div>
-                  </div>
-                  <div>
-                    <div style={{ color: colors.muted }}>SL</div>
-                    <div style={{ color: colors.text }}>{t.sl}</div>
-                  </div>
-                </div>
               </div>
             ))}
           </div>
@@ -343,12 +329,6 @@ function MorningPanels({
                   ))}
                 </tbody>
               </table>
-            </div>
-            <div className="mt-3 text-[12px]" style={{ color: colors.soft }}>
-              Win rate:{" "}
-              <span className="font-semibold tabular-nums" style={{ color: colors.green }}>
-                {data.historicalWinRatePct}%
-              </span>
             </div>
           </div>
         </div>
