@@ -108,12 +108,12 @@ export function MacroSentimentDetailChart({
 
   return (
     <div style={{ width: "100%", height }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
         <LineChart data={filtered} margin={{ top: 6, right: 10, left: 2, bottom: 6 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
           <XAxis
             dataKey="date"
-            tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             minTickGap={28}
@@ -127,7 +127,7 @@ export function MacroSentimentDetailChart({
           />
           <YAxis
             domain={yDomain}
-            tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             width={48}
@@ -202,12 +202,12 @@ export function MacroSentimentZScoreChart({
 
   return (
     <div style={{ width: "100%", height }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
         <LineChart data={filtered} margin={{ top: 6, right: 10, left: 2, bottom: 6 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
           <XAxis
             dataKey="date"
-            tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             minTickGap={28}
@@ -221,7 +221,7 @@ export function MacroSentimentZScoreChart({
           />
           <YAxis
             domain={zDomain}
-            tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             width={44}
@@ -248,14 +248,14 @@ export function MacroSentimentZScoreChart({
             stroke={String(C.green)}
             strokeDasharray="5 5"
             strokeWidth={1}
-            label={{ value: "+2σ", fill: String(C.green), fontSize: 9 }}
+            label={{ value: "+2σ", fill: String(C.green), fontSize: 11 }}
           />
           <ReferenceLine
             y={-Z_SCORE_BAND}
             stroke={String(C.red)}
             strokeDasharray="5 5"
             strokeWidth={1}
-            label={{ value: "−2σ", fill: String(C.red), fontSize: 9 }}
+            label={{ value: "−2σ", fill: String(C.red), fontSize: 11 }}
           />
           <Line
             type="linear"
@@ -305,7 +305,7 @@ export function IndicatorDetailCharts({
           />
         </div>
         <div>
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
             Rolling z-score
           </div>
           <MacroSentimentZScoreChart palette={C} rows={zRows} period={period} height={Z_CHART_HEIGHT} />

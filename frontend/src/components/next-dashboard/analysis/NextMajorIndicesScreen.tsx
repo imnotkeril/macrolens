@@ -311,7 +311,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                       <div className="flex shrink-0 flex-wrap items-start justify-between gap-2">
                         <div>
                           <div
-                            className="text-[10px] font-semibold uppercase tracking-[0.1em]"
+                            className="text-[11px] font-semibold uppercase tracking-[0.1em]"
                             style={{ color: "var(--nd-muted)" }}
                           >
                             {col.title}{" "}
@@ -334,7 +334,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                         )}
                       </div>
                       <div
-                        className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t pt-1 text-[10px]"
+                        className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t pt-1 text-[11px]"
                         style={{ borderColor: "var(--nd-border-soft)", color: "var(--nd-muted)" }}
                       >
                         <span className="flex items-center gap-1.5">
@@ -366,7 +366,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                             showDateAxis={false}
                           />
                         ) : (
-                          <div className="flex h-full items-center text-[10px]" style={{ color: "var(--nd-muted)" }}>
+                          <div className="flex h-full items-center text-[11px]" style={{ color: "var(--nd-muted)" }}>
                             No breadth data
                           </div>
                         )}
@@ -391,7 +391,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                             showDateAxis
                           />
                         ) : (
-                          <div className="flex h-full items-center text-[10px]" style={{ color: "var(--nd-muted)" }}>
+                          <div className="flex h-full items-center text-[11px]" style={{ color: "var(--nd-muted)" }}>
                             No breadth data
                           </div>
                         )}
@@ -409,7 +409,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                 >
                   <div className="flex shrink-0 flex-wrap items-start justify-between gap-2">
                     <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
                         Bitcoin <span style={{ color: "var(--nd-soft)" }}>(BTC)</span>
                       </div>
                     </div>
@@ -429,7 +429,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                     )}
                   </div>
                   <div
-                    className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t pt-1 text-[10px]"
+                    className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t pt-1 text-[11px]"
                     style={{ borderColor: "var(--nd-border-soft)", color: "var(--nd-muted)" }}
                   >
                     <span className="flex items-center gap-1.5">
@@ -452,7 +452,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                   </div>
                   <div className="relative min-h-[56px] w-full flex-1">
                     {domQ.isPending ? (
-                      <div className="flex h-full items-center text-[10px]" style={{ color: "var(--nd-muted)" }}>
+                      <div className="flex h-full items-center text-[11px]" style={{ color: "var(--nd-muted)" }}>
                         Loading dominance…
                       </div>
                     ) : dominancePrepared.btc.length ? (
@@ -466,7 +466,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                         showDateAxis={false}
                       />
                     ) : (
-                      <div className="flex h-full items-center text-[10px]" style={{ color: "var(--nd-muted)" }}>
+                      <div className="flex h-full items-center text-[11px]" style={{ color: "var(--nd-muted)" }}>
                         {dominancePrepared.message ?? "No dominance data"}
                       </div>
                     )}
@@ -489,7 +489,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                   </div>
                   <div className="relative min-h-[56px] w-full flex-1">
                     {domQ.isPending ? (
-                      <div className="flex h-full items-center text-[10px]" style={{ color: "var(--nd-muted)" }}>
+                      <div className="flex h-full items-center text-[11px]" style={{ color: "var(--nd-muted)" }}>
                         Loading dominance…
                       </div>
                     ) : dominancePrepared.stable.length ? (
@@ -503,7 +503,7 @@ export function NextMajorIndicesScreen({ omitShell = false }: { omitShell?: bool
                         showDateAxis
                       />
                     ) : (
-                      <div className="flex h-full items-center text-[10px]" style={{ color: "var(--nd-muted)" }}>
+                      <div className="flex h-full items-center text-[11px]" style={{ color: "var(--nd-muted)" }}>
                         {dominancePrepared.message ?? "No dominance data"}
                       </div>
                     )}

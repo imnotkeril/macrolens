@@ -103,12 +103,12 @@ export function YieldCurveStripLineCard({
             {title}
           </div>
           {subtitle ? (
-            <div className="mt-0.5 text-[10px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+            <div className="mt-0.5 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
               {subtitle}
             </div>
           ) : null}
           {contextNote ? (
-            <p className="mt-1.5 max-w-[42ch] text-[10px] leading-snug" style={{ color: "var(--nd-soft)" }}>
+            <p className="mt-1.5 max-w-[42ch] text-[11px] leading-snug" style={{ color: "var(--nd-soft)" }}>
               {contextNote}
             </p>
           ) : null}
@@ -132,12 +132,12 @@ export function YieldCurveStripLineCard({
         </div>
       ) : (
         <div style={{ width: "100%", height }}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
             <ComposedChart data={displayRows} margin={{ top: 6, right: 10, left: 2, bottom: 6 }}>
               <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
               <XAxis
                 dataKey="date"
-                tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+                tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 minTickGap={28}
@@ -151,7 +151,7 @@ export function YieldCurveStripLineCard({
               />
               <YAxis
                 domain={yDomain}
-                tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+                tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 width={44}
@@ -177,7 +177,7 @@ export function YieldCurveStripLineCard({
                   y={r.y}
                   stroke="rgba(255,255,255,0.35)"
                   strokeDasharray="4 4"
-                  label={{ value: r.label, position: "right", fill: "var(--nd-muted)", fontSize: 10 }}
+                  label={{ value: r.label, position: "right", fill: "var(--nd-muted)", fontSize: 11 }}
                 />
               ))}
               <Line

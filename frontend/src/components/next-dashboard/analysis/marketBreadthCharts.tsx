@@ -50,7 +50,7 @@ export function MarketBreadthTfStrip({
           key={p.key}
           type="button"
           onClick={() => onSelect(p.key)}
-          className="rounded-[2px] px-2 py-1 text-[10px] font-medium transition-colors"
+          className="rounded-[2px] px-2 py-1 text-[11px] font-medium transition-colors"
           style={{
             border: `1px solid ${selectedKey === p.key ? "var(--nd-border)" : "transparent"}`,
             background: selectedKey === p.key ? "var(--nd-panel-soft)" : "transparent",
@@ -77,13 +77,13 @@ export function ChartCardHeader({
     <div className="mb-1 flex min-h-[36px] shrink-0 items-start justify-between gap-2">
       <div className="min-w-0">
         <div
-          className="text-[10px] font-semibold uppercase leading-tight tracking-[0.08em]"
+          className="text-[11px] font-semibold uppercase leading-tight tracking-[0.08em]"
           style={{ color: "var(--nd-muted)" }}
         >
           {title}
         </div>
         {subtitle ? (
-          <div className="mt-0.5 text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--nd-soft)" }}>
+          <div className="mt-0.5 text-[11px] uppercase tracking-[0.1em]" style={{ color: "var(--nd-soft)" }}>
             {subtitle}
           </div>
         ) : null}
@@ -137,7 +137,7 @@ export function BreadthDualRefChart({
     <div className="relative flex min-h-0 flex-1 flex-col">
       {last != null && Number.isFinite(last) ? (
         <div
-          className="pointer-events-none absolute right-1 top-1 z-10 rounded border px-1.5 py-0.5 font-mono text-[10px] tabular-nums"
+          className="pointer-events-none absolute right-1 top-1 z-10 rounded border px-1.5 py-0.5 font-mono text-[11px] tabular-nums"
           style={{
             borderColor: "var(--nd-border-soft)",
             background: "var(--nd-panel-soft)",
@@ -148,12 +148,12 @@ export function BreadthDualRefChart({
         </div>
       ) : null}
       <div className="min-h-0 w-full flex-1">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
           <ComposedChart data={sorted} margin={{ top: 8, right: 10, left: 4, bottom: 20 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
             <XAxis
               dataKey="date"
-              tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               minTickGap={28}
@@ -167,14 +167,14 @@ export function BreadthDualRefChart({
             />
             <YAxis
               domain={[0, 100]}
-              tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={32}
               tickFormatter={(v) => `${v}%`}
             />
             <Tooltip
-              contentStyle={{ ...TIP, fontSize: 10 }}
+              contentStyle={{ ...TIP, fontSize: 11 }}
               labelFormatter={(v) => {
                 try {
                   return format(parseISO(String(v)), "MMM d, yyyy");
@@ -241,12 +241,12 @@ export function HighsLowsBarChart({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
         <ComposedChart data={rows} margin={{ top: 8, right: 8, left: 4, bottom: 20 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
           <XAxis
             dataKey="date"
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             minTickGap={28}
@@ -258,9 +258,9 @@ export function HighsLowsBarChart({
               }
             }}
           />
-          <YAxis tick={{ fill: "var(--nd-muted)", fontSize: 9 }} tickLine={false} axisLine={false} width={36} />
+          <YAxis tick={{ fill: "var(--nd-muted)", fontSize: 11 }} tickLine={false} axisLine={false} width={36} />
           <Tooltip
-            contentStyle={{ ...TIP, fontSize: 10 }}
+            contentStyle={{ ...TIP, fontSize: 11 }}
             labelFormatter={(v) => {
               try {
                 return format(parseISO(String(v)), "MMM d, yyyy");
@@ -302,12 +302,12 @@ export function NysiVersusSpxChart({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
         <ComposedChart data={rows} margin={{ top: 8, right: 14, left: 4, bottom: 20 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
           <XAxis
             dataKey="date"
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             minTickGap={28}
@@ -321,7 +321,7 @@ export function NysiVersusSpxChart({
           />
           <YAxis
             yAxisId="left"
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             width={44}
@@ -329,13 +329,13 @@ export function NysiVersusSpxChart({
           <YAxis
             yAxisId="right"
             orientation="right"
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             width={44}
           />
           <Tooltip
-            contentStyle={{ ...TIP, fontSize: 10 }}
+            contentStyle={{ ...TIP, fontSize: 11 }}
             labelFormatter={(v) => {
               try {
                 return format(parseISO(String(v)), "MMM d, yyyy");
@@ -403,7 +403,7 @@ export function TvolBarChart({
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       {last != null ? (
         <div
-          className="pointer-events-none absolute right-1 top-1 z-10 rounded border px-1.5 py-0.5 font-mono text-[10px] tabular-nums"
+          className="pointer-events-none absolute right-1 top-1 z-10 rounded border px-1.5 py-0.5 font-mono text-[11px] tabular-nums"
           style={{
             borderColor: "var(--nd-border-soft)",
             background: "var(--nd-panel-soft)",
@@ -414,12 +414,12 @@ export function TvolBarChart({
         </div>
       ) : null}
       <div className="min-h-0 w-full flex-1">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 10, left: 4, bottom: 20 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
           <XAxis
             dataKey="date"
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             minTickGap={28}
@@ -432,14 +432,14 @@ export function TvolBarChart({
             }}
           />
           <YAxis
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             width={40}
             tickFormatter={(v) => `${(Number(v) / 1e9).toFixed(0)}B`}
           />
           <Tooltip
-            contentStyle={{ ...TIP, fontSize: 10 }}
+            contentStyle={{ ...TIP, fontSize: 11 }}
             formatter={(value: unknown) => {
               const n = typeof value === "number" ? value : Number(value);
               return [Number.isFinite(n) ? (n / 1e9).toFixed(2) + "B" : "—", "Volume"];
@@ -451,7 +451,7 @@ export function TvolBarChart({
               stroke="var(--nd-red)"
               strokeDasharray="5 5"
               strokeOpacity={0.8}
-              label={{ value: "Avg", position: "left", fill: "var(--nd-muted)", fontSize: 9 }}
+              label={{ value: "Avg", position: "left", fill: "var(--nd-muted)", fontSize: 11 }}
             />
           ) : null}
           <Bar dataKey="value" fill={color} opacity={0.82} radius={[2, 2, 0, 0]} />
@@ -505,7 +505,7 @@ export function LineMetricChart({
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       {last != null ? (
         <div
-          className="pointer-events-none absolute right-2 top-1 z-10 rounded border px-1.5 py-0.5 font-mono text-[10px] tabular-nums"
+          className="pointer-events-none absolute right-2 top-1 z-10 rounded border px-1.5 py-0.5 font-mono text-[11px] tabular-nums"
           style={{
             borderColor: "var(--nd-border-soft)",
             background: "var(--nd-panel-soft)",
@@ -516,13 +516,13 @@ export function LineMetricChart({
         </div>
       ) : null}
       <div className="min-h-0 w-full flex-1">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
         {/* Wider margins — print/PDF + overflow:hidden tiles clip last px of plot/strokes without inset */}
         <ComposedChart data={sorted} margin={{ top: 10, right: 26, left: 12, bottom: 22 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
           <XAxis
             dataKey="date"
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             minTickGap={28}
@@ -536,14 +536,14 @@ export function LineMetricChart({
           />
           <YAxis
             domain={resolvedDomain}
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             width={36}
             tickFormatter={(v) => formatY(Number(v))}
           />
           <Tooltip
-            contentStyle={{ ...TIP, fontSize: 10 }}
+            contentStyle={{ ...TIP, fontSize: 11 }}
             formatter={(value: unknown) => {
               const n = typeof value === "number" ? value : Number(value);
               return [Number.isFinite(n) ? formatY(n) : "—", valueLabel];

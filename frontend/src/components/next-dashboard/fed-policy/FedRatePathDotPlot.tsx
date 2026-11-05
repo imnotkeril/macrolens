@@ -139,7 +139,7 @@ export function FedRatePathDotPlot({ fomc, palette: C }: { fomc: FomcDashboard; 
           >
             <TriangleAlert className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--nd-yellow)" }} aria-hidden />
             <div className="text-right leading-tight">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-yellow)" }}>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-yellow)" }}>
                 Divergence alert
               </div>
               <div className="text-[13px] font-semibold tabular-nums" style={{ color: "var(--nd-yellow)" }}>
@@ -151,7 +151,7 @@ export function FedRatePathDotPlot({ fomc, palette: C }: { fomc: FomcDashboard; 
       </div>
 
       <div className="mt-1 w-full min-w-0 shrink-0" style={{ height: CHART_H }}>
-        <ResponsiveContainer width="100%" height={CHART_H}>
+        <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height={CHART_H}>
           <ScatterChart data={chartData} margin={{ top: 32, right: 10, left: 2, bottom: 10 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" vertical={false} />
             <XAxis
@@ -159,7 +159,7 @@ export function FedRatePathDotPlot({ fomc, palette: C }: { fomc: FomcDashboard; 
               dataKey="x"
               domain={[-0.45, 4.45]}
               ticks={[0, 1, 2, 3, 4]}
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={{ stroke: "var(--nd-border-soft)" }}
               tickFormatter={(v: number) => (Number.isInteger(v) && v >= 0 && v < X_LABELS.length ? X_LABELS[v] : "")}
@@ -168,7 +168,7 @@ export function FedRatePathDotPlot({ fomc, palette: C }: { fomc: FomcDashboard; 
               type="number"
               dataKey="y"
               domain={yDomain}
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={{ stroke: "var(--nd-border-soft)" }}
               width={44}
@@ -179,7 +179,7 @@ export function FedRatePathDotPlot({ fomc, palette: C }: { fomc: FomcDashboard; 
                 position: "top",
                 offset: 10,
                 fill: "var(--nd-muted)",
-                fontSize: 10,
+                fontSize: 11,
               }}
             />
             <Tooltip
@@ -192,7 +192,7 @@ export function FedRatePathDotPlot({ fomc, palette: C }: { fomc: FomcDashboard; 
               labelFormatter={() => ""}
             />
             <Legend
-              wrapperStyle={{ fontSize: 10, paddingTop: 2, color: "var(--nd-soft)" }}
+              wrapperStyle={{ fontSize: 11, paddingTop: 2, color: "var(--nd-soft)" }}
               formatter={(value) => <span style={{ color: "var(--nd-soft)" }}>{value}</span>}
             />
             <Scatter

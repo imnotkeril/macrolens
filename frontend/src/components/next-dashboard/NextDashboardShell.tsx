@@ -281,7 +281,7 @@ export function NextDashboardShell({
                     {!sidebarCollapsed && <span>{item.label}</span>}
                   </Link>
                   {!sidebarCollapsed && item.children?.length && isExpanded ? (
-                    <div className="ml-9 mt-1.5 space-y-1 border-l pl-3 text-[10px] uppercase tracking-[0.09em]" style={{ borderColor: colors.borderSoft, color: colors.muted }}>
+                    <div className="ml-9 mt-1.5 space-y-1 border-l pl-3 text-[11px] uppercase tracking-[0.09em]" style={{ borderColor: colors.borderSoft, color: colors.muted }}>
                       {item.children.map((child) => (
                         <Link
                           key={child.href}
@@ -310,7 +310,7 @@ export function NextDashboardShell({
               {effectiveReportLayout ? (
                 sidebarCollapsed ? (
                   <div className="flex justify-center print:hidden">
-                    <span className="text-[10px] uppercase tracking-[0.08em]" style={{ color: colors.muted }} title="Snapshot">
+                    <span className="text-[11px] uppercase tracking-[0.08em]" style={{ color: colors.muted }} title="Snapshot">
                       Snap
                     </span>
                   </div>
@@ -376,7 +376,7 @@ export function NextDashboardShell({
                         />
                       </div>
                       <div
-                        className="mt-2 truncate text-[10px] leading-tight tracking-[0.02em]"
+                        className="mt-2 truncate text-[11px] leading-tight tracking-[0.02em]"
                         style={{ color: colors.muted, fontVariantNumeric: "tabular-nums" }}
                         title={sidebarRefreshHint(progress)}
                       >

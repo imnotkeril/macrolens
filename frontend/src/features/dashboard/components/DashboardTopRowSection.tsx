@@ -130,7 +130,7 @@ export function DashboardTopRowSection({
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em]" style={{ color: colors.text }}>
             <span>Confidence</span>
             <span
-              className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px]"
+              className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[11px]"
               style={{ borderColor: colors.border }}
             >
               ?

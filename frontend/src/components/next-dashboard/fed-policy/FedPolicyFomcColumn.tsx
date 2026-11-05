@@ -28,7 +28,7 @@ export function FedPolicyFomcColumn({
           FOMC probabilities
         </div>
         {src ? (
-          <div className="mt-0.5 text-[9px] normal-case tracking-[0.02em]" style={{ color: "var(--nd-muted)" }}>
+          <div className="mt-0.5 text-[11px] normal-case tracking-[0.02em]" style={{ color: "var(--nd-muted)" }}>
             Source: {src}
           </div>
         ) : null}

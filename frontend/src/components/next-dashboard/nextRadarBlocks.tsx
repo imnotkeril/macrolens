@@ -120,7 +120,7 @@ export function RadarRecessionChecklistPanel({
 
   const cardPad = "min-h-[40px] px-2.5 py-2";
   const titleSize = "text-[12px]";
-  const threshSize = "text-[10px]";
+  const threshSize = "text-[11px]";
   const valSize = "text-[12px] tabular-nums leading-snug";
   const iconClass = "h-3.5 w-3.5 shrink-0";
 
@@ -231,7 +231,7 @@ export function RadarCycleTimelinePanel({
       {timelineData.length > 0 ? (
         <div className="flex min-h-0 gap-1 sm:gap-2">
           <div
-            className="hidden shrink-0 self-center text-[9px] font-medium uppercase tracking-[0.12em] sm:block"
+            className="hidden shrink-0 self-center text-[11px] font-medium uppercase tracking-[0.12em] sm:block"
             style={{
               color: C.muted,
               writingMode: "vertical-rl",
@@ -278,7 +278,7 @@ export function RadarRecProbHistoryPanel({
       {recProbData.length > 0 ? (
         <div className="flex min-h-0 gap-1 sm:gap-2">
           <div
-            className="hidden shrink-0 self-center text-[9px] font-medium uppercase tracking-[0.12em] sm:block"
+            className="hidden shrink-0 self-center text-[11px] font-medium uppercase tracking-[0.12em] sm:block"
             style={{
               color: C.muted,
               writingMode: "vertical-rl",

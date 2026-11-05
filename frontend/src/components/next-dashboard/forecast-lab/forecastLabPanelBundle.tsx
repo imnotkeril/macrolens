@@ -240,7 +240,7 @@ function EnsembleModelWeightsRows({
             key={key}
             className={cn(FL_HBAR_ROW_GRID, "rounded-[2px] py-1 pl-0.5 pr-1")}
           >
-            <span className="text-[10px] font-semibold uppercase tracking-[0.11em]" style={{ color: palette.muted }}>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.11em]" style={{ color: palette.muted }}>
               {label}
             </span>
             <div
@@ -258,7 +258,7 @@ function EnsembleModelWeightsRows({
                 }}
               />
             </div>
-            <span className="font-mono text-[10px] font-normal tabular-nums" style={{ color: palette.soft }}>
+            <span className="font-mono text-[11px] font-normal tabular-nums" style={{ color: palette.soft }}>
               {v != null ? v.toFixed(2) : "—"}
             </span>
           </div>
@@ -286,7 +286,7 @@ function PhaseEnsembleCard({ summary, palette }: { summary: ForecastLabSummary; 
         <div className="min-w-0 flex-1">
           <div
             className="text-[26px] font-semibold uppercase leading-[1.05] tracking-[0.08em] sm:text-[28px]"
-            style={{ color: palette.yellow }}
+            style={{ color: regimeHistoryQuadrantColor(summary.phase_class, palette) }}
           >
             {phaseHeadline}
           </div>
@@ -414,7 +414,7 @@ function ForecastLabStressCard({
         </span>
       </div>
 
-      <p className="mt-2 text-[10px] leading-snug" style={{ color: palette.muted }}>
+      <p className="mt-2 text-[11px] leading-snug" style={{ color: palette.muted }}>
         <span className="font-semibold uppercase tracking-[0.06em]" style={{ color: palette.soft }}>
           ETF basket (monthly returns)
         </span>
@@ -425,7 +425,7 @@ function ForecastLabStressCard({
       </p>
 
       {contributors.length > 0 ? (
-        <div className="text-[10px] leading-snug" style={{ color: palette.muted }}>
+        <div className="text-[11px] leading-snug" style={{ color: palette.muted }}>
           <span className="font-semibold uppercase tracking-[0.06em]" style={{ color: palette.soft }}>
             Largest |z| this month
           </span>
@@ -441,7 +441,7 @@ function ForecastLabStressCard({
       ) : null}
 
       {visibleDrivers.length > 0 ? (
-        <p className="text-[10px] leading-snug" style={{ color: palette.muted }}>
+        <p className="text-[11px] leading-snug" style={{ color: palette.muted }}>
           <span className="font-semibold uppercase tracking-[0.06em]" style={{ color: palette.soft }}>
             Signals
           </span>
@@ -459,7 +459,7 @@ function ForecastLabStressCard({
           <div className="mt-2 min-h-[40px] w-full min-w-0">
             <LabSparkline values={navigatorGrowthSparklineValues} stroke={palette.soft} height={40} />
           </div>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.06em]" style={{ color: palette.muted }}>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.06em]" style={{ color: palette.muted }}>
             Monthly points: {navigatorGrowthSparklineValues.length}
           </p>
         </div>
@@ -626,7 +626,7 @@ function ForecastLabMacroPanelTable({
   );
 
   const rowBorder = "1px solid color-mix(in srgb, var(--nd-text) 6%, transparent)";
-  const headMuted = { color: palette.muted, fontSize: 10, letterSpacing: "0.1em", fontWeight: 600 as const };
+  const headMuted = { color: palette.muted, fontSize: 11, letterSpacing: "0.1em", fontWeight: 600 as const };
 
   if (!macroRows.length) {
     return <p style={{ color: palette.muted }}>No macro forecasts.</p>;
@@ -1020,7 +1020,7 @@ function ExpertBreakdownHitRate({
         </tbody>
       </table>
       {data.note ? (
-        <p className="mt-2 text-[10px] leading-relaxed" style={{ color: palette.muted }}>
+        <p className="mt-2 text-[11px] leading-relaxed" style={{ color: palette.muted }}>
           {data.note}
         </p>
       ) : null}
@@ -1558,7 +1558,7 @@ function FlFeatureImportanceCard({ trainMetrics, palette }: { trainMetrics: Reco
             return (
               <div key={`${name}-${i}`} className={cn(FL_HBAR_ROW_GRID, "min-w-0 rounded-[2px] py-1 pl-0.5 pr-1")}>
                 <span
-                  className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.11em]"
+                  className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.11em]"
                   style={{ color: palette.muted }}
                   title={name}
                 >
@@ -1573,7 +1573,7 @@ function FlFeatureImportanceCard({ trainMetrics, palette }: { trainMetrics: Reco
                 >
                   <div className="h-full rounded-none" style={{ width: `${wPct}%`, background: col }} />
                 </div>
-                <span className="font-mono text-[10px] font-normal tabular-nums" style={{ color: palette.soft }}>
+                <span className="font-mono text-[11px] font-normal tabular-nums" style={{ color: palette.soft }}>
                   {imp.toFixed(2)}
                 </span>
               </div>

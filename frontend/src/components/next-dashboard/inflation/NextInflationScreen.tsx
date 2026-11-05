@@ -261,7 +261,7 @@ export function NextInflationScreen({ omitShell = false }: { omitShell?: boolean
               <div className="mt-2 flex min-h-0 flex-1 flex-col items-center justify-center">
                 <table className="w-full max-w-[430px] border-separate border-spacing-y-px text-[12px]">
                   <thead>
-                    <tr className="text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+                    <tr className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
                       <th className="pb-1 text-center font-medium">Series</th>
                       <th className="pb-1 text-center font-medium">Now</th>
                       <th className="pb-1 text-center font-medium">3M</th>
@@ -324,7 +324,7 @@ export function NextInflationScreen({ omitShell = false }: { omitShell?: boolean
                   </tbody>
                 </table>
                 <div className="mt-3 w-full max-w-[430px] rounded-[2px] border border-[var(--nd-border-soft)] px-3 py-2">
-                  <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+                  <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
                     <span>Inflation Direction</span>
                     <span>{summarySignal.regime}</span>
                   </div>

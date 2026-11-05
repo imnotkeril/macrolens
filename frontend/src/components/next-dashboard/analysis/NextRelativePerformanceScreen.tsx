@@ -327,7 +327,7 @@ export function NextRelativePerformanceScreen({ omitShell = false }: { omitShell
                   style={{ borderColor: "var(--nd-border-soft)" }}
                 >
                   <div className="flex shrink-0 flex-wrap items-start justify-between gap-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
                       S&amp;P500 sectors
                     </div>
                     <RelPerfPeriodStrip selectedDays={colDays[0]} onSelect={(d) => setDaysForCol(0, d)} />
@@ -406,7 +406,7 @@ export function NextRelativePerformanceScreen({ omitShell = false }: { omitShell
                   style={{ borderColor: "var(--nd-border-soft)" }}
                 >
                   <div className="flex shrink-0 flex-wrap items-start justify-between gap-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
                       Currency indices
                     </div>
                     <RelPerfPeriodStrip selectedDays={colDays[1]} onSelect={(d) => setDaysForCol(1, d)} />
@@ -485,7 +485,7 @@ export function NextRelativePerformanceScreen({ omitShell = false }: { omitShell
                   style={{ borderColor: "var(--nd-border-soft)" }}
                 >
                   <div className="flex shrink-0 flex-wrap items-start justify-between gap-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
                       Sentiment (sector groups)
                     </div>
                     <RelPerfPeriodStrip selectedDays={colDays[2]} onSelect={(d) => setDaysForCol(2, d)} />
@@ -518,7 +518,7 @@ export function NextRelativePerformanceScreen({ omitShell = false }: { omitShell
                                 {fmtPctSigned(row.value)}
                               </span>
                             </div>
-                            <div className="mt-1 normal-case text-[9px] leading-tight" style={{ color: "var(--nd-muted)" }}>
+                            <div className="mt-1 normal-case text-[11px] leading-tight" style={{ color: "var(--nd-muted)" }}>
                               {row.formula}
                             </div>
                           </div>
@@ -617,7 +617,7 @@ function MacroIndicatorRow({
   if (!rows.length) {
     return (
       <div
-        className="flex h-full min-h-[52px] items-center px-2 text-[10px]"
+        className="flex h-full min-h-[52px] items-center px-2 text-[11px]"
         style={{ color: "var(--nd-muted)" }}
       >
         {title} — no data

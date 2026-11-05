@@ -150,7 +150,7 @@ export function NextRadarCycleGauge({
               y={p.y}
               textAnchor="middle"
               dominantBaseline="middle"
-              fill="rgba(255,255,255,0.78)"
+              fill="var(--nd-text)"
               fontSize={11}
               fontWeight={500}
               style={{ letterSpacing: "0.02em" }}
@@ -165,11 +165,11 @@ export function NextRadarCycleGauge({
           y1={cy}
           x2={needleTip.x}
           y2={needleTip.y}
-          stroke="rgba(255,255,255,0.92)"
+          stroke="var(--nd-text)"
           strokeWidth={2}
           strokeLinecap="round"
         />
-        <circle cx={cx} cy={cy} r={6} fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.25)" strokeWidth={1} />
+        <circle cx={cx} cy={cy} r={6} fill="var(--nd-text)" stroke="var(--nd-panel)" strokeWidth={1} />
 
         <text
           x={cx}
@@ -245,7 +245,7 @@ export function NextRadarRecession12m({
               aria-hidden
             />
           </div>
-          <div className="mt-1 flex justify-between font-mono text-[10px]" style={{ color: "var(--nd-muted)" }}>
+          <div className="mt-1 flex justify-between font-mono text-[11px]" style={{ color: "var(--nd-muted)" }}>
             <span>0%</span>
             <span>25%</span>
             <span>50%</span>
@@ -265,7 +265,7 @@ export function NextRadarRecession12m({
         }}
       >
         <div
-          className="pb-1.5 pr-3 text-[10px] font-semibold uppercase tracking-[0.1em]"
+          className="pb-1.5 pr-3 text-[11px] font-semibold uppercase tracking-[0.1em]"
           style={{ gridColumn: 1, gridRow: 1, color: "var(--nd-text)" }}
         >
           Model breakdown
@@ -281,7 +281,7 @@ export function NextRadarRecession12m({
           />
         </div>
         <div
-          className="pb-1.5 pl-3 text-[10px] font-semibold uppercase tracking-[0.1em]"
+          className="pb-1.5 pl-3 text-[11px] font-semibold uppercase tracking-[0.1em]"
           style={{ gridColumn: 3, gridRow: 1, color: "var(--nd-text)" }}
         >
           Key drivers
@@ -307,7 +307,7 @@ export function NextRadarRecession12m({
                     </span>
                   </>
                 ) : (
-                  <span className="text-[10px]" style={{ color: "var(--nd-muted)" }}>
+                  <span className="text-[11px]" style={{ color: "var(--nd-muted)" }}>
                     —
                   </span>
                 )}
@@ -337,7 +337,7 @@ export function NextRadarRecession12m({
                     </span>
                   </>
                 ) : (
-                  <span className="text-[10px]" style={{ color: "var(--nd-muted)" }}>
+                  <span className="text-[11px]" style={{ color: "var(--nd-muted)" }}>
                     —
                   </span>
                 )}
@@ -435,7 +435,7 @@ export function NextRadarTacticalTable({
       <table className="w-full border-collapse text-[13px]">
         <thead>
           <tr
-            className="border-b text-[10px] uppercase tracking-[0.08em]"
+            className="border-b text-[11px] uppercase tracking-[0.08em]"
             style={{ borderColor: "var(--nd-border-soft)", color: "var(--nd-muted)" }}
           >
             <th className="pb-2 text-center font-medium">Asset class</th>
@@ -536,7 +536,7 @@ export function NextRadarExpectedReturnsTable({
       <table className="w-full border-collapse text-[13px]">
         <thead>
           <tr
-            className="border-b text-[10px] uppercase tracking-[0.08em]"
+            className="border-b text-[11px] uppercase tracking-[0.08em]"
             style={{ borderColor: "var(--nd-border-soft)", color: "var(--nd-muted)" }}
           >
             <th className="pb-2 text-center font-medium">Asset</th>

@@ -62,7 +62,7 @@ export function InflationSingleLineCard({
             {title}
           </div>
           {subtitle ? (
-            <div className="mt-0.5 text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+            <div className="mt-0.5 text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
               {subtitle}
             </div>
           ) : null}
@@ -80,12 +80,12 @@ export function InflationSingleLineCard({
         </div>
       ) : (
         <div style={{ width: "100%", height }}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
             <ComposedChart data={displayRows} margin={{ top: 6, right: 10, left: 10, bottom: 2 }}>
               <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
               <XAxis
                 dataKey="date"
-                tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+                tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 minTickGap={26}
@@ -100,7 +100,7 @@ export function InflationSingleLineCard({
               <YAxis
                 orientation="right"
                 domain={yDomain}
-                tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+                tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 width={38}
@@ -129,7 +129,7 @@ export function InflationSingleLineCard({
                 y={2}
                 stroke="rgba(255,255,255,0.3)"
                 strokeDasharray="4 4"
-                label={{ value: "Fed target", position: "right", fill: "var(--nd-muted)", fontSize: 10 }}
+                label={{ value: "Fed target", position: "right", fill: "var(--nd-muted)", fontSize: 11 }}
               />
               <Line type="monotone" dataKey="value" stroke={lineColor} strokeWidth={1.8} dot={false} isAnimationActive={false} />
             </ComposedChart>

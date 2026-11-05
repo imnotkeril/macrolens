@@ -86,12 +86,12 @@ export function FedFundsHistoryRecharts({
     <div className="flex flex-col gap-2">
       <ChartPeriodStrip period={period} onChange={setPeriod} />
       <div style={{ width: "100%", height }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
           <ComposedChart data={filtered} margin={{ top: 6, right: 10, left: 2, bottom: 6 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
             <XAxis
               dataKey="date"
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               minTickGap={28}
@@ -105,7 +105,7 @@ export function FedFundsHistoryRecharts({
             />
             <YAxis
               domain={yDomain}
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={44}
@@ -199,12 +199,12 @@ export function FedForwardRateRecharts({
     <div className="flex flex-col gap-2">
       <ChartPeriodStrip period={period} onChange={setPeriod} />
       <div style={{ width: "100%", height }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
           <LineChart data={filtered} margin={{ top: 6, right: 10, left: 2, bottom: 6 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
             <XAxis
               dataKey="date"
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               minTickGap={28}
@@ -218,7 +218,7 @@ export function FedForwardRateRecharts({
             />
             <YAxis
               domain={yDomain}
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={44}
@@ -293,12 +293,12 @@ export function FedNetLiquidityRecharts({
     <div className="flex flex-col gap-2">
       <ChartPeriodStrip period={period} onChange={setPeriod} />
       <div style={{ width: "100%", height }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
           <ComposedChart data={filtered} margin={{ top: 6, right: 10, left: 2, bottom: 6 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
             <XAxis
               dataKey="date"
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               minTickGap={28}
@@ -312,7 +312,7 @@ export function FedNetLiquidityRecharts({
             />
             <YAxis
               domain={yDomain}
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={52}
@@ -375,12 +375,12 @@ export function FedRhetoricIndexRecharts({
     <div className="flex flex-col gap-1">
       <ChartPeriodStrip period={period} onChange={setPeriod} />
       <div style={{ width: "100%", height }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
           <LineChart data={filtered} margin={{ top: 2, right: 4, left: 0, bottom: 2 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
             <XAxis
               dataKey="date"
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               minTickGap={20}
@@ -394,7 +394,7 @@ export function FedRhetoricIndexRecharts({
             />
             <YAxis
               domain={[0, 100]}
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={28}

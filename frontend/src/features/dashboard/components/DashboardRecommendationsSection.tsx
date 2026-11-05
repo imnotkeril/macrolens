@@ -119,7 +119,7 @@ function LegTag({ label, tone }: { label: string; tone: "long" | "short" | "neut
   const borderColor = `color-mix(in srgb, ${base} 45%, transparent)`;
   return (
     <span
-      className="inline-flex h-5 items-center rounded-[2px] px-1.5 text-[10px] uppercase tracking-[0.03em]"
+      className="inline-flex h-5 items-center rounded-[2px] px-1.5 text-[11px] uppercase tracking-[0.03em]"
       style={{
         color,
         background,
@@ -135,7 +135,7 @@ function SnapshotTradingIdeas({ rows, borderColor, textColor }: { rows: IdeaRow[
   return (
     <div>
       <div
-        className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.05fr)_minmax(0,1.2fr)] gap-2 border-b pb-1 text-[10px] uppercase tracking-[0.08em]"
+        className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.05fr)_minmax(0,1.2fr)] gap-2 border-b pb-1 text-[11px] uppercase tracking-[0.08em]"
         style={{ borderColor, color: "var(--nd-muted)" }}
       >
         <span>Category</span>

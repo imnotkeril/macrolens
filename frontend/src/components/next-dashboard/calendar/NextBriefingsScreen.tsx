@@ -63,7 +63,7 @@ function KeyEventsTable({
   colors: ReturnType<typeof useNextShellTheme>["colors"];
   importancePalette: { high: string; mid: string; low: string };
 }) {
-  const th = "text-left text-[10px] uppercase tracking-[0.1em] pb-2 pr-3";
+  const th = "text-left text-[11px] uppercase tracking-[0.1em] pb-2 pr-3";
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px] border-collapse text-[12px] tabular-nums">
@@ -103,7 +103,7 @@ function KeyEventsTable({
                     <span style={{ color: colors.muted }}>—</span>
                   ) : (
                     <span
-                      className="inline-block rounded border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                      className="inline-block rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
                       style={{ borderColor: bm.border, color: bm.fg }}
                     >
                       {beatMissLabel(r.beatMiss)}
@@ -147,7 +147,7 @@ function MarketSnapshotGrid({
                 {s.changePct.toFixed(2)}%
               </span>
             </div>
-            <div className="mt-0.5 truncate text-[10px] uppercase tracking-[0.08em]" style={{ color: colors.muted }}>
+            <div className="mt-0.5 truncate text-[11px] uppercase tracking-[0.08em]" style={{ color: colors.muted }}>
               {s.name}
             </div>
             <div className="mt-1 text-[13px] tabular-nums" style={{ color: colors.text }}>
@@ -181,7 +181,7 @@ function MorningPanels({
               {data.briefDate}
             </span>
             <span
-              className="rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]"
+              className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em]"
               style={{ borderColor: colors.yellow, color: colors.yellow }}
             >
               Morning
@@ -223,7 +223,7 @@ function MorningPanels({
               </div>
             </div>
           </div>
-          <div className="mt-4 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: colors.muted }}>
+          <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: colors.muted }}>
             Overnight moves
           </div>
           <ul className="mt-2 space-y-1.5 text-[12px]">
@@ -239,7 +239,7 @@ function MorningPanels({
               );
             })}
           </ul>
-          <div className="mt-4 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: colors.muted }}>
+          <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: colors.muted }}>
             Expected move (1D)
           </div>
           <ul className="mt-2 space-y-2">
@@ -301,7 +301,7 @@ function MorningPanels({
               <table className="w-full text-[12px] tabular-nums">
                 <thead>
                   <tr style={{ color: colors.muted }}>
-                    <th className="pb-2 text-left text-[10px] uppercase tracking-[0.08em]">{" "}</th>
+                    <th className="pb-2 text-left text-[11px] uppercase tracking-[0.08em]">{" "}</th>
                     <th className="pb-2 text-right">Equity 1D</th>
                     <th className="pb-2 text-right">10Y 1D</th>
                     <th className="pb-2 text-right">USD 1D</th>
@@ -339,7 +339,7 @@ function MorningPanels({
           <span className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: colors.muted }}>
             Market snapshot
           </span>
-          <span className="text-[10px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
+          <span className="text-[11px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
             Snapshot time: {data.marketSnapshotTimeEt}
           </span>
         </div>
@@ -371,7 +371,7 @@ function EveningPanels({
               {data.briefDate}
             </span>
             <span
-              className="rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]"
+              className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em]"
               style={{ borderColor: colors.purple, color: colors.purple }}
             >
               Evening
@@ -409,7 +409,7 @@ function EveningPanels({
             { label: "Total", value: String(data.total) },
           ].map((m) => (
             <div key={m.label} className="rounded border px-3 py-2" style={{ borderColor: colors.borderSoft, background: colors.panelSoft }}>
-              <div className="text-[10px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
+              <div className="text-[11px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
                 {m.label}
               </div>
               <div className="mt-1 text-[20px] font-semibold tabular-nums" style={{ color: colors.text }}>
@@ -422,7 +422,7 @@ function EveningPanels({
           <table className="w-full min-w-[560px] text-[12px] tabular-nums">
             <thead>
               <tr style={{ color: colors.muted }}>
-                <th className="pb-2 text-left text-[10px] uppercase tracking-[0.08em]">Event</th>
+                <th className="pb-2 text-left text-[11px] uppercase tracking-[0.08em]">Event</th>
                 <th className="pb-2 text-center">Predicted</th>
                 <th className="pb-2 text-center">Actual</th>
                 <th className="pb-2 text-right">Surprise %</th>
@@ -468,11 +468,11 @@ function EveningPanels({
                   </span>
                 </div>
                 <div className="mt-2">
-                  <span className="inline-block rounded border px-2 py-0.5 text-[10px] font-bold uppercase" style={{ borderColor: bm.border, color: bm.fg }}>
+                  <span className="inline-block rounded border px-2 py-0.5 text-[11px] font-bold uppercase" style={{ borderColor: bm.border, color: bm.fg }}>
                     {beatMissLabel(c.outcome)}
                   </span>
                 </div>
-                <div className="mt-3 grid grid-cols-3 gap-1 text-[10px]">
+                <div className="mt-3 grid grid-cols-3 gap-1 text-[11px]">
                   <div>
                     <div style={{ color: colors.muted }}>Est</div>
                     <div className="tabular-nums" style={{ color: colors.soft }}>
@@ -509,7 +509,7 @@ function EveningPanels({
           <p className="mt-2 text-[13px] leading-relaxed" style={{ color: colors.soft }}>
             {data.marketReaction}
           </p>
-          <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: colors.muted }}>
+          <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: colors.muted }}>
             Main movers
           </div>
           <ul className="mt-2 space-y-1 text-[12px]">
@@ -548,7 +548,7 @@ function EveningPanels({
               const up = t.changePct >= 0;
               return (
                 <div key={t.symbol} className="rounded border px-2 py-2" style={{ borderColor: colors.borderSoft, background: colors.panelSoft }}>
-                  <div className="text-[10px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
+                  <div className="text-[11px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
                     {t.symbol}
                   </div>
                   <div className="text-[13px] tabular-nums" style={{ color: colors.text }}>
@@ -566,7 +566,7 @@ function EveningPanels({
             <p className="text-[13px] leading-relaxed" style={{ color: colors.soft }}>
               {data.tomorrowPreview}
             </p>
-            <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: colors.muted }}>
+            <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: colors.muted }}>
               Key events
             </div>
             <ul className="mt-2 space-y-1.5 text-[12px]">
@@ -588,7 +588,7 @@ function EveningPanels({
           <span className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: colors.muted }}>
             Market snapshot
           </span>
-          <span className="text-[10px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
+          <span className="text-[11px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
             Snapshot time: {data.marketSnapshotTimeEt}
           </span>
         </div>

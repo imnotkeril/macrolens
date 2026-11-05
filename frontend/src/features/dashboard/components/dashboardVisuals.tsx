@@ -24,7 +24,7 @@ const C = {
 const NAV_SVG = {
   bg: "#070b10",
   border: "#2f3842",
-  muted: "#7e7e78",
+  muted: "#8a8a83",
   soft: "#b1ada6",
   green: "#72ad66",
   red: "#d45d72",
@@ -105,22 +105,22 @@ export function MacroNavigatorSvg({
         preserveAspectRatio="xMidYMid meet"
         aria-hidden="true"
       >
-      <line x1="310" y1="42" x2="310" y2="344" stroke={NAV_SVG.border} strokeWidth="1" />
-      <line x1="118" y1="195" x2="502" y2="195" stroke={NAV_SVG.border} strokeWidth="1" />
-      <line x1="310" y1="42" x2="310" y2="344" stroke={NAV_SVG.muted} strokeWidth="1" strokeDasharray="1 62" opacity="0.5" />
-      <line x1="118" y1="195" x2="502" y2="195" stroke={NAV_SVG.muted} strokeWidth="1" strokeDasharray="28 28" opacity="0.35" />
+      <line x1="310" y1="42" x2="310" y2="344" style={{ stroke: "var(--nd-border)" }} strokeWidth="1" />
+      <line x1="118" y1="195" x2="502" y2="195" style={{ stroke: "var(--nd-border)" }} strokeWidth="1" />
+      <line x1="310" y1="42" x2="310" y2="344" style={{ stroke: "var(--nd-muted)" }} strokeWidth="1" strokeDasharray="1 62" opacity="0.5" />
+      <line x1="118" y1="195" x2="502" y2="195" style={{ stroke: "var(--nd-muted)" }} strokeWidth="1" strokeDasharray="28 28" opacity="0.35" />
 
-      <text x="170" y="102" fill={NAV_SVG.blue} fontSize="18" letterSpacing="1.3">GROWTH</text>
-      <text x="417" y="102" fill={NAV_SVG.green} fontSize="18" letterSpacing="1.3">RISK ON</text>
-      <text x="170" y="314" fill={NAV_SVG.red} fontSize="18" letterSpacing="1.3">RISK OFF</text>
-      <text x="420" y="314" fill={NAV_SVG.yellow} fontSize="18" letterSpacing="1.3">VALUE</text>
+      <text x="170" y="102" style={{ fill: C.blue }} fontSize="18" letterSpacing="1.3">GROWTH</text>
+      <text x="417" y="102" style={{ fill: C.green }} fontSize="18" letterSpacing="1.3">RISK ON</text>
+      <text x="170" y="314" style={{ fill: C.red }} fontSize="18" letterSpacing="1.3">RISK OFF</text>
+      <text x="420" y="314" style={{ fill: C.yellow }} fontSize="18" letterSpacing="1.3">VALUE</text>
 
-      <text x="310" y="27" fill={NAV_SVG.soft} fontSize="11" textAnchor="middle">FED POLICY (EASY)</text>
-      <text x="310" y="365" fill={NAV_SVG.soft} fontSize="11" textAnchor="middle">FED POLICY (TIGHT)</text>
-      <text x="24" y="199" fill={NAV_SVG.soft} fontSize="11">MACRO</text>
-      <text x="24" y="214" fill={NAV_SVG.soft} fontSize="11">SENTIMENT</text>
-      <text x="554" y="199" fill={NAV_SVG.soft} fontSize="11">MACRO</text>
-      <text x="554" y="214" fill={NAV_SVG.soft} fontSize="11">SENTIMENT</text>
+      <text x="310" y="27" style={{ fill: C.soft }} fontSize="11" textAnchor="middle">FED POLICY (EASY)</text>
+      <text x="310" y="365" style={{ fill: C.soft }} fontSize="11" textAnchor="middle">FED POLICY (TIGHT)</text>
+      <text x="24" y="199" style={{ fill: C.soft }} fontSize="11">MACRO</text>
+      <text x="24" y="214" style={{ fill: C.soft }} fontSize="11">SENTIMENT</text>
+      <text x="554" y="199" style={{ fill: C.soft }} fontSize="11">MACRO</text>
+      <text x="554" y="214" style={{ fill: C.soft }} fontSize="11">SENTIMENT</text>
 
       <line x1="176" y1="250" x2="224" y2="164" stroke={redPast} strokeWidth="1.6" strokeDasharray="5 7" />
       <line x1="224" y1="164" x2={nowX} y2={nowY} stroke={redPastSoft} strokeWidth="1.6" strokeDasharray="5 7" />
@@ -137,10 +137,10 @@ export function MacroNavigatorSvg({
       <text x="444" y="254" fill={greenAhead} fontSize="11">1Y+</text>
 
       <circle cx={ensembleX} cy={ensembleY} r="7" fill={ensemblePurple} opacity="0.9" />
-      <text x={ensembleX + 10} y={ensembleY - 9} fill={ensemblePurple} fontSize="10">ENSEMBLE</text>
+      <text x={ensembleX + 10} y={ensembleY - 9} fill={ensemblePurple} fontSize="11">ENSEMBLE</text>
 
-      <circle cx={nowX} cy={nowY} r="8" fill={neutralNow} stroke={NAV_SVG.border} strokeWidth="2" />
-      <rect x={nowX + 16} y={nowY - 13} width="36" height="24" rx="2" fill="#c4beb3" stroke={NAV_SVG.border} />
+      <circle cx={nowX} cy={nowY} r="8" fill={neutralNow} style={{ stroke: "var(--nd-border)" }} strokeWidth="2" />
+      <rect x={nowX + 16} y={nowY - 13} width="36" height="24" rx="2" fill="#c4beb3" style={{ stroke: "var(--nd-border)" }} />
       <text x={nowX + 34} y={nowY + 3} fill={NAV_SVG.bg} fontSize="12" fontWeight="600" textAnchor="middle">NOW</text>
       </svg>
     </div>
@@ -155,14 +155,14 @@ export function SignalRow({ signal }: { signal: CrossAssetDisplaySignal }) {
       className="grid items-center border-b"
       style={{
         borderColor: C.border,
-        gridTemplateColumns: "minmax(0, 1.04fr) minmax(0, 1.56fr) 162px",
+        gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 1fr) 150px",
         columnGap: 8,
         padding: "4px 0",
       }}
     >
       <div className="min-w-0">
-        <div className="truncate text-[12px] uppercase tracking-[0.03em]">{signal.name}</div>
-        <div className="mt-0.5 truncate text-[10px]" style={{ color: C.soft }}>{signal.description}</div>
+        <div className="line-clamp-2 break-words text-[12px] uppercase leading-tight tracking-[0.03em]" title={signal.name}>{signal.name}</div>
+        <div className="mt-0.5 truncate text-[11px]" style={{ color: C.soft }} title={signal.description}>{signal.description}</div>
       </div>
       <div className="min-w-0 pr-0.5">
         {hasData ? (
@@ -170,7 +170,7 @@ export function SignalRow({ signal }: { signal: CrossAssetDisplaySignal }) {
         ) : null}
       </div>
       <div className="flex items-center justify-end gap-1.5">
-        <span className="min-w-[88px] whitespace-nowrap rounded-[2px] px-2 py-1 text-center text-[9px] uppercase tracking-[0.06em]" style={{ background: hasData ? badgeColor(signal.signal) : "transparent", color: hasData ? badgeTextColor(signal.signal) : C.muted }}>{hasData ? badgeText(signal.signal) : "—"}</span>
+        <span className="min-w-[78px] whitespace-nowrap rounded-[2px] px-2 py-1 text-center text-[11px] uppercase tracking-[0.06em]" style={{ background: hasData ? badgeColor(signal.signal) : "transparent", color: hasData ? badgeTextColor(signal.signal) : C.muted }}>{hasData ? badgeText(signal.signal) : "—"}</span>
         <div className="min-w-[56px] whitespace-nowrap text-right text-[12px] tabular-nums">{value}</div>
       </div>
     </div>
@@ -216,7 +216,7 @@ export function QuickRow({
   const deltaColor = delta == null ? C.soft : higherIsWorse ? (delta > 0 ? C.red : delta < 0 ? C.green : C.soft) : (delta > 0 ? C.green : delta < 0 ? C.red : C.soft);
   const midRatio = clamp((mid - min) / (max - min), 0, 1);
   const titleSize = compact ? "text-[12px]" : "text-[14px]";
-  const subSize = compact ? "text-[10px]" : "text-[11px]";
+  const subSize = compact ? "text-[11px]" : "text-[11px]";
   const valueSize = compact ? "text-[18px]" : "text-[20px]";
   const headerGap = compact ? "mb-2" : "mb-4";
   const scaleGap = compact ? "mt-2" : "mt-3";
@@ -285,7 +285,7 @@ export function InflationQuickRow({
       <div className="mb-2 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[12px] uppercase tracking-[0.06em]" style={{ color: C.text }}>Inflation</div>
-          <div className="mt-1 text-[10px] uppercase" style={{ color: C.soft }}>CPI YoY</div>
+          <div className="mt-1 text-[11px] uppercase" style={{ color: C.soft }}>CPI YoY</div>
         </div>
         <div className="text-right text-[18px] leading-none tabular-nums">
           {cpiValue == null ? "—" : displayDelta.value}
@@ -424,13 +424,13 @@ export function FedRateHistorySpark({ values }: { values: number[] }) {
           })}
         </svg>
       </div>
-      <span className="pointer-events-none absolute right-0 top-0 text-[10px] tabular-nums leading-none" style={{ color: C.muted }}>
+      <span className="pointer-events-none absolute right-0 top-0 text-[11px] tabular-nums leading-none" style={{ color: C.muted }}>
         {formatRateAxisLabel(yMax)}
       </span>
-      <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[10px] tabular-nums leading-none" style={{ color: C.muted }}>
+      <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[11px] tabular-nums leading-none" style={{ color: C.muted }}>
         {formatRateAxisLabel(yMid)}
       </span>
-      <span className="pointer-events-none absolute bottom-0 right-0 text-[10px] tabular-nums leading-none" style={{ color: C.muted }}>
+      <span className="pointer-events-none absolute bottom-0 right-0 text-[11px] tabular-nums leading-none" style={{ color: C.muted }}>
         {formatRateAxisLabel(yMin)}
       </span>
     </div>
@@ -613,9 +613,9 @@ export function MacroSentimentSparkBlock({ values }: { values: number[] }) {
         <path d={areaPath} fill={C.green} opacity={0.1} />
         <path d={linePath} fill="none" stroke={C.green} strokeWidth="1.35" strokeLinecap="butt" strokeLinejoin="miter" />
       </svg>
-      <span className="pointer-events-none absolute right-0 text-[10px] tabular-nums leading-none" style={{ top: `${topLabelPct}%`, transform: "translateY(-40%)", color: C.muted }}>{formatAxisValue(yMax)}</span>
-      <span className="pointer-events-none absolute right-0 text-[10px] tabular-nums leading-none" style={{ top: `${midLabelPct}%`, transform: "translateY(-50%)", color: C.muted }}>{formatAxisValue(yMid)}</span>
-      <span className="pointer-events-none absolute right-0 text-[10px] tabular-nums leading-none" style={{ top: `${bottomLabelPct}%`, transform: "translateY(-60%)", color: C.muted }}>{formatAxisValue(yMin)}</span>
+      <span className="pointer-events-none absolute right-0 text-[11px] tabular-nums leading-none" style={{ top: `${topLabelPct}%`, transform: "translateY(-40%)", color: C.muted }}>{formatAxisValue(yMax)}</span>
+      <span className="pointer-events-none absolute right-0 text-[11px] tabular-nums leading-none" style={{ top: `${midLabelPct}%`, transform: "translateY(-50%)", color: C.muted }}>{formatAxisValue(yMid)}</span>
+      <span className="pointer-events-none absolute right-0 text-[11px] tabular-nums leading-none" style={{ top: `${bottomLabelPct}%`, transform: "translateY(-60%)", color: C.muted }}>{formatAxisValue(yMin)}</span>
     </div>
   );
 }

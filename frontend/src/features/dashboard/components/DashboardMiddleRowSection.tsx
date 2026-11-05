@@ -121,7 +121,7 @@ export function DashboardMiddleRowSection({
           <RiskSegmentDonutComponent value={recessionProbPct} />
         </div>
         <div className="mt-3 flex min-h-0 flex-1 flex-col text-[11px]">
-          <div className="mb-2 flex shrink-0 items-center justify-between pb-1 text-[10px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
+          <div className="mb-2 flex shrink-0 items-center justify-between pb-1 text-[11px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
             <span>Model</span>
             <span>Probability</span>
           </div>
@@ -130,7 +130,7 @@ export function DashboardMiddleRowSection({
               <div key={row.name} className="flex items-center justify-between gap-2 py-1">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: row.dot }} />
-                  <span className="min-w-0 truncate text-[11px]" style={{ color: colors.soft }}>{row.name}</span>
+                  <span className="min-w-0 break-words text-[11px] leading-tight" style={{ color: colors.soft }} title={row.name}>{row.name}</span>
                 </div>
                 <span className="shrink-0 text-[11px] tabular-nums" style={{ color: colors.text }}>{formatPercent(row.pct, 0)}</span>
               </div>
@@ -212,7 +212,7 @@ export function DashboardMiddleRowSection({
             <div className="col-span-2 mt-2 border-t pt-3" style={{ borderColor: colors.borderSoft }}>
               <div className="grid min-w-0 items-start" style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}>
                 <div className="min-w-0">
-                  <div className="leading-tight text-[10px] uppercase tracking-[0.06em]" style={{ color: colors.soft }}>
+                  <div className="leading-tight text-[11px] uppercase tracking-[0.06em]" style={{ color: colors.soft }}>
                     <div>Fed Funds</div>
                     <div>Rate</div>
                   </div>

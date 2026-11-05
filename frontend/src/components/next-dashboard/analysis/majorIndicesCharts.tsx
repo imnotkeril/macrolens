@@ -45,7 +45,7 @@ export function MajorIndicesPeriodStrip({
           key={p.label}
           type="button"
           onClick={() => onSelect(p.days)}
-          className="rounded-[2px] px-2 py-1 text-[10px] font-medium transition-colors"
+          className="rounded-[2px] px-2 py-1 text-[11px] font-medium transition-colors"
           style={{
             border: `1px solid ${selectedDays === p.days ? "var(--nd-border)" : "transparent"}`,
             background: selectedDays === p.days ? "var(--nd-panel-soft)" : "transparent",
@@ -103,12 +103,12 @@ export function IndexWeeklyPriceChart({
 
   return (
     <div className="h-full min-h-[80px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
         <ComposedChart data={chartData} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
           <XAxis
             dataKey="date"
-            tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             minTickGap={28}
@@ -123,7 +123,7 @@ export function IndexWeeklyPriceChart({
           <YAxis
             orientation="left"
             domain={yDomain}
-            tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             width={52}
@@ -159,7 +159,7 @@ export function IndexWeeklyPriceChart({
                 value: `ATH ${fmtPriceCompact(athPrice)}`,
                 position: "insideTopRight",
                 fill: "var(--nd-muted)",
-                fontSize: 9,
+                fontSize: 11,
               }}
             />
           ) : null}
@@ -224,7 +224,7 @@ export function BreadthPercentChart({
   if (!sorted.length) {
     return (
       <div
-        className="flex h-full min-h-[48px] items-center justify-center text-[10px]"
+        className="flex h-full min-h-[48px] items-center justify-center text-[11px]"
         style={{ color: "var(--nd-muted)" }}
       >
         No data
@@ -236,7 +236,7 @@ export function BreadthPercentChart({
     <div className="relative h-full min-h-[48px] w-full">
       {last != null && Number.isFinite(last) ? (
         <div
-          className="pointer-events-none absolute right-1 top-1 z-10 rounded border px-1.5 py-0.5 font-mono text-[10px] tabular-nums"
+          className="pointer-events-none absolute right-1 top-1 z-10 rounded border px-1.5 py-0.5 font-mono text-[11px] tabular-nums"
           style={{
             borderColor: "var(--nd-border-soft)",
             background: "var(--nd-panel-soft)",
@@ -246,7 +246,7 @@ export function BreadthPercentChart({
           {last.toFixed(1)}%
         </div>
       ) : null}
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
         <ComposedChart
           data={sorted}
           margin={{ top: 4, right: 8, left: 4, bottom: showDateAxis ? 18 : 4 }}
@@ -255,7 +255,7 @@ export function BreadthPercentChart({
           <XAxis
             dataKey="date"
             hide={!showDateAxis}
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             minTickGap={22}
@@ -270,14 +270,14 @@ export function BreadthPercentChart({
           <YAxis
             orientation="left"
             domain={yDomain}
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             width={36}
             tickFormatter={(v) => `${v}%`}
           />
           <Tooltip
-            contentStyle={{ ...TIP, fontSize: 10 }}
+            contentStyle={{ ...TIP, fontSize: 11 }}
             labelFormatter={(v) => {
               try {
                 return format(parseISO(String(v)), "MMM d, yyyy");
@@ -299,7 +299,7 @@ export function BreadthPercentChart({
               value: referenceLabel,
               position: "insideTopLeft",
               fill: "var(--nd-muted)",
-              fontSize: 9,
+              fontSize: 11,
             }}
           />
           <Line

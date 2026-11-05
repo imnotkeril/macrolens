@@ -100,12 +100,12 @@ export function CurveMomentumChart({
         </div>
       ) : (
         <div className={chartAreaClass} style={chartAreaStyle}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
             <ComposedChart data={filtered} margin={{ top: 4, right: 8, left: 0, bottom: 2 }}>
               <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
               <XAxis
                 dataKey="date"
-                tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+                tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 minTickGap={22}
@@ -119,7 +119,7 @@ export function CurveMomentumChart({
               />
               <YAxis
                 domain={yDomain}
-                tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+                tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 width={38}

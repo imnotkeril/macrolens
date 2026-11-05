@@ -118,7 +118,7 @@ export function NextEconomicCalendarScreen() {
                 key={item}
                 type="button"
                 onClick={() => setImportanceFilter((prev) => ({ ...prev, [item]: !prev[item] }))}
-                className="rounded border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                className="rounded border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
                 style={{
                   borderColor: importanceFilter[item] ? chipColor(item, C) : C.borderSoft,
                   color: importanceFilter[item] ? chipColor(item, C) : C.muted,
@@ -134,7 +134,7 @@ export function NextEconomicCalendarScreen() {
                 key={region}
                 type="button"
                 onClick={() => setRegionFilter((prev) => ({ ...prev, [region]: !prev[region] }))}
-                className="rounded border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                className="rounded border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
                 style={{
                   borderColor: regionFilter[region] ? C.yellow : C.borderSoft,
                   color: regionFilter[region] ? C.text : C.muted,
@@ -184,7 +184,7 @@ function ToggleTwo({
             key={item}
             type="button"
             onClick={() => onChange(key)}
-            className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.13em]"
+            className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.13em]"
             style={{
               background: isActive ? colors.panelSoft : "transparent",
               color: isActive ? colors.yellow : colors.muted,
@@ -223,7 +223,7 @@ function DayGroup({
       <div className="mt-3 overflow-x-auto">
         <div className="min-w-[940px]">
           <div
-            className="grid grid-cols-[64px_92px_1fr_96px_96px_96px_24px] items-center gap-2 border-b px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+            className="grid grid-cols-[64px_92px_1fr_96px_96px_96px_24px] items-center gap-2 border-b px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
             style={{ color: colors.muted, borderColor: colors.borderSoft }}
           >
             <span>Time</span>
@@ -295,9 +295,9 @@ function ExpandedEvent({
           <div className="mt-2 grid grid-cols-6 gap-1">
             {event.details.historical.map((p) => (
               <div key={p.label} className="rounded border px-1.5 py-1.5 text-center" style={{ borderColor: colors.borderSoft }}>
-                <div className="text-[9px]" style={{ color: colors.muted }}>{p.label}</div>
+                <div className="text-[11px]" style={{ color: colors.muted }}>{p.label}</div>
                 <div className="mt-1 text-[11px] tabular-nums" style={{ color: colors.text }}>{p.value.toFixed(1)}</div>
-                <div className="mt-1 text-[9px] uppercase" style={{ color: p.marker === "beat" ? colors.green : p.marker === "miss" ? colors.red : colors.blue }}>
+                <div className="mt-1 text-[11px] uppercase" style={{ color: p.marker === "beat" ? colors.green : p.marker === "miss" ? colors.red : colors.blue }}>
                   {p.marker}
                 </div>
               </div>
@@ -335,12 +335,12 @@ function ExpandedEvent({
           </ul>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {event.details.aiPrediction.relatedInstruments.map((r) => (
-              <span key={r} className="rounded border px-1.5 py-0.5 text-[10px]" style={{ borderColor: colors.borderSoft, color: colors.text }}>
+              <span key={r} className="rounded border px-1.5 py-0.5 text-[11px]" style={{ borderColor: colors.borderSoft, color: colors.text }}>
                 {r}
               </span>
             ))}
           </div>
-          <div className="mt-2 text-[10px] uppercase tracking-[0.1em]" style={{ color: colors.green }}>
+          <div className="mt-2 text-[11px] uppercase tracking-[0.1em]" style={{ color: colors.green }}>
             {event.details.aiPrediction.strongestRegimeImpact}
           </div>
         </div>
@@ -356,7 +356,7 @@ function ExpandedEvent({
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-semibold">{profile.symbol}</span>
                 <span
-                  className="text-[10px] uppercase"
+                  className="text-[11px] uppercase"
                   style={{
                     color:
                       profile.bias === "bullish" ? colors.green : profile.bias === "bearish" ? colors.red : colors.muted,
@@ -369,13 +369,13 @@ function ExpandedEvent({
                 {profile.avgMovePct >= 0 ? "+" : ""}
                 {profile.avgMovePct.toFixed(2)}%
               </div>
-              <div className="mt-1 text-[10px]" style={{ color: colors.muted }}>
+              <div className="mt-1 text-[11px]" style={{ color: colors.muted }}>
                 Samples {profile.samples}
               </div>
-              <div className="mt-1 text-[10px]" style={{ color: colors.soft }}>
+              <div className="mt-1 text-[11px]" style={{ color: colors.soft }}>
                 {profile.pattern}
               </div>
-              <div className="text-[10px]" style={{ color: colors.soft }}>
+              <div className="text-[11px]" style={{ color: colors.soft }}>
                 Sensitivity {profile.sensitivity}
               </div>
             </div>
@@ -385,7 +385,7 @@ function ExpandedEvent({
           href={event.details.fredSeriesUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-3 inline-block text-[10px] uppercase tracking-[0.1em] underline"
+          className="mt-3 inline-block text-[11px] uppercase tracking-[0.1em] underline"
           style={{ color: colors.blue }}
         >
           {event.details.fredSeriesLabel}
@@ -398,7 +398,7 @@ function ExpandedEvent({
 function Metric({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="rounded border px-2 py-1" style={{ borderColor: color }}>
-      <div className="text-[9px] uppercase tracking-[0.1em]" style={{ color }}>
+      <div className="text-[11px] uppercase tracking-[0.1em]" style={{ color }}>
         {label}
       </div>
       <div className="text-[14px] tabular-nums" style={{ color }}>

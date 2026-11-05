@@ -83,7 +83,7 @@ export function FedPolicyPolicyScoreColumn({
               Policy score
             </div>
             {ok.last_change_date ? (
-              <div className="max-w-[55%] shrink-0 text-right text-[9px] normal-case leading-snug" style={{ color: "var(--nd-muted)" }}>
+              <div className="max-w-[55%] shrink-0 text-right text-[11px] normal-case leading-snug" style={{ color: "var(--nd-muted)" }}>
                 Last rate change: {String(ok.last_change_date)}
               </div>
             ) : null}
@@ -148,17 +148,17 @@ export function FedPolicyPolicyScoreColumn({
             const ppDisplay = ppStr === "—" ? "—" : ppStr.replace(/pp/i, "PP");
 
             return (
-              <div className="mt-2 border-t pt-2 text-[10px] uppercase tracking-[0.06em]" style={{ borderColor: "var(--nd-border-soft)" }}>
+              <div className="mt-2 border-t pt-2 text-[11px] uppercase tracking-[0.06em]" style={{ borderColor: "var(--nd-border-soft)" }}>
                 <table className="w-full table-fixed border-collapse">
                   <colgroup>
                     <col className="min-w-0" />
-                    <col style={{ width: "5.75rem" }} />
-                    <col style={{ width: "5.75rem" }} />
+                    <col style={{ width: "5.25rem" }} />
+                    <col style={{ width: "5.25rem" }} />
                   </colgroup>
                   <tbody>
                     <tr className="border-b" style={{ borderColor: "var(--nd-border-soft)" }}>
-                      <td className="min-w-0 py-2.5 align-middle pr-3">
-                        <div style={{ color: "var(--nd-text)" }}>Rate vs Neutral (SEP LR)</div>
+                      <td className="min-w-0 py-2.5 align-middle pr-2">
+                        <div style={{ color: "var(--nd-text)" }}>vs Neutral (SEP)</div>
                       </td>
                       <td
                         className="px-2 py-2.5 align-middle text-center text-[12px] tabular-nums"
@@ -175,7 +175,7 @@ export function FedPolicyPolicyScoreColumn({
                       </td>
                     </tr>
                     <tr className="border-b" style={{ borderColor: "var(--nd-border-soft)" }}>
-                      <td className="min-w-0 py-2.5 align-middle pr-3">
+                      <td className="min-w-0 py-2.5 align-middle pr-2">
                         <div style={{ color: "var(--nd-text)" }}>Rate direction</div>
                       </td>
                       <td
@@ -200,7 +200,7 @@ export function FedPolicyPolicyScoreColumn({
                       </td>
                     </tr>
                     <tr className="border-b" style={{ borderColor: "var(--nd-border-soft)" }}>
-                      <td className="min-w-0 py-2.5 align-middle pr-3">
+                      <td className="min-w-0 py-2.5 align-middle pr-2">
                         <div style={{ color: "var(--nd-text)" }}>Balance sheet</div>
                       </td>
                       <td
@@ -230,13 +230,13 @@ export function FedPolicyPolicyScoreColumn({
             );
           })()}
           {sentiment ? (
-            <div className="mt-3 text-[10px] uppercase tracking-[0.06em]">
-              <div className="mb-2 text-[10px] font-semibold tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
+            <div className="mt-3 text-[11px] uppercase tracking-[0.06em]">
+              <div className="mb-2 text-[11px] font-semibold tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
                 {sentiment.fromRhetoric ? "Rhetoric (Fed/CB agent)" : "Hawkish / dovish (policy score)"}
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-10 text-center text-[10px] normal-case" style={{ color: C.green }}>
+                  <span className="w-10 text-center text-[11px] normal-case" style={{ color: C.green }}>
                     Dovish
                   </span>
                   <div
@@ -252,7 +252,7 @@ export function FedPolicyPolicyScoreColumn({
                       style={{ left: `${sentiment.pct}%` }}
                     />
                   </div>
-                  <span className="w-10 text-center text-[10px] normal-case" style={{ color: C.red }}>
+                  <span className="w-10 text-center text-[11px] normal-case" style={{ color: C.red }}>
                     Hawkish
                   </span>
                 </div>

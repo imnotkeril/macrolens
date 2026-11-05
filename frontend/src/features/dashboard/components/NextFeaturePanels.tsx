@@ -106,7 +106,7 @@ export function FedPolicySinglePanel({
         <div className="col-span-2 mt-2 border-t pt-3" style={{ borderColor: colors.borderSoft }}>
           <div className="grid min-w-0 items-start" style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}>
             <div className="min-w-0">
-              <div className="leading-tight text-[10px] uppercase tracking-[0.06em]" style={{ color: colors.soft }}>
+              <div className="leading-tight text-[11px] uppercase tracking-[0.06em]" style={{ color: colors.soft }}>
                 <div>Fed Funds</div>
                 <div>Rate</div>
               </div>

@@ -191,7 +191,7 @@ function MeetingMinutesHero({ title, meeting, C }: MeetingMinutesHeroProps) {
           >
             {tiles.map((tile) => (
               <div key={tile.label} className="min-w-0 px-2 py-2 text-center" style={{ background: C.panelSoft }}>
-                <div className="text-[9px] font-semibold uppercase leading-none tracking-[0.08em] md:text-[10px]" style={{ color: C.muted }}>
+                <div className="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] md:text-[11px]" style={{ color: C.muted }}>
                   {tile.label}
                 </div>
                 <div
@@ -250,7 +250,7 @@ export function NextFomcMinutesScreen() {
                   key={item.id}
                   type="button"
                   onClick={() => setTab(item.id as MinutesTab)}
-                  className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                  className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em]"
                   style={{
                     color: active ? C.text : C.muted,
                     background: active ? C.panelSoft : "transparent",
@@ -324,11 +324,11 @@ export function NextFomcMinutesScreen() {
               {meeting.quotes.map((q, idx) => (
                 <blockquote
                   key={`${q.source}-${idx}`}
-                  className="border-l-2 pl-3 text-[13px] leading-relaxed"
-                  style={{ borderColor: toneColor(q.tone, C), color: C.soft }}
+                  className="rounded-[2px] border px-3 py-2 text-[13px] leading-relaxed"
+                  style={{ borderColor: C.borderSoft, color: C.soft }}
                 >
                   “{q.text}”
-                  <div className="mt-1 text-[10px] uppercase tracking-[0.1em]" style={{ color: C.muted }}>
+                  <div className="mt-1 text-[11px] uppercase tracking-[0.1em]" style={{ color: toneColor(q.tone, C) }}>
                     {q.source}
                   </div>
                 </blockquote>
