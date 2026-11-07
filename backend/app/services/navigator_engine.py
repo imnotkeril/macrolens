@@ -13,6 +13,7 @@ PIT as-of matches the Macro Dashboard Forecast Lab card: month-end on or before 
 share one snapshot date and probabilities.
 """
 
+import asyncio
 import logging
 from datetime import date, timedelta
 
@@ -48,6 +49,9 @@ from app.services.yield_analyzer import YieldAnalyzer
 logger = logging.getLogger(__name__)
 
 RECESSION_CHECKLIST_TOTAL = 8
+
+
+OVERLAY_BUDGET_S = 12.0
 
 
 def _dashboard_fl_pit_as_of() -> date:
@@ -566,8 +570,15 @@ class NavigatorEngine:
         try:
             from app.services.forecast_lab.inference import build_summary
 
-            # as_of already month-end aligned; do not re-shift via settings
-            fl = await build_summary(self.db, as_of, align_month_end=False)
+            # as_of already month-end aligned; do not re-shift via settings.
+            # Own session + budget: the overlay is optional, a slow model must not sink the page.
+            async def _summary():
+                from app.database import async_session
+
+                async with async_session() as overlay_db:
+                    return await build_summary(overlay_db, as_of, align_month_end=False)
+
+            fl = await asyncio.wait_for(_summary(), timeout=OVERLAY_BUDGET_S)
             pp = fl.phase_probabilities
             if fl.insufficient_data or pp is None or fl.phase_class is None:
                 raise ValueError("forecast lab has no inputs")

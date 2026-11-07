@@ -25,6 +25,7 @@ from app.schemas.forecast_lab import (
     TrainStartResponse,
     TrainStatusResponse,
 )
+from app.services import ttl_cache
 from app.services.forecast_lab.artifacts import active_bundle_dir, load_meta, resolve_artifacts_dir
 from app.services.forecast_lab.diagnostics import oos_payload, phase_asset_alignment_payload
 from app.services.forecast_lab.inference import build_summary
@@ -98,6 +99,10 @@ def _regime_orm_to_schema(
     )
 
 
+_SUMMARY_TTL_S = 300.0
+_SUMMARY_BUDGET_S = 25.0
+
+
 @router.get("/summary", response_model=ForecastLabSummaryResponse)
 async def get_summary(
     as_of: date | None = None,
@@ -105,9 +110,21 @@ async def get_summary(
         None,
         description="If true, use last completed month-end on or before as_of. If omitted, uses Settings.forecast_lab_summary_align_month_end.",
     ),
-    db: AsyncSession = Depends(get_db),
 ):
-    return await build_summary(db, as_of, align_month_end)
+    key = f"forecast-lab:summary:{as_of}:{align_month_end}"
+
+    async def _compute():
+        async with async_session() as db:
+            return await asyncio.wait_for(
+                build_summary(db, as_of, align_month_end), timeout=_SUMMARY_BUDGET_S
+            )
+
+    try:
+        return await ttl_cache.cached(key, _SUMMARY_TTL_S, _compute)
+    except TimeoutError:
+        raise HTTPException(
+            status_code=503, detail="Forecast summary is taking too long, retry"
+        ) from None
 
 
 @router.get("/bundle", response_model=BundleInfoResponse)
