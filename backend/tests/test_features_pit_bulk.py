@@ -138,3 +138,44 @@ async def test_bulk_uses_few_queries_and_stays_fast(session: AsyncSession):
     assert len(rows) == 40
     assert len(statements) <= 6, statements
     assert elapsed < 2.0
+
+
+@pytest.mark.asyncio
+async def test_macro_frame_bulk_matches_per_query_helpers(session: AsyncSession):
+    from app.services.forecast_lab import macro_data
+
+    defs = [
+        {"id": "HY_OAS", "source": "market"},
+        {"id": "S3", "source": "indicator_fred_id"},
+        {"id": "MISSING", "source": "market"},
+    ]
+    statements: list[str] = []
+
+    def _count(conn, cursor, statement, *a):
+        statements.append(statement)
+
+    sync_engine = session.bind.sync_engine  # type: ignore[union-attr]
+    event.listen(sync_engine, "before_cursor_execute", _count)
+    try:
+        df = await macro_data.build_macro_frame(session, date(2021, 1, 1), date(2025, 12, 31), defs)
+    finally:
+        event.remove(sync_engine, "before_cursor_execute", _count)
+    assert len(df) == 60
+    assert len(statements) <= 12, len(statements)
+
+    for _, r in df.iloc[::9].iterrows():
+        d = r["date"]
+        ref = await features_pit.build_feature_row_per_query(session, d)
+        assert r["growth_score"] == pytest.approx(ref.growth_score)
+        assert r["fed_policy_score"] == pytest.approx(ref.fed_policy_score)
+        for sid, helper in (
+            ("HY_OAS", macro_data._market_month_last),
+            ("S3", macro_data._indicator_month_last_by_fred),
+            ("MISSING", macro_data._market_month_last),
+        ):
+            expected = await helper(session, sid, d)
+            got = r[sid]
+            if expected is None:
+                assert got is None or got != got  # NaN in the frame
+            else:
+                assert got == pytest.approx(expected)
