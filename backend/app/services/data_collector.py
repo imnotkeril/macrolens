@@ -14,6 +14,7 @@ from app.models.fed_policy import BalanceSheet, FedRate
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.market_data import MarketData, YieldData
 from app.services.data_sources import FredAdapter, SourceRouter, YahooAdapter
+from app.services.fed_documents import ingest_fed_documents
 from app.services.fed_press_service import backfill_fomc_signal_phrases
 from app.services.fred_client import (
     MARKET_SERIES,
@@ -306,6 +307,15 @@ class DataCollector:
                     logger.info("FOMC press excerpts backfilled: %s rows", n)
             except Exception:
                 logger.exception("FOMC signal phrase backfill failed")
+
+            try:
+                # Statements/minutes full text (newest first, bounded per run; backlog fills over days).
+                docs = await ingest_fed_documents(db, max_new=12)
+                if docs:
+                    logger.info("FOMC documents ingested: %s", docs)
+            except Exception:
+                await db.rollback()
+                logger.exception("FOMC document ingest failed")
 
             await db.commit()
         logger.info("Fed rate collection complete")
@@ -648,6 +658,19 @@ class DataCollector:
                         )
                     )
                     await db.execute(stmt)
+
+            # Monthly fed funds futures (ZQ_YYYYMM): market-implied policy path for the Fed page.
+            for symbol, series in self.yahoo.get_zq_curve().items():
+                for ts, val in series.items():
+                    d = ts.date() if hasattr(ts, "date") else ts
+                    await db.execute(
+                        pg_insert(MarketData)
+                        .values(date=d, symbol=symbol, value=float(val), change_pct=None)
+                        .on_conflict_do_update(
+                            constraint="uq_market_date_symbol",
+                            set_={"value": float(val)},
+                        )
+                    )
 
             # Full Yahoo history for macro symbols that only have ~14d from the loop above (IJH, BDIY, DBC, ZB_FUT).
             await self._backfill_sparse_yahoo_macro_symbols(

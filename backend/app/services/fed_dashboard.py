@@ -7,7 +7,7 @@ Falls back to legacy ZQ heuristic for meeting probabilities if CME is unreachabl
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,8 +16,10 @@ from app.config import get_settings
 from app.models.fed_policy import FedRate
 from app.models.market_data import MarketData
 from app.services.cme_fedwatch_client import fetch_fedwatch_meetings_cme
+from app.services.fed_futures import meeting_probabilities
 from app.services.fed_rate_schema import apply_fed_rate_load_columns
 from app.services.fed_sep_fred import build_sep_rate_path_from_fred
+from app.services.fomc_calendar import get_fomc_meetings
 
 logger = logging.getLogger(__name__)
 
@@ -104,26 +106,33 @@ def _heuristic_meetings(
 
 
 def _extrapolated_rate_path(current_mid: float, forward_rate: float | None, neutral: float) -> dict:
-    """Legacy straight-line extrapolation (only used if FRED SEP build fails)."""
-    r_star = neutral
-    now_fed = current_mid
-    now_market = forward_rate if forward_rate is not None else current_mid
-
-    q2_fed = round(now_fed - 0.25, 2) if now_fed > r_star else now_fed
-    q2_market = round(now_market - 0.25, 2) if now_market and now_market > r_star else now_market
-
-    q4_fed = round(q2_fed - 0.25, 2) if q2_fed > r_star else r_star
-    q4_market = round(q2_market - 0.25, 2) if q2_market and q2_market > r_star else q2_market
-
-    y27_fed = round(q4_fed - 0.25, 2) if q4_fed > r_star else r_star
-    y27_market = round(q4_market - 0.125, 2) if q4_market and q4_market > r_star else q4_market
-
+    """Minimal fallback when FRED SEP is unavailable: current policy rate and longer-run anchor."""
     return {
-        "now": {"fed_median": round(now_fed, 2), "market": round(now_market or now_fed, 2)},
-        "q2_26": {"fed_median": q2_fed, "market": round(q2_market or q2_fed, 2)},
-        "q4_26": {"fed_median": q4_fed, "market": round(q4_market or q4_fed, 2)},
-        "2027": {"fed_median": y27_fed, "market": round(y27_market or y27_fed, 2)},
-        "lt": {"fed_median": r_star, "market": r_star},
+        "now": {
+            "label": "Now",
+            "fed_median": round(current_mid, 2),
+            "market": round(forward_rate, 2) if forward_rate is not None else None,
+        },
+        "lt": {"label": "Longer run", "fed_median": round(neutral, 2), "market": None},
+    }
+
+
+def _meeting_row(m: dict, decision: date) -> dict:
+    hold, c25, c50, hike = m["hold_pct"], m["cut25_pct"], m["cut50_pct"], m["hike_pct"]
+    if hike >= c25 + c50 and hike >= hold:
+        outcome, otype = "+25bps", "hike"
+    elif c25 + c50 > hold:
+        outcome, otype = ("−50bps" if c50 > c25 else "−25bps"), "cut"
+    else:
+        outcome, otype = "Hold", "hold"
+    return {
+        "date": _format_date(decision),
+        "hold_pct": hold,
+        "cut25_pct": c25,
+        "cut50_pct": c50,
+        "hike_pct": hike,
+        "outcome": outcome,
+        "outcome_type": otype,
     }
 
 
@@ -184,24 +193,58 @@ class FedDashboardService:
         if zq_rows:
             forward_rate = 100 - zq_rows[0].value
 
-        upcoming = _get_upcoming_fomc(today)
+        # Monthly ZQ contracts stored by the nightly refresh: latest implied rate per month.
+        curve: dict[tuple[int, int], float] = {}
+        zq_month_q = (
+            select(MarketData.symbol, MarketData.date, MarketData.value)
+            .where(MarketData.symbol.like("ZQ\\_2%", escape="\\"))
+            .where(MarketData.date >= today - timedelta(days=14))
+            .order_by(MarketData.symbol, desc(MarketData.date))
+        )
+        seen: set[str] = set()
+        for sym, _d, val in (await self.db.execute(zq_month_q)).all():
+            if sym in seen:
+                continue
+            seen.add(sym)
+            try:
+                curve[(int(sym[3:7]), int(sym[7:9]))] = 100.0 - float(val)
+            except ValueError:
+                continue
+
+        effr_now = rate_row.effr if rate_row and rate_row.effr is not None else None
+        front = curve.get((today.year, today.month))
+        pre_rate = (
+            effr_now if effr_now is not None else (front if front is not None else current_mid)
+        )
+        # Put market-implied rates on the target-range midpoint scale used by the Fed median.
+        offset = (current_mid - effr_now) if effr_now is not None and current_mid > 0 else 0.0
+
+        all_meetings = await get_fomc_meetings()
+        upcoming = [m.decision for m in all_meetings if m.decision >= today][:6]
         meetings_source = "zq_heuristic"
+        meetings: list[dict] = []
         cme = await fetch_fedwatch_meetings_cme(current_mid if current_mid > 0 else None)
         if cme:
-            meetings = cme
-            meetings_source = "cme_fedwatch"
-        else:
-            meetings = _heuristic_meetings(upcoming, current_mid, forward_rate)
+            meetings, meetings_source = cme, "cme_fedwatch"
+        elif curve and current_mid > 0:
+            chain = meeting_probabilities(upcoming, curve, pre_rate)
+            meetings = [_meeting_row(c, c["date"]) for c in chain]
+            meetings_source = "zq_futures"
+        if not meetings:
+            meetings = _heuristic_meetings(upcoming[:5], current_mid, forward_rate)
 
         neutral = await self._neutral_from_db()
         settings = get_settings()
         rate_path_source = "extrapolation"
-        rate_path = _extrapolated_rate_path(current_mid, forward_rate, neutral)
+        market_now = front + offset if front is not None else forward_rate
+        rate_path = _extrapolated_rate_path(current_mid, market_now, neutral)
         if settings.fred_api_key:
+            market_year_end = {y: v + offset for (y, mth), v in curve.items() if mth == 12}
             sep_path, meta = await build_sep_rate_path_from_fred(
                 api_key=settings.fred_api_key,
                 current_mid=current_mid,
-                market_now=forward_rate,
+                market_now=market_now,
+                market_year_end=market_year_end,
             )
             if sep_path:
                 rate_path = sep_path
