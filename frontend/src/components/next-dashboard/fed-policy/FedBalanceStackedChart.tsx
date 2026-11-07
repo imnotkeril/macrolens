@@ -136,12 +136,12 @@ export function FedBalanceStackedChart({
         ))}
       </div>
       <div style={{ width: "100%", height }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
           <ComposedChart data={filtered} margin={{ top: 8, right: 12, left: 2, bottom: 4 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
             <XAxis
               dataKey="date"
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               minTickGap={28}
@@ -154,7 +154,7 @@ export function FedBalanceStackedChart({
               }}
             />
             <YAxis
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={52}

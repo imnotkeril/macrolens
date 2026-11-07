@@ -10,10 +10,12 @@ import type {
   TrainStatus,
 } from "@/types/forecastLab";
 
+import { adminFetch } from "@/lib/adminFetch";
 import { apiFetchOrigin } from "@/lib/apiFetchOrigin";
 
 async function flFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${apiFetchOrigin()}${path}`, {
+  const doFetch = init?.method && init.method !== "GET" ? adminFetch : fetch;
+  const res = await doFetch(`${apiFetchOrigin()}${path}`, {
     ...init,
     headers: { ...init?.headers, Accept: "application/json" },
   });

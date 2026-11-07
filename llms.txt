@@ -1,34 +1,893 @@
-# MacroLens
+# MacroLens API
 
-> Macro-trading terminal: regime analysis, Fed policy, yield curves, inflation,
-> cross-asset confirmation, Forecast Lab (HMM + XGBoost) diagnostics, economic
-> calendar, and LLM-backed market intelligence. FastAPI backend + Next.js frontend.
+> Macro-trading terminal backend (FastAPI). Regime analysis (Cycle Radar, Navigator), Fed policy,
+> yield curve, inflation and indicators, market confirmation, Forecast Lab model outputs,
+> economic calendar, alerts, LLM agents and memory retrieval.
 
-The HTTP API is served by the FastAPI backend under the `/api` prefix. Interactive,
-always-current docs: `/docs` (Swagger UI) and `/openapi.json` (machine-readable schema).
-Health: `GET /api/health`.
+Base URL: `http://127.0.0.1:8000` locally, or the deployed backend origin. All routes are under `/api`.
+Operations: 102. Source of truth: `GET /openapi.json` (Swagger UI at `/docs`). This file was generated
+from the FastAPI OpenAPI schema of `backend/app/main.py`; regenerate it when routes change.
+Summaries are derived from handler names when a handler has no docstring; parameter and response
+types are exact.
 
-## API surface
+## Authentication and limits
 
-- [Indicators](/api/indicators): macro indicators, z-scores, trends
-- [Fed Policy](/api/fed): rate path, FedWatch, SEP, dashboard
-- [Yield Curve](/api/yield-curve): curve snapshots, spreads, inversions
-- [Navigator](/api/navigator): regime navigator, phase confidence, cross-asset confirmation
-- [Regime](/api/regime): macro regime / quadrant state and history
-- [Forecast Lab](/api/forecast-lab): HMM + GBDT forecasts, ensembles, training, snapshots
-- [ML Regime](/api/ml): ML regime prediction, backtest, metrics, training
-- [Market](/api/market): market data, prices, breadth, relative performance
-- [Calendar](/api/calendar): economic calendar, events, briefings, FOMC
-- [Calendar Canary](/api/calendar-canary): forward calendar data-quality canary
-- [Alerts](/api/alerts): user alerts and notifications
-- [Agents](/api/agents): LLM intelligence agents (Fed / News / Macro / Master)
-- [Memory](/api/memory): embedding-based memory retrieval
+- **Read endpoints (GET) are public.**
+- **Write endpoints** (any non-GET request under `/api/`) require the header
+  `X-API-Key: <ADMIN_API_KEY>`. Missing or wrong key: `401 {"detail": "Missing or invalid API key"}`.
+  If `ADMIN_API_KEY` is not configured: `503`. Exception: `POST /api/alerts/{alert_id}/read` and
+  `POST /api/alerts/read-all` are open.
+- Rate limit (per client IP, sliding 60 s window): general `RATE_LIMIT_PER_MINUTE` (240),
+  write requests `RATE_LIMIT_ADMIN_PER_MINUTE` (20); exceeded: `429`, `Retry-After: 60`.
+  `/api/health` is exempt. Behind a proxy, `RATE_LIMIT_TRUST_PROXY=true` uses the first `X-Forwarded-For` hop.
+- Request body larger than `MAX_REQUEST_BODY_BYTES` (1048576 by default): `413`.
+- Validation errors on query/path/body: `422` with FastAPI's `detail` array.
 
-## Deployment
+## Common error shape
 
-- [DEPLOY.md](/DEPLOY.md): Vercel (frontend) + Hugging Face Spaces (backend) + managed Postgres/Redis
+```json
+{"detail": "message or validation details"}
+```
 
-## Notes
+## Endpoints by group
 
-- The backend is always-on (APScheduler refresh jobs + ML training); it is not serverless.
-- LLM agents and embeddings are optional; without API keys the system uses rule-based fallbacks.
+| Group | Operations |
+|---|---|
+| Agents | 6 |
+| Alerts | 4 |
+| Calendar | 2 |
+| Calendar Canary | 2 |
+| Data | 4 |
+| Fed Policy | 5 |
+| Forecast Lab | 10 |
+| Health | 1 |
+| Indicators | 9 |
+| ML Regime | 8 |
+| ML2 | 5 |
+| Market | 18 |
+| Memory | 12 |
+| Navigator | 5 |
+| Regime | 2 |
+| Yield Curve | 9 |
+
+## Agents
+
+### `GET /api/agents/context-pack`
+
+Get Context Pack.
+Single payload for Dashboard / Analysis: specialist signals + Master recommendation.
+- Auth: public
+- Parameters:
+  - `as_of` (query, string | null, optional)
+- Response 200 (application/json): `object`
+
+### `GET /api/agents/fed-rhetoric/history`
+
+Get Fed Rhetoric History.
+- Auth: public
+- Parameters:
+  - `date_from` (query, string | null, optional)
+  - `date_to` (query, string | null, optional)
+- Response 200 (application/json): `object`
+
+### `GET /api/agents/macro/tab-summary`
+
+Get Macro Tab Summary.
+- Auth: public
+- Parameters:
+  - `tab` (query, string, required)
+  - `as_of` (query, string | null, optional)
+- Response 200 (application/json): `object`
+
+### `GET /api/agents/recommendation`
+
+Latest Recommendation.
+- Auth: public
+- Response 200 (application/json): `RecommendationResponse`
+
+### `POST /api/agents/run`
+
+Run Agents.
+- Auth: X-API-Key required
+- Response 200 (application/json): `AgentRunResponse`
+
+### `GET /api/agents/signals`
+
+Latest Signals.
+- Auth: public
+- Parameters:
+  - `as_of` (query, string | null, optional)
+- Response 200 (application/json): `object`
+
+
+## Alerts
+
+### `POST /api/alerts/{alert_id}/read`
+
+Mark Alert Read.
+- Auth: public
+- Parameters:
+  - `alert_id` (path, integer, required)
+- Response 200 (application/json): `object`
+
+### `GET /api/alerts/`
+
+List Alerts.
+- Auth: public
+- Parameters:
+  - `unread_only` (query, boolean, optional, default `False`)
+  - `limit` (query, integer, optional, default `50`)
+- Response 200 (application/json): `array of AlertResponse`
+
+### `GET /api/alerts/count`
+
+Get Alert Count.
+- Auth: public
+- Response 200 (application/json): `AlertCount`
+
+### `POST /api/alerts/read-all`
+
+Mark All Read.
+- Auth: public
+- Response 200 (application/json): `object`
+
+
+## Calendar
+
+### `GET /api/calendar/`
+
+Get Calendar.
+- Auth: public
+- Parameters:
+  - `upcoming_days` (query, integer, optional, default `45`)
+  - `recent_days` (query, integer, optional, default `30`)
+- Response 200 (application/json): `CalendarSummary`
+
+### `GET /api/calendar/impact/{indicator_id}`
+
+Get Event Impact.
+- Auth: public
+- Parameters:
+  - `indicator_id` (path, integer, required)
+  - `limit` (query, integer, optional, default `12`)
+- Response 200 (application/json): `EventImpact`
+
+
+## Calendar Canary
+
+### `POST /api/calendar-canary/refresh`
+
+Refresh Calendar Canary.
+- Auth: X-API-Key required
+- Parameters:
+  - `days_ahead` (query, integer, optional, default `45`)
+- Response 200 (application/json): `object`
+
+### `GET /api/calendar-canary/upcoming`
+
+Get Upcoming Calendar Canary.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `45`)
+- Response 200 (application/json): `array of CalendarCanaryEventOut`
+
+
+## Data
+
+### `POST /api/data/backfill-history`
+
+Backfill History.
+One-shot bulk load for the rolling window: all seeded indicators, yields, Fed, FX, market/regime/macro (FRED + Yahoo).
+- Auth: X-API-Key required
+- Parameters:
+  - `years` (query, integer | null, optional)
+- Response 200 (application/json): `object`
+
+### `POST /api/data/refresh`
+
+Refresh All Data.
+Start a full data refresh in the background. Poll GET /refresh-progress until done.
+- Auth: X-API-Key required
+- Response 200 (application/json): `object`
+
+### `GET /api/data/refresh-progress`
+
+Get Refresh Progress Endpoint.
+Current data refresh progress: percent, phase, logs. Poll from frontend.
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/data/source-health`
+
+Source Health.
+Recent source health snapshots for ingestion quality monitoring.
+- Auth: public
+- Parameters:
+  - `limit` (query, integer, optional, default `50`)
+- Response 200 (application/json): `object`
+
+
+## Fed Policy
+
+### `GET /api/fed/balance-sheet`
+
+Get Balance Sheet History.
+- Auth: public
+- Parameters:
+  - `limit` (query, integer, optional, default `120`)
+- Response 200 (application/json): `array of BalanceSheetResponse`
+
+### `GET /api/fed/current`
+
+Get Fed Status.
+- Auth: public
+- Response 200 (application/json): `FedPolicyStatus`
+
+### `GET /api/fed/dot-plot`
+
+Get Fed Dot Plot.
+FOMC SEP median federal funds path (FRED FEDTARMD / FEDTARMDLR) + market mid from DB.
+- Auth: public
+- Response 200 (application/json): `FedDotPlotResponse`
+
+### `GET /api/fed/fomc-dashboard`
+
+Get Fomc Dashboard.
+FOMC meeting probabilities (CME FedWatch when available, else ZQ heuristic) and SEP dot path (FRED).
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/fed/rate-history`
+
+Get Rate History.
+- Auth: public
+- Parameters:
+  - `limit` (query, integer, optional, default `120`)
+- Response 200 (application/json): `array of FedRateResponse`
+
+
+## Forecast Lab
+
+### `GET /api/forecast-lab/bundle`
+
+Get Bundle.
+- Auth: public
+- Response 200 (application/json): `BundleInfoResponse`
+
+### `GET /api/forecast-lab/diagnostics/oos`
+
+Diagnostics Oos.
+- Auth: public
+- Response 200 (application/json): `DiagnosticsOOSResponse`
+
+### `GET /api/forecast-lab/diagnostics/phase-asset-alignment`
+
+Diagnostics Phase Asset.
+- Auth: public
+- Parameters:
+  - `date_from` (query, string | null, optional)
+  - `date_to` (query, string | null, optional)
+- Response 200 (application/json): `PhaseAssetAlignmentResponse`
+
+### `POST /api/forecast-lab/log-snapshot`
+
+Post Log Snapshot.
+- Auth: X-API-Key required
+- Parameters:
+  - `as_of` (query, string | null, optional)
+  - `align_month_end` (query, boolean | null, optional)
+- Response 200 (application/json): `LogSnapshotResponse`
+
+### `GET /api/forecast-lab/regime-history`
+
+Get Regime History.
+- Auth: public
+- Parameters:
+  - `date_from` (query, string | null, optional)
+  - `date_to` (query, string | null, optional)
+- Response 200 (application/json): `RegimeHistoryListResponse`
+
+### `POST /api/forecast-lab/regime-history/materialize`
+
+Post Regime History Materialize.
+Fill/update `regime_history_monthly`: Navigator + FL rule + lookback asset-implied + forward rule confirmation (YAML horizon).
+- Auth: X-API-Key required
+- Parameters:
+  - `date_from` (query, string | null, optional)
+  - `date_to` (query, string | null, optional)
+  - `asset_confirm_threshold` (query, number, optional, default `0.5`)
+- Response 200 (application/json): `RegimeHistoryMaterializeResponse`
+
+### `GET /api/forecast-lab/summary`
+
+Get Summary.
+- Auth: public
+- Parameters:
+  - `as_of` (query, string | null, optional)
+  - `align_month_end` (query, boolean | null, optional)
+- Response 200 (application/json): `ForecastLabSummaryResponse`
+
+### `POST /api/forecast-lab/train`
+
+Post Train.
+- Auth: X-API-Key required
+- Response 200 (application/json): `TrainStartResponse`
+
+### `POST /api/forecast-lab/train/reset-progress`
+
+Post Train Reset Progress.
+Clear stuck 'in progress' state so the UI can start training again.
+- Auth: X-API-Key required
+- Response 200 (application/json): `TrainStatusResponse`
+
+### `GET /api/forecast-lab/train/status`
+
+Train Status.
+- Auth: public
+- Response 200 (application/json): `TrainStatusResponse`
+
+
+## Health
+
+### `GET /api/health`
+
+Health Check.
+- Auth: public
+- Response 200 (application/json): `object`
+
+
+## Indicators
+
+### `GET /api/indicators`
+
+List Indicators.
+List indicators with latest values.
+
+Uses one batched query for latest `IndicatorValue` per indicator (PostgreSQL
+DISTINCT ON) instead of N+1 round-trips. Prefer `GET /kpi-bundle` for the
+macro-sentiment KPI strip (single request vs four parallel `/` calls).
+- Auth: public
+- Parameters:
+  - `category` (query, IndicatorCategory | null, optional)
+- Response 200 (application/json): `array of IndicatorWithLatest`
+
+### `GET /api/indicators/{indicator_id}`
+
+Get Indicator.
+- Auth: public
+- Parameters:
+  - `indicator_id` (path, integer, required)
+- Response 200 (application/json): `IndicatorResponse`
+
+### `GET /api/indicators/{indicator_id}/history`
+
+Get Indicator History.
+- Auth: public
+- Parameters:
+  - `indicator_id` (path, integer, required)
+  - `limit` (query, integer, optional, default `120`)
+- Response 200 (application/json): `array of IndicatorValueResponse`
+
+### `GET /api/indicators/`
+
+List Indicators.
+List indicators with latest values.
+
+Uses one batched query for latest `IndicatorValue` per indicator (PostgreSQL
+DISTINCT ON) instead of N+1 round-trips. Prefer `GET /kpi-bundle` for the
+macro-sentiment KPI strip (single request vs four parallel `/` calls).
+- Auth: public
+- Parameters:
+  - `category` (query, IndicatorCategory | null, optional)
+- Response 200 (application/json): `array of IndicatorWithLatest`
+
+### `GET /api/indicators/categories`
+
+Get Category Scores.
+- Auth: public
+- Response 200 (application/json): `array of CategoryScore`
+
+### `GET /api/indicators/inflation-dashboard`
+
+Get Inflation Dashboard.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `1825`)
+- Response 200 (application/json): `object`
+
+### `GET /api/indicators/inflation-latest`
+
+Get Inflation Latest.
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/indicators/inflation-series/{name}`
+
+Get Inflation Series.
+- Auth: public
+- Parameters:
+  - `name` (path, string, required)
+  - `transform` (query, string, optional, default `yoy`)
+  - `days` (query, integer, optional, default `1825`)
+- Response 200 (application/json): `object`
+
+### `GET /api/indicators/kpi-bundle`
+
+Kpi Indicators Bundle.
+Housing, orders, income_sales, and employment lists in one response.
+- Auth: public
+- Response 200 (application/json): `KpiIndicatorsBundle`
+
+
+## ML Regime
+
+### `POST /api/ml/build-dataset`
+
+Build Dataset Endpoint.
+Build ML dataset from DB. Returns dataset info (rows, date range, features).
+max_months: limit to last N month-ends (e.g. 1 for quick test).
+minimal=1: build only one indicator (fast, one query per month). No growth/fed/cycle.
+- Auth: X-API-Key required
+- Parameters:
+  - `max_months` (query, integer | null, optional)
+  - `minimal` (query, integer, optional, default `0`)
+- Response 200 (application/json): `DatasetInfoResponse`
+
+### `GET /api/ml/dataset-info`
+
+Dataset Info.
+Dataset size, date range, feature list.
+- Auth: public
+- Response 200 (application/json): `DatasetInfoResponse`
+
+### `GET /api/ml/leakage-audit`
+
+Leakage Audit.
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/ml/regime-backtest`
+
+Regime Backtest.
+Backtest over test period: actual vs ensemble by date.
+- Auth: public
+- Response 200 (application/json): `RegimeBacktestResponse`
+
+### `GET /api/ml/regime-metrics`
+
+Regime Metrics.
+Metrics of last trained model (test accuracy, balanced accuracy, log-loss, confusion matrix).
+- Auth: public
+- Response 200 (application/json): `RegimeMetricsResponse`
+
+### `GET /api/ml/regime-predict`
+
+Regime Predict.
+Current nowcast: ensemble probabilities, quadrant, per-model breakdown.
+- Auth: public
+- Response 200 (application/json): `RegimePredictResponse`
+
+### `POST /api/ml/regime-train`
+
+Regime Train.
+Start dataset build + train in a separate process (survives --reload).
+Returns immediately with status "started". Poll GET /api/ml/train-progress for progress.
+- Auth: X-API-Key required
+- Response 200 (application/json): `TrainResponse`
+
+### `GET /api/ml/train-progress`
+
+Get Train Progress Endpoint.
+Current ML train progress: percent, phase, logs. Poll from frontend.
+When a worker process is running, progress is read from file.
+- Auth: public
+- Response 200 (application/json): `object`
+
+
+## ML2
+
+### `GET /api/ml2/latest-stored`
+
+Latest Ml2 Stored.
+- Auth: public
+- Response 200 (application/json): `ML2PredictResponse`
+
+### `GET /api/ml2/metrics`
+
+Get Ml2 Metrics.
+- Auth: public
+- Response 200 (application/json): `ML2MetricsResponse`
+
+### `GET /api/ml2/predict`
+
+Get Ml2 Predict. Read-only: returns the latest stored prediction (same as `/api/ml2/latest-stored`), never recomputes.
+- Auth: public
+- Response 200 (application/json): `ML2PredictResponse`
+
+### `POST /api/ml2/predict`
+
+Predict Ml2. Recomputes the prediction and stores it (DB writes, memory upsert, embedding).
+- Auth: X-API-Key required
+- Response 200 (application/json): `ML2PredictResponse`
+
+### `POST /api/ml2/train`
+
+Train Ml2.
+- Auth: X-API-Key required
+- Response 200 (application/json): `ML2MetricsResponse`
+
+
+## Market
+
+### `GET /api/market/breadth`
+
+Get Breadth.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `1825`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/cross-asset-radar`
+
+Get Cross Asset Radar.
+All 20 Cross-Asset Radar cells (same data sources as macro overview).
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/market/crypto-dominance-history`
+
+Get Crypto Dominance History.
+BTC % and stablecoin % of crypto market cap over time (CoinGecko market caps).
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `1825`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/currencies`
+
+Get Currencies.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `365`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/currency-dashboard`
+
+Get Currency Dashboard.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `1825`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/factors`
+
+Get Factors.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `365`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/indices`
+
+Get Indices.
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/market/indices-dashboard`
+
+Get Indices Dashboard.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `1825`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/macro-overview`
+
+Get Macro Overview.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `1825`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/net-liquidity`
+
+Get Net Liquidity.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `730`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/rates-dashboard`
+
+Get Rates Dashboard.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `1825`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/ratios`
+
+Get Ratios.
+- Auth: public
+- Parameters:
+  - `a` (query, string, required)
+  - `b` (query, string, required)
+  - `days` (query, integer, optional, default `365`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/recession-bands`
+
+Get Recession Bands.
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/market/sector-groups`
+
+Get Sector Groups.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `180`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/sectors`
+
+Get Sectors.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `180`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/sectors-dashboard`
+
+Get Sectors Dashboard.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `365`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/sentiment-dashboard`
+
+Get Sentiment Dashboard.
+- Auth: public
+- Parameters:
+  - `days` (query, integer, optional, default `365`)
+- Response 200 (application/json): `object`
+
+### `GET /api/market/series/{symbol}`
+
+Get Series.
+- Auth: public
+- Parameters:
+  - `symbol` (path, string, required)
+  - `days` (query, integer, optional, default `365`)
+- Response 200 (application/json): `object`
+
+
+## Memory
+
+### `GET /api/memory/admin/overview`
+
+Memory Admin Overview.
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/memory/admin/samples`
+
+Memory Admin Samples.
+- Auth: public
+- Parameters:
+  - `source` (query, string | null, optional)
+  - `limit` (query, integer, optional, default `20`)
+- Response 200 (application/json): `object`
+
+### `POST /api/memory/backfill`
+
+Backfill Memory.
+- Auth: X-API-Key required
+- Parameters:
+  - `years` (query, integer, optional, default `5`)
+  - `source_version` (query, string, optional, default `backfill-v1`)
+- Response 200 (application/json): `object`
+
+### `GET /api/memory/context`
+
+Memory Context.
+- Auth: public
+- Parameters:
+  - `query` (query, string, required)
+  - `top_k` (query, integer, optional, default `8`)
+  - `domain` (query, string | null, optional)
+- Response 200 (application/json): `object`
+
+### `GET /api/memory/health`
+
+Memory Health.
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/memory/provenance`
+
+Memory Provenance.
+- Auth: public
+- Parameters:
+  - `query` (query, string, required)
+  - `top_k` (query, integer, optional, default `5`)
+  - `domain` (query, string | null, optional)
+- Response 200 (application/json): `object`
+
+### `GET /api/memory/search`
+
+Search Memory.
+- Auth: public
+- Parameters:
+  - `query` (query, string, required)
+  - `top_k` (query, integer, optional, default `5`)
+  - `domain` (query, string | null, optional)
+  - `quality_threshold` (query, number, optional, default `0.0`)
+  - `strict_mode` (query, boolean, optional, default `False`)
+- Response 200 (application/json): `MemorySearchResponse`
+
+### `POST /api/memory/snapshot/analysis-indicators`
+
+Snapshot Analysis Indicators.
+- Auth: X-API-Key required
+- Parameters:
+  - `source_version` (query, string, optional, default `v1`)
+- Response 200 (application/json): `object`
+
+### `POST /api/memory/snapshot/dashboard-radar`
+
+Snapshot Dashboard Radar.
+- Auth: X-API-Key required
+- Parameters:
+  - `source_version` (query, string, optional, default `v1`)
+- Response 200 (application/json): `object`
+
+### `POST /api/memory/snapshot/domains`
+
+Snapshot Domains.
+- Auth: X-API-Key required
+- Parameters:
+  - `source_version` (query, string, optional, default `v1`)
+- Response 200 (application/json): `object`
+
+### `GET /api/memory/stats`
+
+Memory Stats.
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `POST /api/memory/upsert`
+
+Upsert Memory.
+- Auth: X-API-Key required
+- Parameters:
+  - `source` (query, string, required)
+  - `doc_key` (query, string, required)
+  - `title` (query, string, required)
+  - `content` (query, string, required)
+  - `tags` (query, string | null, optional)
+  - `quality_score` (query, number, optional, default `1.0`)
+  - `source_version` (query, string | null, optional)
+- Response 200 (application/json): `object`
+
+
+## Navigator
+
+### `GET /api/navigator/current`
+
+Get Current Position.
+- Auth: public
+- Response 200 (application/json): `NavigatorRecommendation`
+
+### `GET /api/navigator/forward`
+
+Get Forward Positions.
+Momentum-based 6m and 1y forward positions for navigator dots (green).
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/navigator/history`
+
+Get Historical Positions.
+- Auth: public
+- Response 200 (application/json): `object`
+
+### `GET /api/navigator/recession-check`
+
+Get Recession Check.
+- Auth: public
+- Response 200 (application/json): `RecessionCheck`
+
+### `GET /api/navigator/signals`
+
+Get Confirmation Signals.
+- Auth: public
+- Response 200 (application/json): `array of CrossAssetSignal`
+
+
+## Regime
+
+### `GET /api/regime/current`
+
+Get Current Regime.
+- Auth: public
+- Response 200 (application/json): `RegimeSnapshot`
+
+### `GET /api/regime/history`
+
+Get Regime History.
+- Auth: public
+- Parameters:
+  - `months` (query, integer, optional, default `60`)
+- Response 200 (application/json): `array of RegimeHistoryPoint`
+
+
+## Yield Curve
+
+### `GET /api/yield-curve/breakeven-history/{maturity}`
+
+Get Breakeven History.
+- Auth: public
+- Parameters:
+  - `maturity` (path, string, required)
+  - `days` (query, integer, optional, default `730`)
+- Response 200 (application/json): `object`
+
+### `GET /api/yield-curve/current`
+
+Get Current Curve.
+- Auth: public
+- Response 200 (application/json): `YieldCurveSnapshot`
+
+### `GET /api/yield-curve/dynamics`
+
+Get Dynamics.
+- Auth: public
+- Response 200 (application/json): `CurveDynamics`
+
+### `GET /api/yield-curve/dynamics-at`
+
+Get Dynamics At.
+PIT curve dynamics vs ~30d / ~90d earlier (same classifier as /dynamics).
+- Auth: public
+- Parameters:
+  - `as_of` (query, string, required)
+- Response 200 (application/json): `CurveDynamics`
+
+### `GET /api/yield-curve/history`
+
+Get Historical Curves.
+- Auth: public
+- Response 200 (application/json): `array of YieldCurveSnapshot`
+
+### `GET /api/yield-curve/real-yield-history/{maturity}`
+
+Get Real Yield History.
+- Auth: public
+- Parameters:
+  - `maturity` (path, string, required)
+  - `days` (query, integer, optional, default `730`)
+- Response 200 (application/json): `object`
+
+### `GET /api/yield-curve/spread-history/{name}`
+
+Get Spread History.
+- Auth: public
+- Parameters:
+  - `name` (path, string, required)
+  - `days` (query, integer, optional, default `730`)
+- Response 200 (application/json): `object`
+
+### `GET /api/yield-curve/spread-percentiles`
+
+Get Spread Percentiles.
+Percentile ranks (1y / 5y / 10y windows) and full-sample mean for key Treasury spreads.
+- Auth: public
+- Response 200 (application/json): `array of SpreadPercentileRow`
+
+### `GET /api/yield-curve/spreads`
+
+Get Spreads.
+- Auth: public
+- Response 200 (application/json): `array of YieldSpread`

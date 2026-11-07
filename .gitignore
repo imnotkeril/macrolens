@@ -90,3 +90,6 @@ docs/
 
 # Agent run scratch
 .codex-pet-runs/
+
+# Playwright MCP local artifacts
+.playwright-mcp/

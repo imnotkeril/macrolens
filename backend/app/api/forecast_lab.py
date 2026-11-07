@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 from datetime import date, datetime
@@ -38,6 +39,9 @@ from app.services.forecast_lab.train_pipeline import run_training
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Held for the whole background training run (single-process guard, like data refresh).
+_train_lock = asyncio.Lock()
 
 
 def _regime_orm_to_schema(
@@ -130,17 +134,22 @@ async def post_train(background_tasks: BackgroundTasks):
     settings = get_settings()
     if not settings.forecast_lab_enable_train_endpoint:
         raise HTTPException(status_code=403, detail="Forecast Lab train endpoint disabled")
+    # get_progress() already ignores stale/interrupted runs (see progress.py), so a leftover
+    # "in progress" file after a crash/restart does not block new training forever.
+    if _train_lock.locked() or not get_progress().get("done", True):
+        raise HTTPException(status_code=409, detail="Forecast Lab training is already in progress")
     resolve_artifacts_dir().mkdir(parents=True, exist_ok=True)
     set_progress(0.0, "queued", "[0%] queued", done=False)
     logger.info("forecast_lab train queued (background)")
 
     async def _run():
-        async with async_session() as session:
-            try:
-                await run_training(session)
-            except Exception:
-                logger.exception("forecast_lab train failed")
-                set_progress(100.0, "error", "[100%] failed", done=True)
+        async with _train_lock:
+            async with async_session() as session:
+                try:
+                    await run_training(session)
+                except Exception:
+                    logger.exception("forecast_lab train failed")
+                    set_progress(100.0, "error", "[100%] failed", done=True)
 
     background_tasks.add_task(_run)
     return TrainStartResponse(status="started", message="Training scheduled in background")

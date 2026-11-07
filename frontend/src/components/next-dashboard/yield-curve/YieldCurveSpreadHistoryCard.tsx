@@ -91,7 +91,7 @@ export function YieldCurveSpreadHistoryCard({
           </div>
           {showInvertedBadge && invMonths != null ? (
             <div
-              className="mt-1 inline-block rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+              className="mt-1 inline-block rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide"
               style={{ background: String(C.red), color: "#fff" }}
             >
               Inverted · {invMonths} {invMonths === 1 ? "month" : "months"}
@@ -101,7 +101,7 @@ export function YieldCurveSpreadHistoryCard({
         <ChartPeriodStrip period={period} onChange={setPeriod} />
       </div>
       {contextNote ? (
-        <p className="text-[10px] leading-snug" style={{ color: "var(--nd-soft)" }}>
+        <p className="text-[11px] leading-snug" style={{ color: "var(--nd-soft)" }}>
           {contextNote}
         </p>
       ) : null}
@@ -122,7 +122,7 @@ export function YieldCurveSpreadHistoryCard({
         </div>
       ) : (
         <div style={{ width: "100%", height }}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
             <ComposedChart data={filtered} margin={{ top: 6, right: 12, left: 2, bottom: 6 }}>
               <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
               <ReferenceArea
@@ -133,7 +133,7 @@ export function YieldCurveSpreadHistoryCard({
               />
               <XAxis
                 dataKey="date"
-                tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+                tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 minTickGap={28}
@@ -147,7 +147,7 @@ export function YieldCurveSpreadHistoryCard({
               />
               <YAxis
                 domain={yDomain}
-                tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+                tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 width={44}
@@ -175,7 +175,7 @@ export function YieldCurveSpreadHistoryCard({
                   value: "Inversion threshold",
                   position: "right",
                   fill: "var(--nd-muted)",
-                  fontSize: 10,
+                  fontSize: 11,
                 }}
               />
               <Line

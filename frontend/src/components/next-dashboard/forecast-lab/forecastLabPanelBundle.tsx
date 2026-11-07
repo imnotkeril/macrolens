@@ -15,6 +15,7 @@ import type {
 } from "@/types/forecastLab";
 import type { NextShellThemeContextValue } from "@/components/next-dashboard/nextShellTheme";
 import { REGIME_HISTORY_TABLE_BORDER } from "@/components/next-dashboard/nextDashboardTableTokens";
+import { NextNoData, NO_DATA_TITLE } from "@/components/next-dashboard/NextNoData";
 const QUADRANT_ORDER = ["Q1_GOLDILOCKS", "Q2_REFLATION", "Q3_OVERHEATING", "Q4_STAGFLATION"] as const;
 
 const QUADRANT_LABELS: Record<string, string> = {
@@ -28,25 +29,25 @@ type QuadrantKey = (typeof QUADRANT_ORDER)[number];
 
 /** Expert breakdown heatmap — column tints; cell gutters like confusion matrix (borderSpacing, no solid grid). */
 const EXPERT_REGIME_HEADER_COLOR: Record<QuadrantKey, string> = {
-  Q1_GOLDILOCKS: "#79A87D",
-  Q2_REFLATION: "#8FB6FF",
-  Q3_OVERHEATING: "#E6C06A",
-  Q4_STAGFLATION: "#E67D7D",
+  Q1_GOLDILOCKS: "var(--nd-green)",
+  Q2_REFLATION: "var(--nd-blue)",
+  Q3_OVERHEATING: "var(--nd-yellow)",
+  Q4_STAGFLATION: "var(--nd-red)",
 };
 
 /** Fixed per-column wash — solid tint (no gradient). */
 const EXPERT_REGIME_COLUMN_BG: Record<QuadrantKey, string> = {
-  Q1_GOLDILOCKS: "rgba(76, 110, 85, 0.30)",
-  Q2_REFLATION: "rgba(62, 95, 118, 0.33)",
-  Q3_OVERHEATING: "rgba(135, 108, 58, 0.33)",
-  Q4_STAGFLATION: "rgba(125, 72, 72, 0.33)",
+  Q1_GOLDILOCKS: "color-mix(in srgb, var(--nd-green) 24%, transparent)",
+  Q2_REFLATION: "color-mix(in srgb, var(--nd-blue) 24%, transparent)",
+  Q3_OVERHEATING: "color-mix(in srgb, var(--nd-yellow) 24%, transparent)",
+  Q4_STAGFLATION: "color-mix(in srgb, var(--nd-red) 24%, transparent)",
 };
 
 /** Gutter between heatmap cells — same as panel surface. */
 const EXPERT_TABLE_GAP_BG = "var(--nd-panel)";
 
 /** Hit-rate row: framed cells, no regime tint fills. */
-const HITRATE_CELL_BORDER = "1px solid rgba(255,255,255,0.15)";
+const HITRATE_CELL_BORDER = "1px solid color-mix(in srgb, var(--nd-text) 15%, transparent)";
 
 const REGIME_MAP_GRID_ORDER: { key: QuadrantKey; corner: "tl" | "tr" | "bl" | "br" }[] = [
   { key: "Q2_REFLATION", corner: "tl" },
@@ -60,28 +61,28 @@ const REGIME_MAP_QUADRANT_VISUAL: Record<
   { cellFill: string; accent: string; bubble: string; frame: string }
 > = {
   Q2_REFLATION: {
-    cellFill: "rgba(68, 95, 128, 0.22)",
-    accent: "#8FB6FF",
-    bubble: "rgba(140,170,220,0.8)",
-    frame: "1px solid rgba(143,182,255,0.42)",
+    cellFill: "color-mix(in srgb, var(--nd-blue) 18%, transparent)",
+    accent: "var(--nd-blue)",
+    bubble: "color-mix(in srgb, var(--nd-blue) 80%, transparent)",
+    frame: "1px solid color-mix(in srgb, var(--nd-blue) 45%, transparent)",
   },
   Q1_GOLDILOCKS: {
-    cellFill: "rgba(68, 112, 88, 0.22)",
-    accent: "#7FD7A4",
-    bubble: "rgba(130,200,160,0.8)",
-    frame: "1px solid rgba(127,215,164,0.42)",
+    cellFill: "color-mix(in srgb, var(--nd-green) 18%, transparent)",
+    accent: "var(--nd-green)",
+    bubble: "color-mix(in srgb, var(--nd-green) 80%, transparent)",
+    frame: "1px solid color-mix(in srgb, var(--nd-green) 45%, transparent)",
   },
   Q4_STAGFLATION: {
-    cellFill: "rgba(125, 72, 72, 0.23)",
-    accent: "#E78D8D",
-    bubble: "rgba(220,130,130,0.85)",
-    frame: "1px solid rgba(231,141,141,0.45)",
+    cellFill: "color-mix(in srgb, var(--nd-red) 18%, transparent)",
+    accent: "var(--nd-red)",
+    bubble: "color-mix(in srgb, var(--nd-red) 80%, transparent)",
+    frame: "1px solid color-mix(in srgb, var(--nd-red) 45%, transparent)",
   },
   Q3_OVERHEATING: {
-    cellFill: "rgba(148, 122, 72, 0.23)",
-    accent: "#E6C06A",
-    bubble: "rgba(230,195,120,0.9)",
-    frame: "1px solid rgba(230,192,106,0.45)",
+    cellFill: "color-mix(in srgb, var(--nd-yellow) 18%, transparent)",
+    accent: "var(--nd-yellow)",
+    bubble: "color-mix(in srgb, var(--nd-yellow) 80%, transparent)",
+    frame: "1px solid color-mix(in srgb, var(--nd-yellow) 45%, transparent)",
   },
 };
 
@@ -131,15 +132,15 @@ function quadrantBgTint(key: QuadrantKey, intensity: number): string {
   const a = Math.min(0.35, 0.06 + intensity * 0.28);
   switch (key) {
     case "Q1_GOLDILOCKS":
-      return `rgba(114, 173, 102, ${a})`;
+      return `color-mix(in srgb, var(--nd-green) ${Math.round(a * 100)}%, transparent)`;
     case "Q2_REFLATION":
-      return `rgba(93, 130, 190, ${a})`;
+      return `color-mix(in srgb, var(--nd-blue) ${Math.round(a * 100)}%, transparent)`;
     case "Q3_OVERHEATING":
-      return `rgba(212, 169, 59, ${a})`;
+      return `color-mix(in srgb, var(--nd-yellow) ${Math.round(a * 100)}%, transparent)`;
     case "Q4_STAGFLATION":
-      return `rgba(212, 93, 114, ${a})`;
+      return `color-mix(in srgb, var(--nd-red) ${Math.round(a * 100)}%, transparent)`;
     default:
-      return `rgba(255,255,255,${a * 0.3})`;
+      return `color-mix(in srgb, var(--nd-text) ${Math.round(a * 30)}%, transparent)`;
   }
 }
 
@@ -189,6 +190,8 @@ function formatRegimeHistoryObsDate(iso: string): string {
 
 /** Macro panel scroll cap (regime history height matches macro card via layout sync on xl). */
 const MACRO_REGIME_HISTORY_MAX_H = "min(396px, 54vh)";
+/** Same cap as a class applied from xl only: below xl the asset table sizes to its content (200% zoom, D-27). */
+const MACRO_REGIME_HISTORY_MAX_H_CLASS = "xl:max-h-[min(396px,54vh)]";
 
 const XL_MEDIA = "(min-width: 1280px)";
 
@@ -227,7 +230,7 @@ function EnsembleModelWeightsRows({
     { label: "HMM", key: "hmm" },
     { label: "CYCLE", key: "cycle" },
   ] as const;
-  const barFill = "rgba(255,255,255,0.22)";
+  const barFill = "color-mix(in srgb, var(--nd-text) 22%, transparent)";
 
   return (
     <div className="flex flex-col gap-2">
@@ -240,7 +243,7 @@ function EnsembleModelWeightsRows({
             key={key}
             className={cn(FL_HBAR_ROW_GRID, "rounded-[2px] py-1 pl-0.5 pr-1")}
           >
-            <span className="text-[10px] font-semibold uppercase tracking-[0.11em]" style={{ color: palette.muted }}>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.11em]" style={{ color: palette.muted }}>
               {label}
             </span>
             <div
@@ -258,7 +261,7 @@ function EnsembleModelWeightsRows({
                 }}
               />
             </div>
-            <span className="font-mono text-[10px] font-normal tabular-nums" style={{ color: palette.soft }}>
+            <span className="font-mono text-[11px] font-normal tabular-nums" style={{ color: palette.soft }}>
               {v != null ? v.toFixed(2) : "—"}
             </span>
           </div>
@@ -270,41 +273,50 @@ function EnsembleModelWeightsRows({
 
 /** Phase headline + date + confidence, MATCH top-right, full regime map below (no duplicate quadrant bars). */
 function PhaseEnsembleCard({ summary, palette }: { summary: ForecastLabSummary; palette: ShellPalette }) {
-  const phaseHeadline = (QUADRANT_LABELS[summary.phase_class] ?? summary.phase_class).toUpperCase();
+  const noData =
+    summary.insufficient_data === true || !summary.phase_class || !summary.phase_probabilities || summary.confidence == null;
+  const phaseKey = summary.phase_class ?? "";
+  const phaseHeadline = (QUADRANT_LABELS[phaseKey] ?? phaseKey).toUpperCase();
   let datePretty = String(summary.as_of_date);
   try {
     datePretty = format(parseISO(String(summary.as_of_date)), "MMM d, yyyy");
   } catch {
     /* keep raw */
   }
-  const confPct = (summary.confidence * 100).toFixed(0);
+  const confPct = summary.confidence != null ? (summary.confidence * 100).toFixed(0) : null;
   const match = summary.dashboard_context?.matches_navigator_quadrant;
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div
-            className="text-[26px] font-semibold uppercase leading-[1.05] tracking-[0.08em] sm:text-[28px]"
-            style={{ color: palette.yellow }}
-          >
-            {phaseHeadline}
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-light">
-            <span className="inline-flex items-center gap-1.5" style={{ color: palette.muted }}>
-              <CalendarDays className="h-3.5 w-3.5 shrink-0 opacity-85" strokeWidth={2} aria-hidden />
-              {datePretty}
-            </span>
-            <span style={{ color: palette.borderSoft }} aria-hidden>
-              |
-            </span>
-            <span style={{ color: palette.muted }}>
-              Confidence{" "}
-              <strong className="font-semibold tabular-nums" style={{ color: palette.text }}>
-                {confPct}%
-              </strong>
-            </span>
-          </div>
+          {noData ? (
+            <NextNoData compact className="!items-start !text-left !py-0" />
+          ) : (
+            <>
+              <div
+                className="text-[26px] font-semibold uppercase leading-[1.05] tracking-[0.08em] sm:text-[28px]"
+                style={{ color: regimeHistoryQuadrantColor(phaseKey, palette) }}
+              >
+                {phaseHeadline}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-light">
+                <span className="inline-flex items-center gap-1.5" style={{ color: palette.muted }}>
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0 opacity-85" strokeWidth={2} aria-hidden />
+                  {datePretty}
+                </span>
+                <span style={{ color: palette.borderSoft }} aria-hidden>
+                  |
+                </span>
+                <span style={{ color: palette.muted }}>
+                  Confidence{" "}
+                  <strong className="font-semibold tabular-nums" style={{ color: palette.text }}>
+                    {confPct}%
+                  </strong>
+                </span>
+              </div>
+            </>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span
@@ -317,11 +329,24 @@ function PhaseEnsembleCard({ summary, palette }: { summary: ForecastLabSummary; 
           >
             ensemble vs rule
           </span>
-          <NavigatorMatchBadge match={match} palette={palette} />
+          {noData ? (
+            <span
+              className="shrink-0 whitespace-nowrap rounded-[2px] border px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.06em]"
+              style={{ borderColor: palette.borderSoft, color: palette.muted }}
+            >
+              {NO_DATA_TITLE}
+            </span>
+          ) : (
+            <NavigatorMatchBadge match={match} palette={palette} />
+          )}
         </div>
       </div>
 
-      <RegimeMapChart probabilities={summary.phase_probabilities} />
+      {noData || !summary.phase_probabilities ? (
+        <NextNoData hint="Run the first data refresh to compute the regime map." />
+      ) : (
+        <RegimeMapChart probabilities={summary.phase_probabilities} />
+      )}
     </div>
   );
 }
@@ -346,7 +371,7 @@ const FL_NAVIGATOR_GROWTH_HELP =
   "Macro context (same 36 month-ends as stress window) — not the anomaly score time series.";
 
 const FL_ANOMALY_INSUFFICIENT_HELP =
-  "Limited history: fewer than 8 aligned monthly return rows across the ETF basket. Backend uses fallback score 0.25 (low band).";
+  "Limited history: fewer than 8 aligned monthly return rows across the ETF basket. No score is shown until enough history exists.";
 
 function ForecastLabStressCard({
   stress,
@@ -367,6 +392,7 @@ function ForecastLabStressCard({
   const visibleDrivers = stress.drivers.filter((d) => d !== "insufficient_market_history");
   const insufficient =
     stress.insufficient_history === true || stress.drivers.includes("insufficient_market_history");
+  // With insufficient history the backend score (0.25) is a fallback, not a measurement: show a dash (D-22).
   const contributors = stress.top_z_contributors ?? [];
 
   return (
@@ -401,20 +427,24 @@ function ForecastLabStressCard({
           className="font-semibold tabular-nums leading-none tracking-tight"
           style={{ color: palette.text, fontSize: "clamp(28px, 5vw, 34px)" }}
         >
-          {(stress.stress_score * 100).toFixed(0)}
+          {insufficient ? "—" : (stress.stress_score * 100).toFixed(0)}
         </span>
-        <span className="pb-1 text-[12px] font-medium tabular-nums" style={{ color: palette.muted }}>
-          / 100
-        </span>
-        <span
-          className="mb-0.5 inline-flex rounded-[2px] border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em]"
-          style={{ borderColor: bandColor, color: bandColor }}
-        >
-          {stress.stress_band}
-        </span>
+        {insufficient ? null : (
+          <>
+            <span className="pb-1 text-[12px] font-medium tabular-nums" style={{ color: palette.muted }}>
+              / 100
+            </span>
+            <span
+              className="mb-0.5 inline-flex rounded-[2px] border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em]"
+              style={{ borderColor: bandColor, color: bandColor }}
+            >
+              {stress.stress_band}
+            </span>
+          </>
+        )}
       </div>
 
-      <p className="mt-2 text-[10px] leading-snug" style={{ color: palette.muted }}>
+      <p className="mt-2 text-[11px] leading-snug" style={{ color: palette.muted }}>
         <span className="font-semibold uppercase tracking-[0.06em]" style={{ color: palette.soft }}>
           ETF basket (monthly returns)
         </span>
@@ -425,7 +455,7 @@ function ForecastLabStressCard({
       </p>
 
       {contributors.length > 0 ? (
-        <div className="text-[10px] leading-snug" style={{ color: palette.muted }}>
+        <div className="text-[11px] leading-snug" style={{ color: palette.muted }}>
           <span className="font-semibold uppercase tracking-[0.06em]" style={{ color: palette.soft }}>
             Largest |z| this month
           </span>
@@ -441,7 +471,7 @@ function ForecastLabStressCard({
       ) : null}
 
       {visibleDrivers.length > 0 ? (
-        <p className="text-[10px] leading-snug" style={{ color: palette.muted }}>
+        <p className="text-[11px] leading-snug" style={{ color: palette.muted }}>
           <span className="font-semibold uppercase tracking-[0.06em]" style={{ color: palette.soft }}>
             Signals
           </span>
@@ -459,7 +489,7 @@ function ForecastLabStressCard({
           <div className="mt-2 min-h-[40px] w-full min-w-0">
             <LabSparkline values={navigatorGrowthSparklineValues} stroke={palette.soft} height={40} />
           </div>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.06em]" style={{ color: palette.muted }}>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.06em]" style={{ color: palette.muted }}>
             Monthly points: {navigatorGrowthSparklineValues.length}
           </p>
         </div>
@@ -625,14 +655,18 @@ function ForecastLabMacroPanelTable({
     [palette.green, palette.yellow, palette.blue, palette.red],
   );
 
-  const rowBorder = "1px solid rgba(255,255,255,0.06)";
-  const headMuted = { color: palette.muted, fontSize: 10, letterSpacing: "0.1em", fontWeight: 600 as const };
+  const rowBorder = "1px solid color-mix(in srgb, var(--nd-text) 6%, transparent)";
+  const headMuted = { color: palette.muted, fontSize: 11, letterSpacing: "0.1em", fontWeight: 600 as const };
 
   if (!macroRows.length) {
-    return <p style={{ color: palette.muted }}>No macro forecasts.</p>;
+    return <NextNoData compact hint="Forecasts appear after the models are trained." />;
   }
 
-  const cellAt = (sid: string, h: number) => pivot.get(sid)?.[h]?.value ?? null;
+  // Untrained forecasts carry a placeholder value (0.0): show a dash instead (D-22).
+  const cellAt = (sid: string, h: number) => {
+    const r = pivot.get(sid)?.[h];
+    return r && r.trained ? r.value : null;
+  };
 
   const nowTextColor = (tint: "accent" | "warn" | "default") => {
     if (tint === "accent") return palette.green;
@@ -652,7 +686,7 @@ function ForecastLabMacroPanelTable({
           <col style={{ width: "13.5%" }} />
         </colgroup>
         <thead>
-          <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.14)" }}>
+          <tr style={{ borderBottom: "1px solid color-mix(in srgb, var(--nd-text) 14%, transparent)" }}>
             <th className="py-2 pr-2 text-left uppercase" style={headMuted}>
               Asset
             </th>
@@ -702,7 +736,7 @@ function ForecastLabMacroPanelTable({
           ))}
           <tr>
             <td colSpan={6} style={{ padding: "4px 0", border: "none", background: "transparent" }}>
-              <div style={{ borderTop: "1px dashed rgba(255,255,255,0.14)" }} />
+              <div style={{ borderTop: "1px dashed color-mix(in srgb, var(--nd-text) 14%, transparent)" }} />
             </td>
           </tr>
           {MACRO_PANEL_ASSETS.map((sid) => {
@@ -798,7 +832,7 @@ const REGIME_MAP_H = 300;
 
 function RegimeMapChart({ probabilities }: { probabilities: PhaseProbabilities }) {
   const g = REGIME_MAP_CROSS_GUTTER_PX;
-  const axisDash = "1px dashed rgba(255,255,255,0.38)";
+  const axisDash = "1px dashed color-mix(in srgb, var(--nd-text) 38%, transparent)";
 
   return (
     <div className="min-w-0 w-full">
@@ -827,8 +861,10 @@ function RegimeMapChart({ probabilities }: { probabilities: PhaseProbabilities }
             const place = REGIME_MAP_GRID_PLACE[key];
             const title = (QUADRANT_LABELS[key] ?? key).toUpperCase();
             const pctStr = `${(p * 100).toFixed(0)}%`;
-            const rawD = 40 + p * 120;
-            const d = Math.min(152, Math.max(28, rawD));
+            const rawD = 36 + p * 90;
+            // Cap below the free area under/above the corner label and shift the bubble away from it (D-27).
+            const d = Math.min(92, Math.max(28, rawD));
+            const shiftY = corner === "tl" || corner === "tr" ? 24 : -24;
             return (
               <div
                 key={key}
@@ -858,7 +894,7 @@ function RegimeMapChart({ probabilities }: { probabilities: PhaseProbabilities }
                     width: d,
                     height: d,
                     marginLeft: -d / 2,
-                    marginTop: -d / 2,
+                    marginTop: -d / 2 + shiftY,
                     borderRadius: "50%",
                     background: vis.bubble,
                     boxShadow: "none",
@@ -917,7 +953,7 @@ function RegimeMapChart({ probabilities }: { probabilities: PhaseProbabilities }
                 width: 10,
                 height: 10,
                 borderRadius: "50%",
-                background: "#d6d6d6",
+                background: "var(--nd-text)",
               }}
             />
           </div>
@@ -1020,7 +1056,7 @@ function ExpertBreakdownHitRate({
         </tbody>
       </table>
       {data.note ? (
-        <p className="mt-2 text-[10px] leading-relaxed" style={{ color: palette.muted }}>
+        <p className="mt-2 text-[11px] leading-relaxed" style={{ color: palette.muted }}>
           {data.note}
         </p>
       ) : null}
@@ -1048,7 +1084,7 @@ function ExpertProbabilityTable({
   const modelText: CSSProperties = {
     fontSize: 14,
     fontWeight: 500,
-    color: "rgba(255,255,255,0.82)",
+    color: "color-mix(in srgb, var(--nd-text) 82%, transparent)",
     textAlign: "left",
   };
   const valueTextBase: CSSProperties = {
@@ -1089,7 +1125,7 @@ function ExpertProbabilityTable({
               style={{
                 ...cellPad,
                 ...neutralHead,
-                color: "rgba(255,255,255,0.45)",
+                color: "color-mix(in srgb, var(--nd-text) 45%, transparent)",
                 textAlign: "left",
               }}
             >
@@ -1152,7 +1188,7 @@ function ExpertProbabilityTable({
                 <td colSpan={1 + QUADRANT_ORDER.length} style={{ padding: 0, border: "none", background: "transparent" }}>
                   <div
                     style={{
-                      borderTop: "1px dashed rgba(255,255,255,0.15)",
+                      borderTop: "1px dashed color-mix(in srgb, var(--nd-text) 15%, transparent)",
                       margin: "8px 0",
                     }}
                   />
@@ -1338,7 +1374,7 @@ function FlConfusionMatrixCard({ trainMetrics, palette }: { trainMetrics: Record
                         ),
                       );
                       const intensity = Math.min(1, Math.max(0, v / maxCell));
-                      const fg = diag ? "rgba(255,255,255,0.96)" : "rgba(255,255,255,0.86)";
+                      const fg = diag ? "color-mix(in srgb, var(--nd-text) 96%, transparent)" : "color-mix(in srgb, var(--nd-text) 86%, transparent)";
                       return (
                         <td
                           key={`${r}-${c}`}
@@ -1376,7 +1412,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
   const binsRaw = trainMetrics.calibration_bins;
   const bins = Array.isArray(binsRaw) ? (binsRaw as { p_mid?: number; accuracy?: number | null }[]) : [];
   const pts = bins.filter((b) => typeof b.accuracy === "number" && Number.isFinite(b.accuracy));
-  const W = 480;
+  const W = 340; // near the rendered card width so SVG text stays >= 11px (D-29)
   const H = 198;
   const padL = 72;
   const padR = 10;
@@ -1389,7 +1425,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
   const yTitleX = 10;
   const mapX = (p: number) => padL + p * plotW;
   const mapY = (a: number) => plotBottom - a * plotH;
-  const axisStroke = "rgba(255,255,255,0.14)";
+  const axisStroke = "color-mix(in srgb, var(--nd-text) 14%, transparent)";
   const axisW = 1.75;
   const tickLen = 6;
   const tickVals = [0, 0.25, 0.5, 0.75, 1];
@@ -1469,7 +1505,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
               y={xAxisTitleY}
               textAnchor="middle"
               fill={palette.soft}
-              fontSize={12}
+              fontSize={13}
               fontWeight={600}
               letterSpacing="0.06em"
               fontFamily="ui-sans-serif, system-ui, sans-serif"
@@ -1481,7 +1517,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
               y={axisMidY}
               textAnchor="middle"
               fill={palette.soft}
-              fontSize={12}
+              fontSize={13}
               fontWeight={600}
               letterSpacing="0.06em"
               fontFamily="ui-sans-serif, system-ui, sans-serif"
@@ -1492,7 +1528,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
             <path
               d={perfect}
               fill="none"
-              stroke="rgba(255,255,255,0.42)"
+              stroke="color-mix(in srgb, var(--nd-text) 42%, transparent)"
               strokeWidth={2}
               strokeDasharray="7 5"
               strokeLinecap="round"
@@ -1518,7 +1554,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
             style={{ color: palette.muted }}
           >
             <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block h-0 w-6 border-t-2 border-dashed" style={{ borderColor: "rgba(255,255,255,0.42)" }} />{" "}
+              <span className="inline-block h-0 w-6 border-t-2 border-dashed" style={{ borderColor: "color-mix(in srgb, var(--nd-text) 42%, transparent)" }} />{" "}
               Perfect
             </span>
             <span className="inline-flex items-center gap-1.5">
@@ -1531,7 +1567,7 @@ function FlCalibrationCard({ trainMetrics, palette }: { trainMetrics: Record<str
   );
 }
 
-const FI_BAR_COLORS = ["#79A87D", "#E6C06A", "#8FB6FF", "#E67D7D", "#B794F6"];
+const FI_BAR_COLORS = ["var(--nd-green)", "var(--nd-yellow)", "var(--nd-blue)", "var(--nd-red)", "var(--nd-purple)"];
 
 function FlFeatureImportanceCard({ trainMetrics, palette }: { trainMetrics: Record<string, unknown>; palette: ShellPalette }) {
   const raw = trainMetrics.feature_importance_top;
@@ -1558,7 +1594,7 @@ function FlFeatureImportanceCard({ trainMetrics, palette }: { trainMetrics: Reco
             return (
               <div key={`${name}-${i}`} className={cn(FL_HBAR_ROW_GRID, "min-w-0 rounded-[2px] py-1 pl-0.5 pr-1")}>
                 <span
-                  className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.11em]"
+                  className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.11em]"
                   style={{ color: palette.muted }}
                   title={name}
                 >
@@ -1573,7 +1609,7 @@ function FlFeatureImportanceCard({ trainMetrics, palette }: { trainMetrics: Reco
                 >
                   <div className="h-full rounded-none" style={{ width: `${wPct}%`, background: col }} />
                 </div>
-                <span className="font-mono text-[10px] font-normal tabular-nums" style={{ color: palette.soft }}>
+                <span className="font-mono text-[11px] font-normal tabular-nums" style={{ color: palette.soft }}>
                   {imp.toFixed(2)}
                 </span>
               </div>
@@ -1609,7 +1645,7 @@ function FlWeightHistoryCard({ trainMetrics, palette }: { trainMetrics: Record<s
   const hist = Array.isArray(raw)
     ? (raw as { as_of?: string; rule?: number; hmm?: number; gbdt?: number; cycle?: number }[])
     : [];
-  const W = 480;
+  const W = 340; // near the rendered card width so SVG text stays >= 11px (D-29)
   const H = 198;
   const padL = 72;
   const padR = 10;
@@ -1619,8 +1655,8 @@ function FlWeightHistoryCard({ trainMetrics, palette }: { trainMetrics: Record<s
   const plotBottom = H - padB;
   const plotTop = padT;
   const plotH = plotBottom - plotTop;
-  const axisStroke = "rgba(255,255,255,0.14)";
-  const gridStroke = "rgba(255,255,255,0.06)";
+  const axisStroke = "color-mix(in srgb, var(--nd-text) 14%, transparent)";
+  const gridStroke = "color-mix(in srgb, var(--nd-text) 6%, transparent)";
   const tickLen = 6;
   const yTicks = [0, 0.25, 0.5, 0.75, 1] as const;
   const series: { key: "rule" | "hmm" | "gbdt" | "cycle"; label: string; stroke: string }[] = [
@@ -1636,7 +1672,7 @@ function FlWeightHistoryCard({ trainMetrics, palette }: { trainMetrics: Record<s
   const mapY = (v: number) => plotBottom - Math.min(1, Math.max(0, v)) * plotH;
   const axisMidY = plotTop + plotH / 2;
   const yTitleX = 10;
-  const xTickIdx = n >= 2 ? weightHistoryXTickIndices(n, 6) : [];
+  const xTickIdx = n >= 2 ? weightHistoryXTickIndices(n, 4) : [];
   const xTickNumberY = plotBottom + tickLen + 16;
   const xAxisTitleY = H - 6;
 
@@ -1692,7 +1728,7 @@ function FlWeightHistoryCard({ trainMetrics, palette }: { trainMetrics: Record<s
               y={axisMidY}
               textAnchor="middle"
               fill={palette.soft}
-              fontSize={12}
+              fontSize={13}
               fontWeight={600}
               letterSpacing="0.06em"
               fontFamily="ui-sans-serif, system-ui, sans-serif"
@@ -1705,7 +1741,7 @@ function FlWeightHistoryCard({ trainMetrics, palette }: { trainMetrics: Record<s
               y={xAxisTitleY}
               textAnchor="middle"
               fill={palette.soft}
-              fontSize={12}
+              fontSize={13}
               fontWeight={600}
               letterSpacing="0.06em"
               fontFamily="ui-sans-serif, system-ui, sans-serif"
@@ -1772,6 +1808,7 @@ export type { ShellPalette, ForecastLabOosApiRow };
 export {
   XL_MEDIA,
   MACRO_REGIME_HISTORY_MAX_H,
+  MACRO_REGIME_HISTORY_MAX_H_CLASS,
   REGIME_HISTORY_TABLE_BORDER,
   extractScores,
   extractFlTrainMetrics,

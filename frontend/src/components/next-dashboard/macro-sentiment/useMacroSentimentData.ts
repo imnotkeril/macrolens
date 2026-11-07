@@ -115,7 +115,7 @@ export function useMacroSentimentData(activeCategory: IndicatorCategory) {
     })),
   });
 
-  const compositeZ = regime ? cycleScoreToZ(regime.cycle_score) : 0;
+  const compositeZ = regime && regime.cycle_score != null ? cycleScoreToZ(regime.cycle_score) : 0;
   const compositeSpark = useMemo(() => {
     const pts = regimeHistQ.data?.map((p) => cycleScoreToZ(p.cycle_score)) ?? [];
     return pts.length >= 2 ? pts.slice(-24) : pts;

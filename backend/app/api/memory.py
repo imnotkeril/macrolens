@@ -41,7 +41,7 @@ async def upsert_memory(
 
 @router.get("/search", response_model=MemorySearchResponse)
 async def search_memory(
-    query: str = Query(..., min_length=2),
+    query: str = Query(..., min_length=2, max_length=256),
     top_k: int = Query(5, ge=1, le=20),
     domain: str | None = Query(None),
     quality_threshold: float = Query(0.0, ge=0.0, le=1.0),
@@ -77,7 +77,7 @@ async def memory_health(db: AsyncSession = Depends(get_db)):
 
 @router.get("/provenance")
 async def memory_provenance(
-    query: str = Query(..., min_length=2),
+    query: str = Query(..., min_length=2, max_length=256),
     top_k: int = Query(5, ge=1, le=20),
     domain: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -237,7 +237,7 @@ async def memory_admin_samples(
 
 @router.get("/context")
 async def memory_context(
-    query: str = Query(..., min_length=2),
+    query: str = Query(..., min_length=2, max_length=256),
     top_k: int = Query(8, ge=1, le=20),
     domain: str | None = Query(None),
     db: AsyncSession = Depends(get_db),

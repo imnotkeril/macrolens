@@ -143,7 +143,7 @@ function FilterRow({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[10px] uppercase tracking-[0.12em]" style={{ color: colors.muted }}>
+      <span className="text-[11px] uppercase tracking-[0.12em]" style={{ color: colors.muted }}>
         {label}
       </span>
       {options.map((opt) => {
@@ -154,7 +154,7 @@ function FilterRow({
             key={opt.id}
             type="button"
             onClick={() => onChange(opt.id)}
-            className="rounded border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+            className="rounded border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
             style={{ borderColor: active ? activeColor : colors.borderSoft, color: active ? activeColor : colors.muted }}
           >
             {opt.label}
@@ -202,7 +202,7 @@ function IndicatorCard({
           <div className="mt-1 text-[11px] uppercase tracking-[0.08em]" style={{ color: C.muted }}>
             {card.region} · {card.releases} releases
             <span
-              className="ml-2 rounded border px-1.5 py-0.5 text-[9px] font-semibold"
+              className="ml-2 rounded border px-1.5 py-0.5 text-[11px] font-semibold"
               style={{
                 borderColor: card.importance === "high" ? C.red : card.importance === "medium" ? C.yellow : C.muted,
                 color: card.importance === "high" ? C.red : card.importance === "medium" ? C.yellow : C.muted,
@@ -211,13 +211,15 @@ function IndicatorCard({
               {card.importance.toUpperCase()}
             </span>
           </div>
-          <a href={card.fredUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[10px] uppercase underline" style={{ color: C.blue }}>
+          <a href={card.fredUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[11px] uppercase underline" style={{ color: C.blue }}>
             FRED Series: {card.fredLabel}
           </a>
         </div>
         <button
           type="button"
           onClick={onToggleExpanded}
+          aria-label={`${expanded ? "Collapse" : "Expand"} ${card.title}`}
+          aria-expanded={expanded}
           className="rounded border p-1.5"
           style={{ borderColor: expanded ? C.yellow : C.borderSoft, color: expanded ? C.yellow : C.muted }}
         >
@@ -256,7 +258,7 @@ function IndicatorCard({
       <div className="mt-2 rounded border p-2" style={{ borderColor: C.borderSoft, background: C.panelSoft }}>
         <button
           type="button"
-          className="flex w-full items-center justify-between text-[10px] uppercase tracking-[0.12em]"
+          className="flex w-full items-center justify-between text-[11px] uppercase tracking-[0.12em]"
           style={{ color: C.soft }}
           onClick={() => setShowPriceAction((v) => !v)}
         >
@@ -273,7 +275,7 @@ function IndicatorCard({
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold">{item.symbol}</span>
                   <span
-                    className="text-[9px] uppercase"
+                    className="text-[11px] uppercase"
                     style={{ color: item.bias === "bullish" ? C.green : item.bias === "bearish" ? C.red : C.muted }}
                   >
                     {item.bias}
@@ -282,7 +284,7 @@ function IndicatorCard({
                 <div className="mt-1 text-[20px] leading-none tabular-nums" style={{ color: C.text }}>
                   {item.accuracyPct}%
                 </div>
-                <div className="text-[10px]" style={{ color: C.muted }}>{item.events} events</div>
+                <div className="text-[11px]" style={{ color: C.muted }}>{item.events} events</div>
                 <div className="mt-1 h-1 overflow-hidden rounded-full" style={{ background: C.borderSoft }}>
                   <div className="h-full" style={{ width: `${item.accuracyPct}%`, background: item.accuracyPct >= 55 ? C.green : C.red }} />
                 </div>
@@ -318,7 +320,7 @@ function MiniSeriesChart({ points, tall }: { points: EventsIndicatorCard["points
 
   return (
     <div className="mt-2 rounded border p-2" style={{ borderColor: C.borderSoft, background: C.panelSoft }}>
-      <div className="mb-1 flex items-center gap-3 text-[10px] uppercase tracking-[0.1em]">
+      <div className="mb-1 flex items-center gap-3 text-[11px] uppercase tracking-[0.1em]">
         <span style={{ color: C.green }}>Actual</span>
         <span style={{ color: C.blue }}>Forecast</span>
         <span style={{ color: C.muted }}>SPY (Right)</span>
@@ -328,7 +330,7 @@ function MiniSeriesChart({ points, tall }: { points: EventsIndicatorCard["points
         <path d={path(forecastVals, toY)} fill="none" stroke={C.blue} strokeWidth="2" strokeDasharray="4 3" />
         <path d={path(spyVals, toSpyY)} fill="none" stroke={C.muted} strokeWidth="1.5" opacity="0.8" />
       </svg>
-      <div className="mt-1 grid grid-cols-7 text-[10px]" style={{ color: C.muted }}>
+      <div className="mt-1 grid grid-cols-7 text-[11px]" style={{ color: C.muted }}>
         {points.map((p) => (
           <span key={p.label}>{p.label}</span>
         ))}

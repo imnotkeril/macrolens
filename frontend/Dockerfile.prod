@@ -10,7 +10,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# BACKEND_URL is read at runtime by next.config rewrites; build does not need it.
+# next.config rewrites are baked in at build time: point them at the backend service.
+ARG BACKEND_INTERNAL_URL=http://backend:8000
+ENV BACKEND_INTERNAL_URL=$BACKEND_INTERNAL_URL
 RUN npm run build
 
 FROM node:20-alpine AS runner

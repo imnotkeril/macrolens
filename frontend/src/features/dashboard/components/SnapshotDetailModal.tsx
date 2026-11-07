@@ -180,7 +180,7 @@ function LegTag({ label, tone }: { label: string; tone: "long" | "short" | "neut
         : "rgba(148,148,140,0.34)";
   return (
     <span
-      className="inline-flex h-5 items-center rounded-[2px] px-1.5 text-[10px] uppercase tracking-[0.03em]"
+      className="inline-flex h-5 items-center rounded-[2px] px-1.5 text-[11px] uppercase tracking-[0.03em]"
       style={{
         color,
         background,

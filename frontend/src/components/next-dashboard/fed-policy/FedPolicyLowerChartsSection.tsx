@@ -10,6 +10,7 @@ import {
 } from "@/components/next-dashboard/fed-policy/FedPolicyRecharts";
 import { FedBalanceStackedChart } from "@/components/next-dashboard/fed-policy/FedBalanceStackedChart";
 import type { BalanceStackRow } from "@/components/next-dashboard/fed-policy/fedPolicyUtils";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import type { NetLiquidityPoint, RatioPoint } from "@/types";
 
 type Colors = NextShellThemeContextValue["colors"];
@@ -51,7 +52,7 @@ export function FedPolicyLowerChartsSection({
             <FedFundsHistoryRecharts palette={palette} rows={rateRows} height={300} />
           ) : (
             <div className="flex h-64 items-center justify-center text-[13px]" style={{ color: "var(--nd-muted)" }}>
-              {rateHistPending ? "Loading…" : "—"}
+              {rateHistPending ? "Loading…" : <NextNoData />}
             </div>
           )}
         </div>
@@ -63,7 +64,7 @@ export function FedPolicyLowerChartsSection({
             <FedForwardRateRecharts palette={palette} rows={forwardRows} height={300} />
           ) : (
             <div className="flex h-64 items-center justify-center text-[13px]" style={{ color: "var(--nd-muted)" }}>
-              {ratesDashPending ? "Loading…" : "—"}
+              {ratesDashPending ? "Loading…" : <NextNoData />}
             </div>
           )}
         </div>
@@ -78,7 +79,7 @@ export function FedPolicyLowerChartsSection({
             <FedBalanceStackedChart rows={stackRows} palette={balancePalette} height={300} />
           ) : (
             <div className="flex h-64 items-center justify-center text-[13px]" style={{ color: "var(--nd-muted)" }}>
-              {bsPending ? "Loading…" : "—"}
+              {bsPending ? "Loading…" : <NextNoData />}
             </div>
           )}
         </div>
@@ -90,7 +91,7 @@ export function FedPolicyLowerChartsSection({
             <FedNetLiquidityRecharts palette={palette} rows={netLiqRows} height={300} />
           ) : (
             <div className="flex h-64 items-center justify-center text-[13px]" style={{ color: "var(--nd-muted)" }}>
-              {netLiqPending ? "Loading…" : "—"}
+              {netLiqPending ? "Loading…" : <NextNoData />}
             </div>
           )}
         </div>

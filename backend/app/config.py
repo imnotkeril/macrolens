@@ -89,6 +89,18 @@ class Settings(BaseSettings):
     # CoinGecko Pro: optional `x-cg-pro-api-key` for long history (`days=max`) on market_chart.
     coingecko_api_key: str = ""
 
+    # API protection. Write/train/LLM endpoints require header `X-API-Key: <ADMIN_API_KEY>`.
+    # Fail-closed: with no key set they answer 503 unless ALLOW_UNAUTHENTICATED_ADMIN=true (local dev only).
+    admin_api_key: str = ""
+    allow_unauthenticated_admin: bool = False
+    # Per-client-IP request budget per minute (0 disables). Admin endpoints get the stricter budget.
+    rate_limit_per_minute: int = 240
+    rate_limit_admin_per_minute: int = 20
+    # Trust the first X-Forwarded-For hop as client IP (only behind a proxy you control).
+    rate_limit_trust_proxy: bool = False
+    # Reject request bodies larger than this (bytes).
+    max_request_body_bytes: int = 1_048_576
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

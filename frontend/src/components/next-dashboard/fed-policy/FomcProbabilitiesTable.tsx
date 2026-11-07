@@ -29,25 +29,25 @@ function outcomeColor(outcomeType: FomcMeetingProb["outcome_type"]) {
 export function FomcProbabilitiesTable({ meetings }: { meetings: FomcMeetingProb[] }) {
   return (
     <div className="min-h-0 flex-1 overflow-auto">
-      <table className="w-full min-w-[440px] table-fixed border-collapse text-[10px] uppercase tracking-[0.06em]">
+      <table className="w-full min-w-[400px] table-fixed border-collapse text-[11px] uppercase tracking-[0.06em]">
         <thead>
           <tr>
-            <th className="pb-2 pr-2 text-left align-bottom font-medium" style={{ color: "var(--nd-muted)", width: "22%" }}>
+            <th className="pb-2 pr-2 text-left align-bottom font-medium" style={{ color: "var(--nd-muted)", width: "21%" }}>
               Meeting date
             </th>
-            <th className="px-1 pb-2 text-center font-medium" style={{ color: "var(--nd-muted)", width: "13%" }}>
+            <th className="px-1 pb-2 text-center font-medium" style={{ color: "var(--nd-muted)", width: "14%" }}>
               Hold
             </th>
-            <th className="px-1 pb-2 text-center font-medium" style={{ color: "var(--nd-muted)", width: "13%" }}>
+            <th className="px-1 pb-2 text-center font-medium" style={{ color: "var(--nd-muted)", width: "14%" }}>
               Cut 25bps
             </th>
-            <th className="px-1 pb-2 text-center font-medium" style={{ color: "var(--nd-muted)", width: "13%" }}>
+            <th className="px-1 pb-2 text-center font-medium" style={{ color: "var(--nd-muted)", width: "14%" }}>
               Cut 50bps
             </th>
-            <th className="px-1 pb-2 text-center font-medium" style={{ color: "var(--nd-muted)", width: "13%" }}>
+            <th className="px-1 pb-2 text-center font-medium" style={{ color: "var(--nd-muted)", width: "14%" }}>
               Hike
             </th>
-            <th className="pb-2 pl-2 text-right align-bottom font-medium" style={{ color: "var(--nd-muted)", width: "14%" }}>
+            <th className="pb-2 pl-2 text-right align-bottom font-medium" style={{ color: "var(--nd-muted)", width: "23%" }}>
               Outcome
             </th>
           </tr>
@@ -57,7 +57,7 @@ export function FomcProbabilitiesTable({ meetings }: { meetings: FomcMeetingProb
             const w = barFractions(m);
             return (
               <tr key={m.date} className="align-top">
-                <td className="py-2.5 pr-2 align-top text-[10px] normal-case tabular-nums" style={{ color: "var(--nd-soft)" }}>
+                <td className="py-2.5 pr-2 align-top text-[11px] normal-case tabular-nums" style={{ color: "var(--nd-soft)" }}>
                   {m.date}
                 </td>
                 <td colSpan={4} className="px-0 py-2.5 align-top">

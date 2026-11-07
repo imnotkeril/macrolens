@@ -64,20 +64,22 @@ export interface CategoryScore {
 
 // ---- Fed Policy ----
 export interface FedPolicyStatus {
-  current_rate_upper: number;
-  current_rate_lower: number;
+  /** True when no FedRate row exists: render the empty state, not defaults. */
+  insufficient_data?: boolean;
+  current_rate_upper: number | null;
+  current_rate_lower: number | null;
   effr: number | null;
-  policy_score: number;
-  stance: string;
-  rate_direction: string;
-  balance_sheet_direction: string;
+  policy_score: number | null;
+  stance: string | null;
+  rate_direction: string | null;
+  balance_sheet_direction: string | null;
   last_change_date: string | null;
   /** FOMC SEP longer-run median (FRED FEDTARMDLR) or server fallback — nominal % anchor. */
   neutral_rate_nominal: number;
   /** Fed/CB agent rhetoric −1…+1 when intelligence pipeline has produced a signal. */
   rhetoric_score: number | null;
   /** Midpoint minus neutral, percentage points. */
-  rate_vs_neutral_pp: number;
+  rate_vs_neutral_pp: number | null;
 }
 
 export interface FedRate {
@@ -159,12 +161,16 @@ export interface SpreadPercentileRow {
 }
 
 export interface YieldCurveSnapshot {
-  date: string;
+  insufficient_data?: boolean;
+  /** Null when there are no curve rows. */
+  date: string | null;
   points: YieldDataPoint[];
   spreads: YieldSpread[];
 }
 
 export interface CurveDynamics {
+  /** True when 2Y or 10Y is missing: hide pattern/description. */
+  insufficient_data?: boolean;
   pattern: string;
   description: string;
   short_end_change_1m: number;
@@ -175,13 +181,13 @@ export interface CurveDynamics {
 
 // ---- Navigator ----
 export interface NavigatorPosition {
-  growth_score: number;
-  fed_policy_score: number;
-  quadrant: string;
-  quadrant_label: string;
-  confidence: number;
-  direction: string;
-  date: string;
+  growth_score: number | null;
+  fed_policy_score: number | null;
+  quadrant: string | null;
+  quadrant_label: string | null;
+  confidence: number | null;
+  direction: string | null;
+  date: string | null;
   ensemble_growth_score?: number | null;
   ensemble_fed_policy_score?: number | null;
   /** Macro×Fed matrix only; `quadrant` is Forecast Lab regime when bundle is trained */
@@ -257,10 +263,11 @@ export interface TradingState {
 }
 
 export interface NavigatorRecommendation {
+  insufficient_data?: boolean;
   position: NavigatorPosition;
   factor_tilts: FactorAllocation[];
   sector_allocations: SectorAllocation[];
-  asset_allocation: AssetAllocation;
+  asset_allocation: AssetAllocation | null;
   geographic: Record<string, string>;
   trading_recommendations?: TradingRecommendation[];
   phase_context?: NavigatorPhaseContext | null;
@@ -273,6 +280,8 @@ export interface CrossAssetSignal {
   signal: "bullish" | "bearish" | "neutral";
   value: number | null;
   description: string;
+  /** False when the underlying series is missing (signal is a placeholder). */
+  has_data?: boolean;
 }
 
 /** One cell of the Cross-Asset Radar grid (from /api/market/cross-asset-radar). */
@@ -281,6 +290,8 @@ export interface CrossAssetRadarCell {
   value: number | null;
   unit: string;
   signal: "bullish" | "bearish" | "neutral";
+  /** False when value is null: show a dash, not the neutral/INVERTED chip. */
+  has_data?: boolean;
 }
 
 export interface RecessionCheckItem {
@@ -290,9 +301,12 @@ export interface RecessionCheckItem {
   threshold: string;
   description: string;
   data_as_of?: string | null;
+  /** False when current_value is "N/A": show a dash, not a check mark. */
+  has_data?: boolean;
 }
 
 export interface RecessionCheck {
+  insufficient_data?: boolean;
   score: number;
   total: number;
   confidence: string;
@@ -454,10 +468,11 @@ export interface ExpectedReturn {
 }
 
 export interface RegimeSnapshot {
-  cycle_score: number;
-  phase: string;
-  phase_label: string;
-  recession_prob_12m: number;
+  insufficient_data?: boolean;
+  cycle_score: number | null;
+  phase: string | null;
+  phase_label: string | null;
+  recession_prob_12m: number | null;
   recession_models: RecessionModelResult[];
   top_drivers: CycleDriverContribution[];
   fci_score: number | null;

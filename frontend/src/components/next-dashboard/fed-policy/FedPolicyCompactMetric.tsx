@@ -17,7 +17,7 @@ export function FedPolicyCompactMetric({
       style={{ borderColor: "var(--nd-border-soft)", background: "var(--nd-panel-soft)" }}
     >
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-medium uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+        <div className="text-[11px] font-medium uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
           {label}
         </div>
         <div className="mt-0.5 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>

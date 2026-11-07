@@ -127,7 +127,7 @@ export function InflationDualChartCard({
             {title}
           </div>
           {subtitle ? (
-            <div className="mt-0.5 text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+            <div className="mt-0.5 text-[11px] uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
               {subtitle}
             </div>
           ) : null}
@@ -146,13 +146,13 @@ export function InflationDualChartCard({
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1" style={{ minHeight: YOY_CHART_MIN_H }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
               <ComposedChart data={yoyRows} margin={{ top: 6, right: 10, left: 4, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
                 <XAxis dataKey="date" hide />
                 <YAxis
                   domain={yoyDomain}
-                  tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+                  tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   width={42}
@@ -181,7 +181,7 @@ export function InflationDualChartCard({
                   y={2}
                   stroke="rgba(255,255,255,0.3)"
                   strokeDasharray="4 4"
-                  label={{ value: "Fed target", position: "right", fill: "var(--nd-muted)", fontSize: 10 }}
+                  label={{ value: "Fed target", position: "right", fill: "var(--nd-muted)", fontSize: 11 }}
                 />
                 {lines.map((line) => (
                   <Line
@@ -200,12 +200,12 @@ export function InflationDualChartCard({
             </ResponsiveContainer>
           </div>
           <div className="mt-auto border-t border-[var(--nd-border-soft)] pt-2" style={{ width: "100%", height: MOM_CHART_H }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
               <ComposedChart data={momRows} margin={{ top: 0, right: 10, left: 4, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+                  tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   minTickGap={18}
@@ -219,7 +219,7 @@ export function InflationDualChartCard({
                 />
                 <YAxis
                   domain={momDomain}
-                  tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+                  tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   width={42}
@@ -254,7 +254,7 @@ export function InflationDualChartCard({
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px]" style={{ color: "var(--nd-muted)" }}>
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px]" style={{ color: "var(--nd-muted)" }}>
             {lines.map((line) => (
               <span key={line.dataKey} className="inline-flex items-center gap-1.5">
                 <span className="inline-block h-[2px] w-3 rounded" style={{ backgroundColor: line.stroke }} />

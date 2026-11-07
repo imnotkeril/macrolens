@@ -44,8 +44,9 @@ async def get_ml2_metrics():
     return ML2MetricsResponse(**service.load_metrics())
 
 
-@router.get("/predict", response_model=ML2PredictResponse)
+@router.post("/predict", response_model=ML2PredictResponse)
 async def predict_ml2(db: AsyncSession = Depends(get_db)):
+    """Recompute and store the ML2 prediction. Admin-only (POST under /api/ needs X-API-Key)."""
     settings = get_settings()
     ds = await build_ml2_dataset(db)
     ft_service = ML2FactorTimingService(settings.ml_artifacts_dir)
@@ -105,6 +106,12 @@ async def predict_ml2(db: AsyncSession = Depends(get_db)):
         trained=True,
         model_version="ml2-v1",
     )
+
+
+@router.get("/predict", response_model=ML2PredictResponse)
+async def get_ml2_predict(db: AsyncSession = Depends(get_db)):
+    """Read-only: latest stored prediction (same payload as /latest-stored). Never writes."""
+    return await latest_ml2_stored(db)
 
 
 @router.get("/latest-stored", response_model=ML2PredictResponse)

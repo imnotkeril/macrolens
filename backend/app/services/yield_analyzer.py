@@ -50,7 +50,7 @@ class YieldAnalyzer:
     async def get_current_snapshot(self) -> YieldCurveSnapshot:
         latest_date = await self._get_latest_date()
         if not latest_date:
-            return YieldCurveSnapshot(date=date.today(), points=[], spreads=[])
+            return YieldCurveSnapshot(date=None, points=[], spreads=[], insufficient_data=True)
 
         query = select(YieldData).where(YieldData.date == latest_date).order_by(YieldData.maturity)
         result = await self.db.execute(query)
@@ -186,6 +186,7 @@ class YieldAnalyzer:
             long_end_change_1m=round(lc_1m * 100, 1),
             short_end_change_3m=round(sc_3m * 100, 1),
             long_end_change_3m=round(lc_3m * 100, 1),
+            insufficient_data=short_now is None or long_now is None,
         )
 
     async def get_spread_history(self, spread_name: str, days: int = 730) -> list[dict]:

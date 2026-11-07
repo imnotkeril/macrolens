@@ -60,7 +60,7 @@ export function RelPerfPeriodStrip({
           key={p.label}
           type="button"
           onClick={() => onSelect(p.days)}
-          className="rounded-[2px] px-2 py-1 text-[10px] font-medium transition-colors"
+          className="rounded-[2px] px-2 py-1 text-[11px] font-medium transition-colors"
           style={{
             border: `1px solid ${selectedDays === p.days ? "var(--nd-border)" : "transparent"}`,
             background: selectedDays === p.days ? "var(--nd-panel-soft)" : "transparent",
@@ -113,12 +113,12 @@ export function RelativePerformanceMainChart({
 
   return (
     <div className="h-full min-h-[80px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 6, right: 8, left: 4, bottom: 6 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
           <XAxis
             dataKey="date"
-            tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             minTickGap={28}
@@ -133,7 +133,7 @@ export function RelativePerformanceMainChart({
           <YAxis
             orientation="left"
             domain={yDomain}
-            tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             width={44}
@@ -221,7 +221,7 @@ export function RelativePerformanceMacroLine({
 
   if (!sorted.length) {
     return (
-      <div className="flex h-full min-h-[32px] items-center text-[9px]" style={{ color: "var(--nd-muted)" }}>
+      <div className="flex h-full min-h-[32px] items-center text-[11px]" style={{ color: "var(--nd-muted)" }}>
         —
       </div>
     );
@@ -232,7 +232,7 @@ export function RelativePerformanceMacroLine({
 
   return (
     <div className="absolute inset-0 min-h-[48px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
         <ComposedChart
           data={sorted}
           margin={{ top: 4, right: 6, left: leftMargin, bottom: bottomMargin }}
@@ -255,7 +255,7 @@ export function RelativePerformanceMacroLine({
             dataKey="date"
             type="category"
             hide={!showDateAxis}
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             minTickGap={22}
@@ -270,14 +270,14 @@ export function RelativePerformanceMacroLine({
           <YAxis
             orientation="left"
             domain={yDomain}
-            tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+            tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             width={yAxisWidth}
             tickFormatter={(v) => valueFormat(Number(v))}
           />
           <Tooltip
-            contentStyle={{ ...TIP, fontSize: 10 }}
+            contentStyle={{ ...TIP, fontSize: 11 }}
             labelFormatter={(v) => {
               try {
                 return format(parseISO(String(v)), "MMM d, yyyy");

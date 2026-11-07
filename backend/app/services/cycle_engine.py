@@ -196,6 +196,8 @@ class CycleEngine:
 
     async def get_current_snapshot(self) -> RegimeSnapshot:
         raw = await self._fetch_cycle_variables()
+        if all(v is None for v in raw.values()):
+            return self._empty_snapshot()
         normalized = await self._normalize_variables(raw)
         cycle_score, drivers = self._compute_cycle_score(normalized, raw)
         phase, phase_label = self._map_phase(cycle_score)
@@ -240,6 +242,28 @@ class CycleEngine:
             timestamp=datetime.now(UTC),
         )
 
+    @staticmethod
+    def _empty_snapshot() -> RegimeSnapshot:
+        """Explicit empty state: no cycle input exists, so no score, phase or probability."""
+        return RegimeSnapshot(
+            insufficient_data=True,
+            cycle_score=None,
+            phase=None,
+            phase_label=None,
+            recession_prob_12m=None,
+            recession_models=[],
+            top_drivers=[],
+            fci_score=None,
+            fci_gdp_impact=None,
+            fci_components=[],
+            phase_signals=[],
+            narrative="Insufficient data: no cycle inputs have been ingested yet.",
+            tactical_allocation=[],
+            expected_returns=[],
+            data_completeness=0.0,
+            timestamp=datetime.now(UTC),
+        )
+
     async def get_history(self, months: int = 60) -> list[RegimeHistoryPoint]:
         """Compute monthly historical cycle scores from available data."""
         points = []
@@ -248,6 +272,8 @@ class CycleEngine:
         for m in range(months, -1, -1):
             target = today - timedelta(days=30 * m)
             raw = await self._fetch_cycle_variables_at(target)
+            if all(v is None for v in raw.values()):
+                continue  # no inputs for this month: skip instead of a default point (D-23)
             normalized = await self._normalize_variables_at(raw, target)
             score, _ = self._compute_cycle_score(normalized, raw)
             phase, _ = self._map_phase(score)
@@ -615,12 +641,8 @@ class CycleEngine:
                 )
             elif key == "yield_curve_10y2y":
                 since = target - timedelta(days=lookback_days)
-                lr = {
-                    d: v for d, v in await self._full_yield("10Y") if since <= d <= target
-                }
-                sr = {
-                    d: v for d, v in await self._full_yield("2Y") if since <= d <= target
-                }
+                lr = {d: v for d, v in await self._full_yield("10Y") if since <= d <= target}
+                sr = {d: v for d, v in await self._full_yield("2Y") if since <= d <= target}
                 common = sorted(set(lr) & set(sr))
                 series = [(lr[d] - sr[d]) * 100 for d in common]
             elif key == "hy_spread":

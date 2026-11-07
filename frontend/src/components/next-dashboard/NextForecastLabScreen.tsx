@@ -11,6 +11,7 @@ import { NEXT_DASHBOARD_NAV_ITEMS } from "@/components/next-dashboard/nextDashbo
 import { useNextShellTheme } from "@/components/next-dashboard/nextShellTheme";
 import { nextPanelSurfaceStyle } from "@/components/next-dashboard/nextPanelSurface";
 import { useDataRefresh } from "@/lib/useDataRefresh";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import {
   getForecastLabSummary,
   getForecastLabTrainStatus,
@@ -33,7 +34,7 @@ import {
   FlWeightHistoryCard,
   ForecastLabMacroPanelTable,
   ForecastLabStressCard,
-  MACRO_REGIME_HISTORY_MAX_H,
+  MACRO_REGIME_HISTORY_MAX_H_CLASS,
   PhaseEnsembleCard,
   RegimeHistoryQuadrantBadge,
   XL_MEDIA,
@@ -125,6 +126,8 @@ export function NextForecastLabScreen() {
   });
 
   const summary = summaryQ.data;
+  // Empty state lives outside the horizontal scroller so it is never clipped at 375 (D-26).
+  const regimeHistEmpty = !regimeHistQ.isPending && !(regimeHistQ.data?.items ?? []).length;
 
   const macroPanelCardRef = useRef<HTMLDivElement>(null);
   const regimeHistoryCardRef = useRef<HTMLDivElement>(null);
@@ -204,9 +207,10 @@ export function NextForecastLabScreen() {
       const h = mid.getBoundingClientRect().height;
       if (h > 0) {
         const px = `${Math.round(h)}px`;
-        left.style.height = px;
+        // min-height only: the regime map / expert table may be taller than the middle column and must not clip.
+        left.style.height = "";
         left.style.minHeight = px;
-        right.style.height = px;
+        right.style.height = "";
         right.style.minHeight = px;
       }
     };
@@ -245,7 +249,7 @@ export function NextForecastLabScreen() {
         navItems={NEXT_DASHBOARD_NAV_ITEMS}
         colors={C}
         shellThemeVars={shellThemeVars}
-        updatedAt={summaryQ.data?.as_of_date ? `FL ${summaryQ.data.as_of_date}` : "—"}
+        updatedAt={summaryQ.data?.as_of_date ?? "No data"}
         refreshing={refreshing}
         refreshResult={refreshResult}
         progress={progress}
@@ -310,7 +314,7 @@ export function NextForecastLabScreen() {
             <div className="rounded-[2px] border px-3 py-2 text-[11px]" style={{ borderColor: C.borderSoft, background: C.panelSoft }}>
               Training: {trainStatus.percent.toFixed(0)}% — {trainStatus.message}
               {trainStatus.log_line ? (
-                <span className="mt-1 block font-mono text-[10px]" style={{ color: C.muted }}>
+                <span className="mt-1 block font-mono text-[11px]" style={{ color: C.muted }}>
                   {trainStatus.log_line}
                 </span>
               ) : null}
@@ -374,7 +378,7 @@ export function NextForecastLabScreen() {
                   {summary.experts ? (
                     <ExpertProbabilityTable experts={summary.experts} ensemblePhase={summary.phase_probabilities} />
                   ) : (
-                    <p style={{ color: C.muted }}>No expert breakdown.</p>
+                    <NextNoData compact hint="Expert probabilities appear after the first data refresh." />
                   )}
                   <ExpertBreakdownHitRate data={alignQ.data} palette={C} />
                 </div>
@@ -389,7 +393,7 @@ export function NextForecastLabScreen() {
                 className="flex w-full min-w-0 flex-col self-start overflow-hidden"
                 style={denseSurface}
               >
-                <div className="w-full overflow-auto" style={{ maxHeight: MACRO_REGIME_HISTORY_MAX_H }}>
+                <div className={`w-full overflow-auto ${MACRO_REGIME_HISTORY_MAX_H_CLASS}`}>
                   <ForecastLabMacroPanelTable macroRows={summary.macro_forecasts} regimeItems={regimeHistQ.data?.items ?? []} palette={C} />
                 </div>
               </div>
@@ -408,7 +412,7 @@ export function NextForecastLabScreen() {
                       type="button"
                       onClick={() => regimeHistQ.refetch()}
                       disabled={regimeHistQ.isFetching}
-                      className="rounded-[2px] border px-2 py-1 text-[10px] font-medium disabled:opacity-50"
+                      className="rounded-[2px] border px-2 py-1 text-[11px] font-medium disabled:opacity-50"
                       style={{ borderColor: C.border, color: C.soft }}
                     >
                       {regimeHistQ.isFetching ? "…" : "Refresh table"}
@@ -417,7 +421,7 @@ export function NextForecastLabScreen() {
                       type="button"
                       onClick={() => materializeMut.mutate()}
                       disabled={materializeMut.isPending}
-                      className="inline-flex items-center gap-1 rounded-[2px] border px-2 py-1 text-[10px] font-medium disabled:opacity-50"
+                      className="inline-flex items-center gap-1 rounded-[2px] border px-2 py-1 text-[11px] font-medium disabled:opacity-50"
                       style={{ borderColor: C.blue, color: C.blue }}
                     >
                       <Database className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
@@ -425,7 +429,10 @@ export function NextForecastLabScreen() {
                     </button>
                   </div>
                 </div>
-                <div className="min-h-0 w-full min-w-0 flex-1 overflow-auto">
+                <div className="min-h-[120px] w-full min-w-0 flex-1 overflow-auto">
+                  {regimeHistEmpty ? (
+                    <NextNoData hint="Use Materialize from DB after the first data refresh." />
+                  ) : (
                   <table
                     className="w-full min-w-[560px] table-fixed border-separate border-spacing-0 font-mono text-[13px]"
                     style={{ border: REGIME_HISTORY_TABLE_BORDER }}
@@ -549,9 +556,10 @@ export function NextForecastLabScreen() {
                         ))}
                     </tbody>
                   </table>
+                  )}
                 </div>
                 {regimeHistQ.isError && (
-                  <p className="text-[10px]" style={{ color: C.red }}>
+                  <p className="text-[11px]" style={{ color: C.red }}>
                     {regimeHistQ.error instanceof Error ? regimeHistQ.error.message : String(regimeHistQ.error)}
                   </p>
                 )}
@@ -562,28 +570,28 @@ export function NextForecastLabScreen() {
           {summary && (
             <div className="grid min-h-0 gap-1.5 lg:grid-cols-2 xl:grid-cols-4">
               <div className="relative flex min-h-0 min-w-0 flex-col gap-1 overflow-hidden pt-0.5" style={diagnosticsSurface}>
-                <h2 className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
                   Confusion matrix
                 </h2>
                 <FlConfusionMatrixCard trainMetrics={trainMetrics} palette={C} />
                 <CardHelpHint text="Predicted vs actual (ensemble · monthly test split)" palette={C} />
               </div>
               <div className="relative flex min-h-0 min-w-0 flex-col gap-1 overflow-hidden pt-0.5" style={diagnosticsSurface}>
-                <h2 className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
                   Calibration
                 </h2>
                 <FlCalibrationCard trainMetrics={trainMetrics} palette={C} />
                 <CardHelpHint text="Reliability diagram (max predicted probability vs. empirical accuracy)" palette={C} />
               </div>
               <div className="relative flex min-h-0 min-w-0 flex-col gap-1 overflow-hidden pt-0.5" style={diagnosticsSurface}>
-                <h2 className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
                   Feature importance (top 5)
                 </h2>
                 <FlFeatureImportanceCard trainMetrics={trainMetrics} palette={C} />
                 <CardHelpHint text="GBDT gain-based importance (aggregate)" palette={C} />
               </div>
               <div className="relative flex min-h-0 min-w-0 flex-col gap-1 overflow-hidden pt-0.5" style={diagnosticsSurface}>
-                <h2 className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
                   Ensemble weight history
                 </h2>
                 <FlWeightHistoryCard trainMetrics={trainMetrics} palette={C} />

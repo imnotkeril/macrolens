@@ -551,6 +551,9 @@ class NavigatorEngine:
             scores_modal_phase,
         )
 
+        if not await self._axes_have_inputs():
+            return self._empty_recommendation()
+
         as_of = _dashboard_fl_pit_as_of()
         direction = await self._compute_direction()
         pit = await features_pit.build_feature_row(self.db, as_of)
@@ -566,6 +569,8 @@ class NavigatorEngine:
             # as_of already month-end aligned; do not re-shift via settings
             fl = await build_summary(self.db, as_of, align_month_end=False)
             pp = fl.phase_probabilities
+            if fl.insufficient_data or pp is None or fl.phase_class is None:
+                raise ValueError("forecast lab has no inputs")
             eg_mix, ef_mix = scores_from_phase_probs(
                 [pp.Q1_GOLDILOCKS, pp.Q2_REFLATION, pp.Q3_OVERHEATING, pp.Q4_STAGFLATION]
             )
@@ -648,6 +653,35 @@ class NavigatorEngine:
             trading_state=trading_state,
         )
 
+    async def _axes_have_inputs(self) -> bool:
+        """True when at least one growth indicator value or one Fed rate row exists."""
+        from app.models.fed_policy import FedRate
+        from app.models.indicator import IndicatorValue
+
+        if (await self.db.execute(select(IndicatorValue.id).limit(1))).first() is not None:
+            return True
+        return (await self.db.execute(select(FedRate.date).limit(1))).first() is not None
+
+    @staticmethod
+    def _empty_recommendation() -> NavigatorRecommendation:
+        """Explicit empty state: neither axis has inputs, so no quadrant or confidence."""
+        return NavigatorRecommendation(
+            insufficient_data=True,
+            position=NavigatorPosition(
+                growth_score=None,
+                fed_policy_score=None,
+                quadrant=None,
+                quadrant_label=None,
+                confidence=None,
+                direction=None,
+                date=None,
+            ),
+            factor_tilts=[],
+            sector_allocations=[],
+            asset_allocation=None,
+            geographic={},
+        )
+
     async def _compute_confidence(
         self,
         quadrant: str,
@@ -725,17 +759,31 @@ class NavigatorEngine:
             )
 
         # Yield curve signal
-        is_inverted = await self.yield_analyzer.is_inverted()
-        signals.append(
-            CrossAssetSignal(
-                name="Yield Curve (2Y10Y)",
-                signal="bearish" if is_inverted else "bullish",
-                value=None,
-                description=(
-                    "INVERTED — recession signal" if is_inverted else "Normal — no recession signal"
-                ),
+        spread_names = {s.name for s in await self.yield_analyzer.get_spreads()}
+        if "2Y10Y" not in spread_names:
+            signals.append(
+                CrossAssetSignal(
+                    name="Yield Curve (2Y10Y)",
+                    signal="neutral",
+                    value=None,
+                    description="No yield curve data",
+                    has_data=False,
+                )
             )
-        )
+        else:
+            is_inverted = await self.yield_analyzer.is_inverted()
+            signals.append(
+                CrossAssetSignal(
+                    name="Yield Curve (2Y10Y)",
+                    signal="bearish" if is_inverted else "bullish",
+                    value=None,
+                    description=(
+                        "INVERTED — recession signal"
+                        if is_inverted
+                        else "Normal — no recession signal"
+                    ),
+                )
+            )
 
         # Real yields signal
         real_yield = await self.yield_analyzer.get_10y_real_yield()
@@ -767,7 +815,7 @@ class NavigatorEngine:
             RecessionCheckItem(
                 name="2Y10Y Curve Inversion",
                 triggered=is_inv,
-                current_value="Inverted" if is_inv else "Normal",
+                current_value=("Inverted" if is_inv else "Normal") if snap.points else "N/A",
                 threshold="<0bp for 3+ months",
                 description="Yield curve inversion is historically 100% accurate recession predictor",
                 data_as_of=y_as_of,
@@ -933,8 +981,14 @@ class NavigatorEngine:
         )
 
         assert len(items) == RECESSION_CHECKLIST_TOTAL
+        for item in items:
+            # "N/A" means the input is missing: `triggered=False` is then a placeholder, not a fact.
+            item.has_data = item.current_value != "N/A"
+        insufficient = not any(item.has_data for item in items)
         score = sum(1 for item in items if item.triggered)
-        if score >= 5:
+        if insufficient:
+            confidence = "insufficient_data"
+        elif score >= 5:
             confidence = "high"
         elif score >= 3:
             confidence = "moderate"
@@ -942,7 +996,11 @@ class NavigatorEngine:
             confidence = "low"
 
         return RecessionCheck(
-            score=score, total=RECESSION_CHECKLIST_TOTAL, confidence=confidence, items=items
+            score=score,
+            total=RECESSION_CHECKLIST_TOTAL,
+            confidence=confidence,
+            items=items,
+            insufficient_data=insufficient,
         )
 
     # ------------------------------------------------------------------

@@ -50,7 +50,7 @@ function fmtPct(v: number | null | undefined) {
 function CellBlock({ children, style }: { children: React.ReactNode; style: CSSProperties }) {
   return (
     <div
-      className="rounded-[3px] px-1.5 py-2 text-center font-mono text-[10px] leading-tight tabular-nums"
+      className="rounded-[3px] px-1.5 py-2 text-center font-mono text-[11px] leading-tight tabular-nums"
       style={style}
     >
       {children}
@@ -80,7 +80,7 @@ export function YieldCurvePercentileTable({
             No percentile data.
           </div>
         ) : (
-          <table className="w-full border-collapse font-mono text-[10px] tabular-nums" style={{ tableLayout: "fixed" }}>
+          <table className="w-full border-collapse font-mono text-[11px] tabular-nums" style={{ tableLayout: "fixed" }}>
             <colgroup>
               <col style={{ width: "19%" }} />
               <col style={{ width: "15%" }} />

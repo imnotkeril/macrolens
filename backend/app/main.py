@@ -20,6 +20,7 @@ from app.api import (
 )
 from app.config import get_settings
 from app.database import Base, async_session, engine
+from app.security import SecurityMiddleware
 from app.services.indicator_analyzer import IndicatorAnalyzer
 from app.services.memory_bootstrap import bootstrap_memory_schemas
 from app.tasks.scheduler import shutdown_scheduler, start_scheduler
@@ -95,7 +96,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="MacroLens API",
     description="Macro Trading & Analysis Framework",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 
@@ -103,6 +104,8 @@ app = FastAPI(
 # Next.js frontend proxies /api same-origin, so this mainly guards direct browser calls.
 _cors_origins = [o.strip() for o in get_settings().cors_allow_origins.split(",") if o.strip()]
 _allow_all = _cors_origins == ["*"]
+# Added before CORS so CORS stays outermost and error responses from the guard carry CORS headers.
+app.add_middleware(SecurityMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,

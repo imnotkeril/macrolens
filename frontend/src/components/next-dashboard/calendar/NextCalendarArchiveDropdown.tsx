@@ -48,14 +48,14 @@ export function NextCalendarArchiveDropdown({
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: C.muted }}>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: C.muted }}>
         {label}
       </span>
       <div ref={rootRef} className={`relative min-w-[200px] ${className ?? ""}`}>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-2 rounded border px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.12em] transition-opacity hover:opacity-90"
+          className="flex w-full items-center justify-between gap-2 rounded border px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.12em] transition-opacity hover:opacity-90"
           style={{
             borderColor: open ? C.orange : C.borderSoft,
             color: C.text,
@@ -91,7 +91,7 @@ export function NextCalendarArchiveDropdown({
                     onValueChange(entry.value);
                     setOpen(false);
                   }}
-                  className="flex w-full items-center px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors"
+                  className="flex w-full items-center px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors"
                   style={{
                     color: active ? C.yellow : C.soft,
                     background: active ? C.panelSoft : "transparent",

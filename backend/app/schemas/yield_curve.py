@@ -21,9 +21,10 @@ class YieldSpread(BaseModel):
 
 
 class YieldCurveSnapshot(BaseModel):
-    date: date
+    date: date | None  # null when there is no curve data at all (never "today")
     points: list[YieldDataResponse]
     spreads: list[YieldSpread]
+    insufficient_data: bool = False
 
 
 class CurveDynamics(BaseModel):
@@ -33,6 +34,8 @@ class CurveDynamics(BaseModel):
     long_end_change_1m: float
     short_end_change_3m: float
     long_end_change_3m: float
+    #: True when the 2Y/10Y yields needed for the classification are missing (changes are 0.0).
+    insufficient_data: bool = False
 
 
 class SpreadPercentileRow(BaseModel):

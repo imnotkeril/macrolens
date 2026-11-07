@@ -190,7 +190,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
               {/* Row 1 */}
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
-                  title="1. SPX price"
+                  title="SPX price"
                   subtitle="Weekly"
                   hint="S&P 500 index with 200-day moving average. Up/down volume sub-panel requires separate NYSE advance/decline volume feed (not in current Yahoo breadth set)."
                 />
@@ -205,7 +205,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
 
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
-                  title="2. % Stocks above 200MA"
+                  title="% Stocks above 200MA"
                   subtitle="Weekly · MMTH"
                   hint="% of S&P 500 stocks above 200-day MA. &lt; 25% = bear market, defensive positioning."
                 />
@@ -223,7 +223,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
 
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
-                  title="3. % Stocks above 50MA"
+                  title="% Stocks above 50MA"
                   subtitle="Weekly · MMFI"
                   hint="% of S&P 500 stocks above 50-day MA."
                 />
@@ -241,7 +241,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
               {/* Row 2 */}
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
-                  title="4. % Stocks above 20MA"
+                  title="% Stocks above 20MA"
                   subtitle="Weekly · MMTW"
                   hint="&lt; 25% = short-term oversold, bounce more likely."
                 />
@@ -259,21 +259,21 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
 
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
-                  title="5. New highs vs new lows"
+                  title="New highs vs new lows"
                   subtitle="Daily · NYSE"
                   hint="NYSE new highs (up) vs new lows (down). Combined tape breadth."
                 />
                 <div className="flex min-h-0 flex-1 flex-col">
                   <HighsLowsBarChart data={prepared.highsLows} colors={{ high: String(C.green), low: String(C.red) }} />
                 </div>
-                <p className="mt-1 shrink-0 text-[8px]" style={{ color: "var(--nd-muted)" }}>
+                <p className="mt-1 shrink-0 text-[11px]" style={{ color: "var(--nd-muted)" }}>
                   Source: NYSE (^NYHGH / ^NYLOW) via Yahoo
                 </p>
               </div>
 
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
-                  title="6. Breadth vs SPX"
+                  title="Breadth vs SPX"
                   subtitle="Daily · NYSI + SPX"
                   hint="McClellan Summation Index (NYSI) vs S&P 500 close. Divergence (SPX up, NYSI down) often precedes breadth deterioration — classic warning when cumulative NYSE A/D is unavailable here."
                 />
@@ -283,7 +283,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
                     colors={{ nysi: String(C.blue), spx: "rgba(180,170,160,0.65)" }}
                   />
                 </div>
-                <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                   NYSI is a cumulative breadth oscillator — proxy when raw NYSE A/D line is not loaded.
                 </p>
               </div>
@@ -291,7 +291,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
               {/* Row 3 */}
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
-                  title="7. US stocks total volume"
+                  title="US stocks total volume"
                   subtitle="Daily · TVOL"
                   hint="NYSE consolidated tape volume (TVOL.US)."
                 />
@@ -302,7 +302,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
 
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
-                  title="8. Put/call ratio"
+                  title="Put/call ratio"
                   subtitle="Daily · PCC"
                   hint="CBOE equity put/call ratio. &gt; 1.2 = extreme fear (contrarian bullish); &lt; 0.7 = complacency."
                 />
@@ -322,7 +322,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
 
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
-                  title="9. VIX"
+                  title="VIX"
                   subtitle="Daily"
                   hint="Implied volatility index. &gt; 30 panic; ~20 elevated; &lt; 15 low vol."
                 />

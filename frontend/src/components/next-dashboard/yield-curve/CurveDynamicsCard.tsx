@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { NextShellThemeContextValue } from "@/components/next-dashboard/nextShellTheme";
 import type { CurveDynamics, RatioPoint } from "@/types";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import { normalizeYieldCurvePattern, YIELD_CURVE_PATTERN_UI } from "./yieldCurvePatternUi";
 
 type C = NextShellThemeContextValue["colors"];
@@ -52,10 +53,13 @@ export function CurveDynamicsCard({
     );
   }
 
-  if (!dynamics) {
+  if (!dynamics || dynamics.insufficient_data) {
     return (
-      <div className="flex flex-1 items-center justify-center py-8 text-[12px]" style={{ color: "var(--nd-muted)" }}>
-        No dynamics data.
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--nd-muted)" }}>
+          Curve dynamics
+        </div>
+        <NextNoData />
       </div>
     );
   }
@@ -96,7 +100,7 @@ export function CurveDynamicsCard({
           {ui.label.toUpperCase()}
         </div>
         <div
-          className="rounded-[2px] px-1.5 py-0.5 font-mono text-[10px] tabular-nums"
+          className="rounded-[2px] px-1.5 py-0.5 font-mono text-[11px] tabular-nums"
           style={{ border: "1px solid var(--nd-border)", color: "var(--nd-soft)" }}
           title="Regime persistence"
         >
@@ -119,7 +123,7 @@ export function CurveDynamicsCard({
             className="rounded-[2px] px-2 py-2"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--nd-border-soft)" }}
           >
-            <div className="text-[9px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--nd-muted)" }}>
               {t.label}
             </div>
             <div className="mt-1 text-[14px] font-semibold tabular-nums" style={{ color: bpColor(t.bp, C) }}>
@@ -129,7 +133,7 @@ export function CurveDynamicsCard({
         ))}
       </div>
       <div className="rounded-[2px] border border-[var(--nd-border-soft)] px-2 py-2">
-        <div className="mb-1 flex items-center justify-between text-[9px] uppercase tracking-[0.08em]">
+        <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-[0.08em]">
           <span style={{ color: "var(--nd-muted)" }}>Signal confidence</span>
           <span className="font-mono tabular-nums" style={{ color: "var(--nd-soft)" }}>
             {confidence}%
@@ -142,14 +146,14 @@ export function CurveDynamicsCard({
           />
         </div>
         <div className="mt-2 border-t border-[var(--nd-border-soft)] pt-2">
-          <div className="mb-1 flex items-center justify-between text-[9px] uppercase tracking-[0.08em]">
+          <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-[0.08em]">
             <span style={{ color: "var(--nd-muted)" }}>2s-10s momentum</span>
             <span className="font-mono tabular-nums" style={{ color: "var(--nd-soft)" }}>
               {lastMomentum != null ? `${lastMomentum >= 0 ? "+" : ""}${lastMomentum.toFixed(2)}` : "—"}
             </span>
           </div>
           <div className="h-[64px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
               <LineChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
                 <XAxis dataKey="date" hide />
                 <YAxis hide domain={yDomain} />

@@ -5,6 +5,7 @@ import { useMemo, type CSSProperties, type ComponentType } from "react";
 import type { NextShellThemeContextValue } from "@/components/next-dashboard/nextShellTheme";
 import { YieldCurveSnapshotCard } from "@/components/next-dashboard/yield-curve/YieldCurveSnapshotCard";
 import type { CategoryScore, YieldCurveSnapshot } from "@/types";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 
 type Palette = {
   borderSoft: string;
@@ -22,19 +23,23 @@ type RecessionModelRow = { name: string; pct: number; dot: string };
 type Props = {
   quadPanelStyle: CSSProperties;
   colors: Palette;
+  /** Backend insufficient_data flags (D-05): show the empty state instead of defaults. */
+  regimeEmpty: boolean;
+  fedEmpty: boolean;
+  yieldEmpty: boolean;
   recessionProbPct: number | null;
   recessionRisk: { label: string; color: string };
   recessionModelRows: RecessionModelRow[];
   cycleScore: number | null;
   macroSentimentSeries: number[];
   categories: CategoryScore[];
-  fedPolicy: number;
+  fedPolicy: number | null;
   /** Midpoint minus FOMC longer-run neutral (SEP), percentage points — from `/api/fed/current`. */
   fedRateVsNeutralPp: number | null;
-  fedStance: string;
+  fedStance: string | null;
   fedRateSeries: number[];
-  rateDirection: string;
-  balanceSheetDirection: string;
+  rateDirection: string | null;
+  balanceSheetDirection: string | null;
   curvePatternLabel: string;
   curvePatternTitle: string;
   yieldCurveSnapshot: YieldCurveSnapshot | null | undefined;
@@ -46,7 +51,7 @@ type Props = {
   RiskSegmentDonutComponent: ComponentType<{ value: number | null | undefined }>;
   MacroSentimentSparkBlockComponent: ComponentType<{ values: number[] }>;
   MacroCategoryRowComponent: ComponentType<{ row: CategoryScore }>;
-  FedPolicyScaleBarComponent: ComponentType<{ value: number }>;
+  FedPolicyScaleBarComponent: ComponentType<{ value: number | null }>;
   FedRateHistorySparkComponent: ComponentType<{ values: number[] }>;
   /** Same palette tokens as `/yield-curve` — passed to `YieldCurveSnapshotCard`. */
   yieldPalette: NextShellThemeContextValue["colors"];
@@ -55,6 +60,9 @@ type Props = {
 export function DashboardMiddleRowSection({
   quadPanelStyle,
   colors,
+  regimeEmpty,
+  fedEmpty,
+  yieldEmpty,
   recessionProbPct,
   recessionRisk,
   recessionModelRows,
@@ -97,15 +105,23 @@ export function DashboardMiddleRowSection({
         <div className="shrink-0">
           <div className="text-[18px] uppercase leading-none tracking-[0.08em]">Recession Probability</div>
         </div>
-        <div className="mt-3 grid shrink-0 items-start gap-2 border-b pb-3" style={{ borderColor: colors.borderSoft, gridTemplateColumns: "minmax(0,1fr) auto" }}>
-          <div className="min-w-0">
+        {regimeEmpty ? (
+          <div className="mt-3 flex min-h-0 flex-1 flex-col">
+            <NextNoData />
+            <Link href="/radar" className="mt-1.5 shrink-0 pt-1 text-[11px] tracking-[0.03em] transition-opacity hover:opacity-90" style={{ color: colors.soft }}>
+              View Cycle Radar {"->"}
+            </Link>
+          </div>
+        ) : (<>
+        <div className="mt-3 flex shrink-0 flex-wrap items-start justify-between gap-2 border-b pb-3" style={{ borderColor: colors.borderSoft }}>
+          <div className="min-w-[96px]">
             <div className="text-[24px] leading-none tabular-nums">{formatPercent(recessionProbPct, 0)}</div>
             <div className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: recessionRisk.color }}>{recessionRisk.label}</div>
           </div>
           <RiskSegmentDonutComponent value={recessionProbPct} />
         </div>
         <div className="mt-3 flex min-h-0 flex-1 flex-col text-[11px]">
-          <div className="mb-2 flex shrink-0 items-center justify-between pb-1 text-[10px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
+          <div className="mb-2 flex shrink-0 items-center justify-between pb-1 text-[11px] uppercase tracking-[0.1em]" style={{ color: colors.muted }}>
             <span>Model</span>
             <span>Probability</span>
           </div>
@@ -114,7 +130,7 @@ export function DashboardMiddleRowSection({
               <div key={row.name} className="flex items-center justify-between gap-2 py-1">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: row.dot }} />
-                  <span className="min-w-0 truncate text-[11px]" style={{ color: colors.soft }}>{row.name}</span>
+                  <span className="min-w-0 break-words text-[11px] leading-tight" style={{ color: colors.soft }} title={row.name}>{row.name}</span>
                 </div>
                 <span className="shrink-0 text-[11px] tabular-nums" style={{ color: colors.text }}>{formatPercent(row.pct, 0)}</span>
               </div>
@@ -128,6 +144,7 @@ export function DashboardMiddleRowSection({
             View Cycle Radar {"->"}
           </Link>
         </div>
+        </>)}
       </div>
 
       <div
@@ -139,7 +156,7 @@ export function DashboardMiddleRowSection({
           <div className="flex h-[92px] shrink-0 items-start gap-3 overflow-hidden">
             <div className="shrink-0">
               <div className="text-[24px] leading-none tabular-nums">{formatNumber(cycleScore)}</div>
-              <div className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: colors.green }}>Z-score</div>
+              <div className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: cycleScore == null ? colors.muted : colors.green }}>Z-score</div>
             </div>
             <div className="min-h-0 min-w-0 flex-1 self-start">
               <MacroSentimentSparkBlockComponent values={macroSentimentSeries} />
@@ -147,9 +164,11 @@ export function DashboardMiddleRowSection({
           </div>
           <div className="mt-3 flex min-h-0 flex-1 flex-col border-t pt-2 text-[11px]" style={{ borderColor: colors.borderSoft }}>
             <div className="min-h-0 flex-1 space-y-0 overflow-y-auto overflow-x-hidden overscroll-contain pr-0.5">
-              {categories.map((row) => (
-                <MacroCategoryRowComponent key={row.category} row={row} />
-              ))}
+              {!categories.some((row) => row.indicator_count > 0) ? (
+                <NextNoData compact />
+              ) : (
+                categories.map((row) => <MacroCategoryRowComponent key={row.category} row={row} />)
+              )}
             </div>
             <Link
               href="/macro-sentiment"
@@ -172,21 +191,29 @@ export function DashboardMiddleRowSection({
           style={quadChrome}
         >
           <div className="mb-1 text-[18px] uppercase leading-none tracking-[0.08em]">Fed Policy Score</div>
+          {fedEmpty ? (
+            <>
+              <NextNoData />
+              <span className="mt-auto shrink-0 pt-2 text-[11px] tracking-[0.03em]" style={{ color: colors.soft }}>
+                Open Fed Policy {"->"}
+              </span>
+            </>
+          ) : (<>
           <div
             className="mt-2 grid min-w-0 shrink-0 items-start gap-y-0 overflow-hidden"
             style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}
           >
             <div className="min-w-0">
               <div className="text-[24px] leading-none tabular-nums">{formatNumber(fedPolicy)}</div>
-              <div className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: colors.green }}>{fedStance}</div>
+              <div className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: colors.green }}>{fedStance ?? "—"}</div>
             </div>
             <div className="min-w-0 px-1 py-0.5">
-              <FedPolicyScaleBarComponent value={fedPolicy ?? 0} />
+              <FedPolicyScaleBarComponent value={fedPolicy} />
             </div>
             <div className="col-span-2 mt-2 border-t pt-3" style={{ borderColor: colors.borderSoft }}>
               <div className="grid min-w-0 items-start" style={{ gridTemplateColumns: "minmax(78px,auto) minmax(0,1fr)" }}>
                 <div className="min-w-0">
-                  <div className="leading-tight text-[10px] uppercase tracking-[0.06em]" style={{ color: colors.soft }}>
+                  <div className="leading-tight text-[11px] uppercase tracking-[0.06em]" style={{ color: colors.soft }}>
                     <div>Fed Funds</div>
                     <div>Rate</div>
                   </div>
@@ -200,11 +227,11 @@ export function DashboardMiddleRowSection({
           <div className="mt-auto flex shrink-0 flex-col border-t pt-3 text-[11px] uppercase tracking-[0.06em]" style={{ color: colors.soft, borderColor: colors.borderSoft }}>
             <div className="flex items-center justify-between py-2">
               <span>Rate direction</span>
-              <span style={{ color: colors.text }}>{rateDirection}</span>
+              <span style={{ color: colors.text }}>{rateDirection ?? "—"}</span>
             </div>
             <div className="flex items-center justify-between py-2">
               <span>Balance sheet</span>
-              <span style={{ color: colors.text }}>{balanceSheetDirection}</span>
+              <span style={{ color: colors.text }}>{balanceSheetDirection ?? "—"}</span>
             </div>
           <div className="flex items-center justify-between py-2">
             <span>Vs neutral (SEP)</span>
@@ -218,6 +245,7 @@ export function DashboardMiddleRowSection({
               Open Fed Policy {"->"}
             </span>
           </div>
+          </>)}
         </div>
       </Link>
 
@@ -238,14 +266,18 @@ export function DashboardMiddleRowSection({
           </div>
         </div>
         <div className="flex min-h-[168px] w-full min-w-0 flex-1 basis-0 flex-col self-stretch overflow-hidden print:min-h-[260px] print:overflow-visible">
-          <YieldCurveSnapshotCard
-            palette={yieldPalette}
-            snapshot={yieldCurveSnapshot ?? undefined}
-            history={yieldHistory ?? undefined}
-            fillHeight
-            hideTitle
-            hideMetrics
-          />
+          {yieldEmpty ? (
+            <NextNoData />
+          ) : (
+            <YieldCurveSnapshotCard
+              palette={yieldPalette}
+              snapshot={yieldCurveSnapshot ?? undefined}
+              history={yieldHistory ?? undefined}
+              fillHeight
+              hideTitle
+              hideMetrics
+            />
+          )}
         </div>
         <div className="mt-auto shrink-0 border-t px-1 pt-2 pb-0.5" style={{ borderColor: colors.borderSoft }}>
           <div className="grid grid-cols-2 gap-0">

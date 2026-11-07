@@ -11,6 +11,7 @@ import numpy as np
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.fed_policy import FedRate
 from app.models.indicator import Importance, Indicator, IndicatorCategory, IndicatorValue
 from app.models.market_data import MarketData, YieldData
 from app.services.fed_tracker import FedTracker
@@ -123,6 +124,16 @@ async def growth_score_at_date(db: AsyncSession, as_of: date) -> tuple[float, di
 
 
 async def yield_spread_10y_2y_at_date(db: AsyncSession, as_of: date) -> float:
+    spread = await yield_spread_10y_2y_or_none(db, as_of)
+    return spread if spread is not None else 0.0
+
+
+async def has_fed_rate_at_date(db: AsyncSession, as_of: date) -> bool:
+    q = select(FedRate.date).where(FedRate.date <= as_of).limit(1)
+    return (await db.execute(q)).scalar_one_or_none() is not None
+
+
+async def yield_spread_10y_2y_or_none(db: AsyncSession, as_of: date) -> float | None:
     async def _yield_val(maturity: str) -> float | None:
         q = (
             select(YieldData.nominal_yield)
@@ -138,7 +149,7 @@ async def yield_spread_10y_2y_at_date(db: AsyncSession, as_of: date) -> float:
     y2 = await _yield_val("2Y")
     if y10 is not None and y2 is not None:
         return y10 - y2
-    return 0.0
+    return None
 
 
 async def hy_spread_proxy_at_date(db: AsyncSession, as_of: date) -> float:
@@ -161,15 +172,17 @@ async def build_feature_row(db: AsyncSession, as_of: date) -> FeatureRow:
     g, g_avail = await growth_score_at_date(db, as_of)
     ft = FedTracker(db)
     fed = await ft.get_policy_score_at_date(as_of)
-    ysp = await yield_spread_10y_2y_at_date(db, as_of)
+    ysp_real = await yield_spread_10y_2y_or_none(db, as_of)
+    ysp = ysp_real if ysp_real is not None else 0.0
+    has_fed = await has_fed_rate_at_date(db, as_of)
     hy = await hy_spread_proxy_at_date(db, as_of)
     dyn = await YieldAnalyzer(db).get_dynamics_at_date(as_of)
     cpat = dyn.pattern
     cemb = curve_pattern_to_embed(cpat)
     avail = {
         **g_avail,
-        "fed": True,
-        "yield_spread": ysp != 0.0 or True,
+        "fed": has_fed,
+        "yield_spread": ysp_real is not None,
         "hy": hy != 0.0,
         "curve_pattern": cpat,
     }

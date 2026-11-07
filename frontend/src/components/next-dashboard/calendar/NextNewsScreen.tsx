@@ -63,20 +63,13 @@ export function NextNewsScreen() {
     <section className="flex flex-col gap-2">
       <div style={filterBarStyle}>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="rounded border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em]" style={{ borderColor: C.borderSoft, color: C.green }}>
-            <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full" style={{ background: C.green }} />
-            Live
-          </div>
-          <span className="text-[10px] uppercase tracking-[0.12em]" style={{ color: C.muted }}>
-            just now
-          </span>
           <div className="ml-1 flex flex-wrap items-center gap-1.5">
             {IMPACTS.map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => setImpactFilter((prev) => ({ ...prev, [item]: !prev[item] }))}
-                className="rounded border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                className="rounded border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
                 style={{
                   borderColor: impactFilter[item] ? impactColor(item, C) : C.borderSoft,
                   color: impactFilter[item] ? impactColor(item, C) : C.muted,
@@ -91,7 +84,7 @@ export function NextNewsScreen() {
             <button
               type="button"
               onClick={() => setCategoryOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 rounded border px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.12em] transition-opacity hover:opacity-90"
+              className="flex w-full items-center justify-between gap-2 rounded border px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.12em] transition-opacity hover:opacity-90"
               style={{
                 borderColor: categoryOpen ? C.orange : C.borderSoft,
                 color: C.text,
@@ -126,7 +119,7 @@ export function NextNewsScreen() {
                         setCategory(entry.id);
                         setCategoryOpen(false);
                       }}
-                      className="flex w-full items-center px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors"
+                      className="flex w-full items-center px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors"
                       style={{
                         color: active ? C.yellow : C.soft,
                         background: active ? C.panelSoft : "transparent",
@@ -153,18 +146,18 @@ export function NextNewsScreen() {
                 <button
                   type="button"
                   onClick={() => setOpenId((prev) => (prev === item.id ? null : item.id))}
-                  className="grid w-full grid-cols-[16px_56px_170px_1fr_82px_20px] items-center gap-2 px-3 py-2 text-left"
+                  className="grid w-full grid-cols-[12px_48px_minmax(0,0.7fr)_minmax(0,1fr)_auto_16px] items-center gap-2 sm:grid-cols-[16px_56px_minmax(0,170px)_minmax(0,1fr)_auto_20px] px-3 py-2 text-left"
                   style={{ color: C.soft }}
                 >
                   <span className="inline-block h-2 w-2 rounded-full" style={{ background: item.unread ? C.red : C.muted }} />
                   <span className="text-[12px] tabular-nums">{item.timeLabel}</span>
-                  <span className="truncate text-[10px] uppercase tracking-[0.08em]" style={{ color: C.muted }}>
+                  <span className="min-w-0 truncate text-[11px] uppercase tracking-[0.08em]" style={{ color: C.muted }}>
                     {item.source} · {item.category}
                   </span>
-                  <span className="truncate text-[13px]" style={{ color: C.text }}>
+                  <span className="min-w-0 truncate text-[13px]" style={{ color: C.text }}>
                     {item.headline}
                   </span>
-                  <span className="justify-self-end rounded border px-2 py-0.5 text-[10px] uppercase" style={{ borderColor: color, color }}>
+                  <span className="min-w-0 max-w-[72px] justify-self-end truncate rounded border px-1.5 py-0.5 text-[11px] uppercase sm:max-w-none sm:px-2" style={{ borderColor: color, color }}>
                     {item.impact}
                   </span>
                   {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -194,7 +187,7 @@ export function NextNewsScreen() {
                       </div>
                       <div className="space-y-2 xl:col-span-5">
                         <div className="rounded border p-2" style={{ borderColor: C.borderSoft, background: C.panel }}>
-                          <div className="text-[10px] uppercase tracking-[0.1em]" style={{ color: C.muted }}>
+                          <div className="text-[11px] uppercase tracking-[0.1em]" style={{ color: C.muted }}>
                             MacroLens Regime Impact
                           </div>
                           <div className="mt-1 text-[12px] leading-relaxed" style={{ color: C.soft }}>
@@ -202,7 +195,7 @@ export function NextNewsScreen() {
                           </div>
                         </div>
                         <div>
-                          <div className="text-[10px] uppercase tracking-[0.1em]" style={{ color: C.muted }}>
+                          <div className="text-[11px] uppercase tracking-[0.1em]" style={{ color: C.muted }}>
                             Related FRED Series
                           </div>
                           <div className="mt-1 divide-y rounded border" style={{ borderColor: C.borderSoft }}>

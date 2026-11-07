@@ -46,9 +46,11 @@ export interface ForecastLabSummary {
   as_of_date: string;
   bundle_id: string;
   trained: boolean;
-  phase_class: string;
-  phase_probabilities: PhaseProbabilities;
-  confidence: number;
+  /** True when the backend has no inputs at all (D-22); phase fields are then null. */
+  insufficient_data?: boolean;
+  phase_class: string | null;
+  phase_probabilities: PhaseProbabilities | null;
+  confidence: number | null;
   ensemble_weights: Record<string, number> | null;
   experts: ExpertPhaseBreakdown | null;
   macro_forecasts: MacroForecastRow[];

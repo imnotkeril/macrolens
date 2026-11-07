@@ -468,7 +468,7 @@ export function NextMacroRatiosScreen({
                 return (
                   <div key={spec.n} className={chartCard} style={panel}>
                     <MacroRatioCardHeader
-                      title={`${spec.n}. ${spec.title}`}
+                      title={spec.title}
                       subtitle={`Weekly · ${spec.tickers}`}
                       hint={spec.hint}
                     />
@@ -488,7 +488,7 @@ export function NextMacroRatiosScreen({
               })}
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="10. Commodity index vs bonds"
+                  title="Commodity index vs bonds"
                   subtitle="Weekly · DBC / ZB=F (BCOM / ZB proxies)"
                   hint="DBC (commodity ETF) vs CBOT Treasury bond futures — loaded via Yahoo into MarketData."
                 />
@@ -506,7 +506,7 @@ export function NextMacroRatiosScreen({
               {/* 11 BDI vs SPX */}
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="11. Baltic Dry vs SPX"
+                  title="Baltic Dry vs SPX"
                   subtitle="Weekly · BDRY (BDIY) vs SP500"
                   hint="BDRY ETF (dry bulk / Baltic proxy) stored as symbol BDIY in MarketData."
                 />
@@ -524,7 +524,7 @@ export function NextMacroRatiosScreen({
               {/* 12 IPO vs SPX */}
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="12. IPO ETF vs SPX"
+                  title="IPO ETF vs SPX"
                   subtitle="Weekly · IPO vs SP500"
                   hint="Renaissance IPO ETF vs broad market — liquidity & risk appetite proxy."
                 />
@@ -546,7 +546,7 @@ export function NextMacroRatiosScreen({
             >
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="1. Inflation expectations (TIP/IEF)"
+                  title="Inflation expectations (TIP/IEF)"
                   subtitle="Weekly · Ratio: TIPS ETF / 7–10Y Treasury ETF"
                   hint="Macro overview: TIP/IEF where both ETFs exist in MarketData."
                 />
@@ -558,14 +558,14 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(2)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Rising = inflation expectations rising.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="2. 5Y real yield (US05Y − T5YIE)"
+                  title="5Y real yield (US05Y − T5YIE)"
                   subtitle="Weekly · Nominal 5Y yield minus 5Y breakeven"
                   hint="Approximate ex-ante real short rate from Treasury curve + breakeven."
                 />
@@ -577,14 +577,14 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(2)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     High = tight financial conditions, pressure on growth assets.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="3. 10Y−2Y spread"
+                  title="10Y−2Y spread"
                   subtitle="Weekly · 10Y Treasury yield minus 2Y Treasury yield"
                   hint="Yield curve slope; negative = inversion."
                 />
@@ -596,14 +596,14 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(2)}
                     references={[{ y: 0, stroke: String(C.red), dash: "4 3", label: "0" }]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Below 0 = inversion, recession signal.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="4. Forward Fed Funds rate (100 − ZQ)"
+                  title="Forward Fed Funds rate (100 − ZQ)"
                   subtitle="Daily · Implied Fed Funds from ZQ futures (100 − price)"
                   hint="Uses ZQ futures level from MarketData when present."
                 />
@@ -615,14 +615,14 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(2)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Where the market expects the Fed Funds rate.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="5. Balance sheet — major central banks"
+                  title="Balance sheet — major central banks"
                   subtitle="Weekly · Fed + ECB (extend to BoJ/BoE/PBoC when series exist)"
                   hint="Sum of Fed balance sheet (WALCL) + ECB assets (ECBBS), USD millions → trillions."
                 />
@@ -634,14 +634,14 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => `${v.toFixed(1)}T`}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Rising = global liquidity expansion, tailwind for risk assets.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="6. Net liquidity (Fed BS − RRP − TGA)"
+                  title="Net liquidity (Fed BS − RRP − TGA)"
                   subtitle="Weekly · Trillions USD"
                   hint="From /api/market/net-liquidity — WALCL-based Fed BS minus Treasury General Account and RRP."
                 />
@@ -653,14 +653,14 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => `${v.toFixed(2)}T`}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Higher = more liquidity in the system.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="7. MOVE index"
+                  title="MOVE index"
                   subtitle="Daily · Implied volatility of US Treasuries"
                   hint="ICE BofA MOVE index (^MOVE) when loaded into MarketData."
                 />
@@ -675,14 +675,14 @@ export function NextMacroRatiosScreen({
                       { y: 80, stroke: String(C.green), dash: "4 3", label: "80" },
                     ]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Elevated bond vol above ~100 · ~80 closer to normal conditions.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="8. Overnight reverse repo (RRP)"
+                  title="Overnight reverse repo (RRP)"
                   subtitle="Daily · NY Fed RRP usage (RRPONTSYD)"
                   hint="Stored as symbol RRP — FRED daily usage in millions USD; chart shows billions."
                 />
@@ -694,14 +694,14 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => `${Math.round(v)}B`}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Declining = liquidity leaving RRP and flowing into markets.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="9. US leading economic index"
+                  title="US leading economic index"
                   subtitle="Monthly · Conference Board LEI (USSLIND)"
                   hint="Macro overview LEI series from MarketData."
                 />
@@ -713,14 +713,14 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(1)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Leading indicator for US economy.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="10. China leading economic index"
+                  title="China leading economic index"
                   subtitle="Monthly · OECD China CLI (CHNLOLITONOSTSAM)"
                   hint="China composite leading indicator — macro overview CNLEI."
                 />
@@ -732,14 +732,14 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(1)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Leading indicator for China activity / EM tilt.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="11. Credit impulse"
+                  title="Credit impulse"
                   subtitle="Monthly · YoY change of YoY % growth (TOTALSL)"
                   hint="Computed from CONSUMER_CREDIT (FRED TOTALSL) — needs regime history in MarketData."
                 />
@@ -751,14 +751,14 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => `${v.toFixed(1)} pp`}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Leads recessions by ~9–12 months when momentum rolls over.
                   </p>
                 </div>
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="12. ISM new orders / inventories"
+                  title="ISM new orders / inventories"
                   subtitle="Monthly · NAPMNO / NAPMII (FRED)"
                   hint="FRED NAPMNO / NAPMII (ISM manufacturing new orders / inventories diffusion indices)."
                 />
@@ -770,7 +770,7 @@ export function NextMacroRatiosScreen({
                     formatY={(v) => v.toFixed(2)}
                     references={[]}
                   />
-                  <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+                  <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
                     Rising = expansion ahead · Falling = inventory buildup / slowdown.
                   </p>
                 </div>

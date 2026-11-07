@@ -7,6 +7,7 @@ import {
   summarizeLegs,
   tiltArrow,
 } from "@/features/dashboard/utils/snapshotUtils";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 
 type Palette = {
   panel: string;
@@ -24,6 +25,8 @@ type IdeaRow = { name: string; trade_type: string; legs: string; description?: s
 
 type Props = {
   colors: Palette;
+  /** Navigator has no inputs (insufficient_data): show the empty state, not fallback tilts. */
+  empty: boolean;
   factors: TiltRow[];
   sectors: TiltRow[];
   alloc: Array<{ label: string; value: number; color: string }>;
@@ -109,27 +112,14 @@ function GeographySplitBar({
 }
 
 function LegTag({ label, tone }: { label: string; tone: "long" | "short" | "neutral" }) {
-  const color =
-    tone === "long"
-      ? "#c2f2c9"
-      : tone === "short"
-        ? "#ffd4dc"
-        : "#d8d2c7";
-  const background =
-    tone === "long"
-      ? "rgba(114,173,102,0.2)"
-      : tone === "short"
-        ? "rgba(212,93,114,0.2)"
-        : "rgba(126,126,120,0.22)";
-  const borderColor =
-    tone === "long"
-      ? "rgba(114,173,102,0.35)"
-      : tone === "short"
-        ? "rgba(212,93,114,0.35)"
-        : "rgba(148,148,140,0.34)";
+  // Theme tokens only: text uses the semantic colour, fill/border are tints of it (readable in both themes).
+  const base = tone === "long" ? "var(--nd-green)" : tone === "short" ? "var(--nd-red)" : "var(--nd-soft)";
+  const color = base;
+  const background = `color-mix(in srgb, ${base} 16%, transparent)`;
+  const borderColor = `color-mix(in srgb, ${base} 45%, transparent)`;
   return (
     <span
-      className="inline-flex h-5 items-center rounded-[2px] px-1.5 text-[10px] uppercase tracking-[0.03em]"
+      className="inline-flex h-5 items-center rounded-[2px] px-1.5 text-[11px] uppercase tracking-[0.03em]"
       style={{
         color,
         background,
@@ -145,7 +135,7 @@ function SnapshotTradingIdeas({ rows, borderColor, textColor }: { rows: IdeaRow[
   return (
     <div>
       <div
-        className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.05fr)_minmax(0,1.2fr)] gap-2 border-b pb-1 text-[10px] uppercase tracking-[0.08em]"
+        className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.05fr)_minmax(0,1.2fr)] gap-2 border-b pb-1 text-[11px] uppercase tracking-[0.08em]"
         style={{ borderColor, color: "var(--nd-muted)" }}
       >
         <span>Category</span>
@@ -176,6 +166,7 @@ function SnapshotTradingIdeas({ rows, borderColor, textColor }: { rows: IdeaRow[
 
 export function DashboardRecommendationsSection({
   colors,
+  empty,
   factors,
   sectors,
   alloc,
@@ -193,6 +184,7 @@ export function DashboardRecommendationsSection({
       style={{ background: colors.panel, border: `1px solid ${colors.border}`, borderRadius: "4px", padding: "20px 22px", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.012)", minHeight: 0, overflow: "hidden", height: 280 }}
     >
       <div className="mb-1 text-[18px] uppercase leading-none tracking-[0.08em]">Recommendations Snapshot</div>
+      {empty ? <NextNoData className="mt-2" /> : (
       <div className="mt-3 grid grid-cols-[0.82fr_0.95fr_1.24fr_2.84fr] gap-0 text-[12px]" style={{ color: colors.soft }}>
         <div className="flex h-full flex-col pr-3">
           <SnapshotTiltTable title="Factor Tilts" rows={factors} showSignals />
@@ -252,6 +244,7 @@ export function DashboardRecommendationsSection({
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

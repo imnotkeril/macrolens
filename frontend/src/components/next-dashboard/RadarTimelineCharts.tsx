@@ -43,7 +43,7 @@ function PeriodStrip({
           key={p.label}
           type="button"
           onClick={() => onChange(p.label)}
-          className="rounded-[2px] px-2.5 py-1 text-[10px] font-medium transition-colors"
+          className="rounded-[2px] px-2.5 py-1 text-[11px] font-medium transition-colors"
           style={{
             border: period === p.label ? "1px solid var(--nd-border)" : "1px solid transparent",
             background: period === p.label ? "var(--nd-panel-soft)" : "transparent",
@@ -164,14 +164,14 @@ export function RadarRecessionProbChart({
             stroke: String(C.muted),
             strokeDasharray: "4 4",
             strokeWidth: 1,
-            label: { value: "40%", position: "right", fill: "var(--nd-soft)", fontSize: 10 },
+            label: { value: "40%", position: "right", fill: "var(--nd-soft)", fontSize: 11 },
           },
           {
             y: 20,
             stroke: String(C.muted),
             strokeDasharray: "4 4",
             strokeWidth: 1,
-            label: { value: "20%", position: "right", fill: "var(--nd-soft)", fontSize: 10 },
+            label: { value: "20%", position: "right", fill: "var(--nd-soft)", fontSize: 11 },
           },
         ]}
       />

@@ -69,7 +69,7 @@ export function NextFedPolicyAiCard() {
           </div>
           {hawkIdx != null ? (
             <div>
-              <div className="mb-0.5 flex justify-between text-[9px] uppercase tracking-[0.06em]" style={{ color: "var(--nd-muted)" }}>
+              <div className="mb-0.5 flex justify-between text-[11px] uppercase tracking-[0.06em]" style={{ color: "var(--nd-muted)" }}>
                 <span>Dovish 0</span>
                 <span>Neutral 50</span>
                 <span>Hawkish 100</span>
@@ -93,7 +93,7 @@ export function NextFedPolicyAiCard() {
             </div>
           ) : null}
           <div className="min-h-0 min-w-0 flex-1">
-            <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
+            <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
               Rhetoric index (daily)
             </div>
             {histLoading ? (

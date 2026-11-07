@@ -10,7 +10,8 @@ import {
 } from "@/components/next-dashboard/nextRadarPanels";
 import type { NextShellThemeContextValue } from "@/components/next-dashboard/nextShellTheme";
 import { RadarCycleScoreChart, RadarRecessionProbChart } from "@/components/next-dashboard/RadarTimelineCharts";
-import { Check, Info, X } from "lucide-react";
+import { Check, Info, Minus, X } from "lucide-react";
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import type { RecessionBand, RecessionCheck, RegimeSnapshot } from "@/types";
 
 export type NextShellColors = NextShellThemeContextValue["colors"];
@@ -45,12 +46,16 @@ export function RadarCycleScorePanel({
         </button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
-        <NextRadarCycleGauge
-          palette={C}
-          score={regime.cycle_score}
-          phase={regime.phase}
-          phaseLabel={regime.phase_label}
-        />
+        {regime.insufficient_data || regime.cycle_score == null || regime.phase == null || regime.phase_label == null ? (
+          <NextNoData />
+        ) : (
+          <NextRadarCycleGauge
+            palette={C}
+            score={regime.cycle_score}
+            phase={regime.phase}
+            phaseLabel={regime.phase_label}
+          />
+        )}
       </div>
     </div>
   );
@@ -71,12 +76,16 @@ export function RadarRecessionProbPanel({
     <div className="flex h-full min-h-0 w-full flex-col" style={{ ...surface, ...placement, minHeight: 0 }}>
       <NextRadarSectionTitle className="mb-0">Recession Probability 12M</NextRadarSectionTitle>
       <div className="flex min-h-0 flex-1 flex-col pt-2">
-        <NextRadarRecession12m
-          palette={C}
-          probability={regime.recession_prob_12m}
-          models={regime.recession_models}
-          drivers={regime.top_drivers}
-        />
+        {regime.insufficient_data || regime.recession_prob_12m == null ? (
+          <NextNoData />
+        ) : (
+          <NextRadarRecession12m
+            palette={C}
+            probability={regime.recession_prob_12m}
+            models={regime.recession_models}
+            drivers={regime.top_drivers}
+          />
+        )}
       </div>
     </div>
   );
@@ -111,7 +120,7 @@ export function RadarRecessionChecklistPanel({
 
   const cardPad = "min-h-[40px] px-2.5 py-2";
   const titleSize = "text-[12px]";
-  const threshSize = "text-[10px]";
+  const threshSize = "text-[11px]";
   const valSize = "text-[12px] tabular-nums leading-snug";
   const iconClass = "h-3.5 w-3.5 shrink-0";
 
@@ -128,7 +137,7 @@ export function RadarRecessionChecklistPanel({
         <NextRadarSectionTitle className="mb-0 min-w-0 flex-1 leading-tight">
           Recession Checklist
         </NextRadarSectionTitle>
-        {recession ? (
+        {recession && !recession.insufficient_data ? (
           <span
             className="shrink-0 whitespace-nowrap rounded-[2px] border px-2 py-0.5 font-mono text-[11px] tabular-nums uppercase tracking-[0.06em]"
             style={checklistConfidenceStyle(C, recession.confidence)}
@@ -137,14 +146,20 @@ export function RadarRecessionChecklistPanel({
           </span>
         ) : null}
       </div>
-      {recession ? (
+      {recession?.insufficient_data ? (
+        <NextNoData />
+      ) : recession ? (
         <div className={`${listGrid} min-h-0 flex-1 overflow-y-auto max-w-full`}>
-          {recession.items.map((item, idx) => (
+          {recession.items.map((item, idx) => {
+            // has_data false: `triggered` is a placeholder, show a dash instead of a check / cross.
+            const hasData = item.has_data !== false;
+            const triggered = hasData && item.triggered;
+            return (
             <div
               key={item.name}
               className={`grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-start gap-x-2.5 rounded-[2px] border ${cardPad}`}
               style={
-                item.triggered
+                triggered
                   ? {
                       borderColor: C.red,
                       borderWidth: 1,
@@ -166,24 +181,27 @@ export function RadarRecessionChecklistPanel({
                 </div>
               </div>
               <span className={`max-w-[10rem] pt-0.5 text-right font-mono font-light break-words ${valSize}`} style={{ color: C.soft }}>
-                {item.current_value}
+                {hasData ? item.current_value : "—"}
               </span>
               <span
                 className="flex h-6 w-6 shrink-0 items-center justify-center justify-self-end rounded-full border"
                 style={{
-                  borderColor: item.triggered ? C.red : C.green,
-                  color: item.triggered ? C.red : C.green,
+                  borderColor: !hasData ? C.borderSoft : triggered ? C.red : C.green,
+                  color: !hasData ? C.muted : triggered ? C.red : C.green,
                   background: "var(--nd-bg)",
                 }}
               >
-                {item.triggered ? (
+                {!hasData ? (
+                  <Minus className={iconClass} strokeWidth={2.5} aria-label="No data" />
+                ) : triggered ? (
                   <X className={iconClass} strokeWidth={2.5} aria-label="Triggered" />
                 ) : (
                   <Check className={iconClass} strokeWidth={2.5} aria-label="Not triggered" />
                 )}
               </span>
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-[13px] font-light" style={{ color: C.muted }}>
@@ -213,7 +231,7 @@ export function RadarCycleTimelinePanel({
       {timelineData.length > 0 ? (
         <div className="flex min-h-0 gap-1 sm:gap-2">
           <div
-            className="hidden shrink-0 self-center text-[9px] font-medium uppercase tracking-[0.12em] sm:block"
+            className="hidden shrink-0 self-center text-[11px] font-medium uppercase tracking-[0.12em] sm:block"
             style={{
               color: C.muted,
               writingMode: "vertical-rl",
@@ -233,9 +251,7 @@ export function RadarCycleTimelinePanel({
           </div>
         </div>
       ) : (
-        <div className="text-[13px]" style={{ color: C.muted }}>
-          No history.
-        </div>
+        <NextNoData />
       )}
     </div>
   );
@@ -260,7 +276,7 @@ export function RadarRecProbHistoryPanel({
       {recProbData.length > 0 ? (
         <div className="flex min-h-0 gap-1 sm:gap-2">
           <div
-            className="hidden shrink-0 self-center text-[9px] font-medium uppercase tracking-[0.12em] sm:block"
+            className="hidden shrink-0 self-center text-[11px] font-medium uppercase tracking-[0.12em] sm:block"
             style={{
               color: C.muted,
               writingMode: "vertical-rl",
@@ -280,9 +296,7 @@ export function RadarRecProbHistoryPanel({
           </div>
         </div>
       ) : (
-        <div className="text-[13px]" style={{ color: C.muted }}>
-          No history.
-        </div>
+        <NextNoData />
       )}
     </div>
   );
@@ -302,17 +316,25 @@ export function RadarTablesSection({
   const tactical = (
     <div style={{ ...surface, minHeight: 0 }}>
       <NextRadarSectionTitle>Tactical Asset Allocation by Cycle Phase</NextRadarSectionTitle>
-      <NextRadarTacticalTable palette={C} allocation={regime.tactical_allocation} currentPhase={regime.phase} />
+      {regime.insufficient_data ? (
+        <NextNoData />
+      ) : (
+        <NextRadarTacticalTable palette={C} allocation={regime.tactical_allocation} currentPhase={regime.phase ?? ""} />
+      )}
     </div>
   );
   const expected = (
     <div style={{ ...surface, minHeight: 0 }}>
       <NextRadarSectionTitle>Expected Returns</NextRadarSectionTitle>
-      <NextRadarExpectedReturnsTable
-        palette={C}
-        rows={regime.expected_returns}
-        currentPhase={regime.phase}
-      />
+      {regime.insufficient_data ? (
+        <NextNoData />
+      ) : (
+        <NextRadarExpectedReturnsTable
+          palette={C}
+          rows={regime.expected_returns}
+          currentPhase={regime.phase ?? ""}
+        />
+      )}
     </div>
   );
 

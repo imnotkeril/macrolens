@@ -51,7 +51,7 @@ export function MacroRatiosTfStrip({
           key={p.key}
           type="button"
           onClick={() => onSelect(p.key)}
-          className="rounded-[2px] px-2 py-1 text-[10px] font-medium transition-colors"
+          className="rounded-[2px] px-2 py-1 text-[11px] font-medium transition-colors"
           style={{
             border: `1px solid ${selectedKey === p.key ? "var(--nd-border)" : "transparent"}`,
             background: selectedKey === p.key ? "var(--nd-panel-soft)" : "transparent",
@@ -79,7 +79,7 @@ export function MacroRatiosPageStrip({
           key={p}
           type="button"
           onClick={() => onSelect(p)}
-          className="rounded-[2px] px-2.5 py-1 text-[10px] font-medium transition-colors"
+          className="rounded-[2px] px-2.5 py-1 text-[11px] font-medium transition-colors"
           style={{
             border: "1px solid transparent",
             background: page === p ? "var(--nd-panel)" : "transparent",
@@ -107,13 +107,13 @@ export function MacroRatioCardHeader({
     <div className="mb-1 flex min-h-[32px] shrink-0 items-start justify-between gap-2">
       <div className="min-w-0">
         <div
-          className="text-[10px] font-semibold uppercase leading-tight tracking-[0.08em]"
+          className="text-[11px] font-semibold uppercase leading-tight tracking-[0.08em]"
           style={{ color: "var(--nd-muted)" }}
         >
           {title}
         </div>
         {subtitle ? (
-          <div className="mt-0.5 text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--nd-soft)" }}>
+          <div className="mt-0.5 text-[11px] uppercase tracking-[0.1em]" style={{ color: "var(--nd-soft)" }}>
             {subtitle}
           </div>
         ) : null}
@@ -163,7 +163,7 @@ export function DualAxisMacroChart({
       {last ? (
         <div className="pointer-events-none absolute right-1 top-8 z-10 flex flex-col items-end gap-0.5">
           <div
-            className="rounded border px-1.5 py-0.5 font-mono text-[10px] tabular-nums"
+            className="rounded border px-1.5 py-0.5 font-mono text-[11px] tabular-nums"
             style={{
               borderColor: "var(--nd-border-soft)",
               background: "var(--nd-panel-soft)",
@@ -173,7 +173,7 @@ export function DualAxisMacroChart({
             {formatRight(last.y)}
           </div>
           <div
-            className="rounded border px-1.5 py-0.5 font-mono text-[10px] tabular-nums"
+            className="rounded border px-1.5 py-0.5 font-mono text-[11px] tabular-nums"
             style={{
               borderColor: "var(--nd-border-soft)",
               background: "var(--nd-panel-soft)",
@@ -185,13 +185,13 @@ export function DualAxisMacroChart({
         </div>
       ) : null}
       <div className="min-h-0 min-w-0 max-w-full w-full flex-1 overflow-hidden">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
           {/* Right margin must fit right YAxis (width 44) + ticks; 12px clipped the scale when tiles use overflow-hidden */}
           <ComposedChart data={data} margin={{ top: 10, right: 80, left: 10, bottom: 20 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
             <XAxis
               dataKey="date"
-              tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               minTickGap={28}
@@ -206,7 +206,7 @@ export function DualAxisMacroChart({
             <YAxis
               yAxisId="left"
               domain={leftDomain}
-              tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={40}
@@ -220,14 +220,14 @@ export function DualAxisMacroChart({
               yAxisId="right"
               orientation="right"
               domain={rightDomain}
-              tick={{ fill: "var(--nd-muted)", fontSize: 9 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={44}
               tickFormatter={(v) => formatRight(Number(v))}
             />
             <Tooltip
-              contentStyle={{ ...TIP, fontSize: 10 }}
+              contentStyle={{ ...TIP, fontSize: 11 }}
               labelFormatter={(v) => {
                 try {
                   return format(parseISO(String(v)), "MMM d, yyyy");
@@ -271,7 +271,7 @@ export function DualAxisMacroChart({
         </ResponsiveContainer>
       </div>
       {annotation ? (
-        <p className="mt-1 shrink-0 text-[8px] leading-snug" style={{ color: "var(--nd-muted)" }}>
+        <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
           {annotation}
         </p>
       ) : null}

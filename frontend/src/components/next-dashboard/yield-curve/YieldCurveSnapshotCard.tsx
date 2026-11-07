@@ -1,5 +1,6 @@
 "use client";
 
+import { NextNoData } from "@/components/next-dashboard/NextNoData";
 import { useMemo } from "react";
 import {
   CartesianGrid,
@@ -39,7 +40,7 @@ function MetricBlock({
 }) {
   return (
     <div className="min-w-0 text-center">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--nd-muted)" }}>
         {label}
       </div>
       <div className="mt-1 text-[15px] font-semibold tabular-nums" style={{ color: valueColor }}>
@@ -155,7 +156,7 @@ export function YieldCurveSnapshotCard({
         } ${fillHeight ? "h-full" : ""}`}
         style={{ color: "var(--nd-muted)", background: "rgba(255,255,255,0.02)" }}
       >
-        No yield curve data.
+        <NextNoData compact />
       </div>
     );
   }
@@ -174,7 +175,7 @@ export function YieldCurveSnapshotCard({
         className={`${chartAreaClass} ${embedChrome ? "flex min-h-0 min-w-0 flex-col" : ""} min-w-0`}
       >
         <div className={embedChrome ? "min-h-0 w-full flex-1" : "h-full w-full"}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer initialDimension={{ width: 320, height: 200 }} width="100%" height="100%">
           <LineChart
             data={chartData}
             margin={
@@ -186,13 +187,13 @@ export function YieldCurveSnapshotCard({
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} strokeDasharray="0" />
             <XAxis
               dataKey="tenor"
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
               domain={yDomain}
-              tick={{ fill: "var(--nd-muted)", fontSize: 10 }}
+              tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={40}
@@ -260,7 +261,7 @@ export function YieldCurveSnapshotCard({
         </div>
         {embedChrome ? (
           <div
-            className="flex shrink-0 flex-wrap justify-center gap-x-5 gap-y-1 px-1 pb-0 pt-2 text-[10px] uppercase tracking-[0.06em]"
+            className="flex shrink-0 flex-wrap justify-center gap-x-5 gap-y-1 px-1 pb-0 pt-2 text-[11px] uppercase tracking-[0.06em]"
             style={{ color: "var(--nd-soft)" }}
           >
             <span className="inline-flex items-center gap-1.5">
@@ -296,7 +297,7 @@ export function YieldCurveSnapshotCard({
               badge={
                 inverted3m10 ? (
                   <div
-                    className="mt-1 inline-block rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                    className="mt-1 inline-block rounded px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide"
                     style={{ background: String(C.red), color: "#fff" }}
                   >
                     Inverted

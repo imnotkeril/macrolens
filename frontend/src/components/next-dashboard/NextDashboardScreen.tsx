@@ -88,6 +88,11 @@ export function NextDashboardScreen({
   const handleRefresh = mode === "report" ? () => {} : runDataRefresh;
   const queryClient = useQueryClient();
   const {
+    regimeEmpty,
+    navigatorEmpty,
+    fedEmpty,
+    yieldEmpty,
+    signalsEmpty,
     queryErrors,
     navigatorQ,
     regimeQ,
@@ -123,7 +128,7 @@ export function NextDashboardScreen({
     alloc,
     geographySource,
   } = useDashboardData();
-  const activeRegimeLabel = compactRegimeLabel(activeRegime);
+  const activeRegimeLabel = activeRegime ? compactRegimeLabel(activeRegime) : null;
 
   const geographyRows = useMemo(() => {
     const base = Object.entries(geographySource).slice(0, 5);
@@ -202,9 +207,11 @@ export function NextDashboardScreen({
               }
               confidence={confidence}
               confidenceText={fmtPct(confidence, 0)}
+              navigatorEmpty={navigatorEmpty}
+              signalsEmpty={signalsEmpty}
               signals={signals}
               activeRegimeLabel={activeRegimeLabel}
-              activeRegimeColor={regimeAccent(activeRegimeLabel)}
+              activeRegimeColor={regimeAccent(activeRegimeLabel ?? "")}
               inflationLatest={inflationLatest}
               coreInflationLatest={coreInflationLatest}
               inflationDelta={inflationDelta}
@@ -221,6 +228,9 @@ export function NextDashboardScreen({
             <DashboardMiddleRowSection
               quadPanelStyle={nextPanelDashboardQuadStyle(C)}
               colors={C}
+              regimeEmpty={regimeEmpty}
+              fedEmpty={fedEmpty}
+              yieldEmpty={yieldEmpty}
               recessionProbPct={recessionProbPct}
               recessionRisk={recessionRisk}
               recessionModelRows={recessionModelRows}
@@ -229,12 +239,14 @@ export function NextDashboardScreen({
               categories={categories}
               fedPolicy={fedPolicy}
               fedRateVsNeutralPp={fedRateVsNeutralPp}
-              fedStance={fedQ.data?.stance ?? "Moderately Easy"}
+              fedStance={fedQ.data?.stance ?? null}
               fedRateSeries={fedRateSeries}
-              rateDirection={fedQ.data?.rate_direction ?? "Paused"}
-              balanceSheetDirection={fedQ.data?.balance_sheet_direction ?? "QT"}
-              curvePatternLabel={formatCurvePatternLabel(curveDynamicsQ.data?.pattern)}
-              curvePatternTitle={curveDynamicsQ.data?.description ?? ""}
+              rateDirection={fedQ.data?.rate_direction ?? null}
+              balanceSheetDirection={fedQ.data?.balance_sheet_direction ?? null}
+              curvePatternLabel={
+                curveDynamicsQ.data?.insufficient_data ? "—" : formatCurvePatternLabel(curveDynamicsQ.data?.pattern)
+              }
+              curvePatternTitle={curveDynamicsQ.data?.insufficient_data ? "" : curveDynamicsQ.data?.description ?? ""}
               yieldCurveSnapshot={yieldCurveQ.data}
               yieldHistory={yieldHistoryQ.data}
               spread2y10yText={formatSpread2y10y(yieldCurveQ.data)}
@@ -251,6 +263,7 @@ export function NextDashboardScreen({
 
             <DashboardRecommendationsSection
               colors={C}
+              empty={navigatorEmpty}
               factors={
                 factors.length
                   ? factors.map((f) => ({ name: f.factor, tilt: normalizeTiltLabel(f.weight), color: tiltColor(f.weight) }))
@@ -277,10 +290,11 @@ export function NextDashboardScreen({
                 panelStyle={nextPanelFillBelowChromeStyle(C)}
                 colors={C}
                 fedPolicy={fedPolicy}
-                fedStance={fedQ.data?.stance ?? "Moderately Easy"}
+                fedEmpty={fedEmpty}
+                fedStance={fedQ.data?.stance ?? null}
                 fedRateSeries={fedRateSeries}
-                rateDirection={fedQ.data?.rate_direction ?? "Paused"}
-                balanceSheetDirection={fedQ.data?.balance_sheet_direction ?? "QT"}
+                rateDirection={fedQ.data?.rate_direction ?? null}
+                balanceSheetDirection={fedQ.data?.balance_sheet_direction ?? null}
                 formatNumber={fmtNumber}
                 formatPercent={fmtPct}
                 RiskSegmentDonutComponent={RiskSegmentDonut}
