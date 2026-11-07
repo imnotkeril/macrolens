@@ -111,8 +111,15 @@ export interface FomcMeetingProb {
 }
 
 export interface RatePathPoint {
+  label?: string | null;
   fed_median: number;
-  market: number;
+  /** Market-implied rate from fed funds futures; null when the curve does not reach that date. */
+  market: number | null;
+  /** SEP central tendency / full range of year-end projections (FRED). */
+  ct_low?: number | null;
+  ct_high?: number | null;
+  range_low?: number | null;
+  range_high?: number | null;
 }
 
 export interface FomcDashboard {

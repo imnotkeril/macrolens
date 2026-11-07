@@ -4,6 +4,8 @@ from datetime import date, timedelta
 import pandas as pd
 import yfinance as yf
 
+from app.services.fed_futures import db_symbol, zq_symbol
+
 logger = logging.getLogger(__name__)
 
 YAHOO_MARKET_SERIES = {
@@ -190,6 +192,34 @@ class YahooClient:
                 result[name] = self.get_series(symbol, start=start)
             except Exception:
                 logger.warning("Could not fetch breadth series %s (%s)", name, symbol)
+        return result
+
+    def get_zq_curve(self, months_ahead: int = 18) -> dict[str, pd.Series]:
+        """Monthly 30-day fed funds futures (current month + `months_ahead`), keyed ZQ_YYYYMM.
+
+        Contracts Yahoo does not list are simply absent from the result.
+        """
+        today = date.today()
+        wanted: dict[str, str] = {}
+        y, m = today.year, today.month
+        for _ in range(months_ahead + 1):
+            wanted[zq_symbol(y, m)] = db_symbol(y, m)
+            y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+        try:
+            df = yf.download(list(wanted), period="1mo", progress=False, threads=True, timeout=30)
+            close = df["Close"] if df is not None and not df.empty else None
+        except Exception:
+            logger.warning("Could not download ZQ curve", exc_info=True)
+            return {}
+        if close is None:
+            return {}
+        result: dict[str, pd.Series] = {}
+        for yahoo_sym, name in wanted.items():
+            if yahoo_sym in close.columns:
+                s = close[yahoo_sym].dropna()
+                if not s.empty:
+                    s.index = pd.to_datetime(s.index).tz_localize(None)
+                    result[name] = s
         return result
 
     def get_macro_etf_data(self, start: str | None = None) -> dict[str, pd.Series]:

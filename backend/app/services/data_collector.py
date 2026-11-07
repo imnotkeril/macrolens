@@ -649,6 +649,19 @@ class DataCollector:
                     )
                     await db.execute(stmt)
 
+            # Monthly fed funds futures (ZQ_YYYYMM): market-implied policy path for the Fed page.
+            for symbol, series in self.yahoo.get_zq_curve().items():
+                for ts, val in series.items():
+                    d = ts.date() if hasattr(ts, "date") else ts
+                    await db.execute(
+                        pg_insert(MarketData)
+                        .values(date=d, symbol=symbol, value=float(val), change_pct=None)
+                        .on_conflict_do_update(
+                            constraint="uq_market_date_symbol",
+                            set_={"value": float(val)},
+                        )
+                    )
+
             # Full Yahoo history for macro symbols that only have ~14d from the loop above (IJH, BDIY, DBC, ZB_FUT).
             await self._backfill_sparse_yahoo_macro_symbols(
                 db,
