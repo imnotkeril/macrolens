@@ -170,8 +170,8 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
 
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
             <p className="max-w-[min(100%,52rem)] text-[12px] leading-snug" style={{ color: "var(--nd-muted)" }}>
-              Market breadth — NYSE / S&P 500 participation (MMTH, MMFI, MMTW from StockCharts-style Yahoo
-              symbols). McClellan Summation (NYSI) used where cumulative NYSE A/D is unavailable on this data path.
+              Market breadth — S&P 500 participation, computed daily from the 500 constituents' prices (% above
+              200/50/20-day MA, new highs/lows, McClellan oscillator and Summation Index). Closing-price basis; current members only.
             </p>
             <MarketBreadthTfStrip selectedKey={tfKey} onSelect={setTfKey} />
           </div>
@@ -192,7 +192,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
                 <ChartCardHeader
                   title="SPX price"
                   subtitle="Weekly"
-                  hint="S&P 500 index with 200-day moving average. Up/down volume sub-panel requires separate NYSE advance/decline volume feed (not in current Yahoo breadth set)."
+                  hint="S&P 500 index with 200-day moving average. Up/down volume sub-panel needs an advance/decline volume feed (not computed here)."
                 />
                 <div className="flex min-h-0 flex-1 flex-col">
                 <SpxWeeklyPricePanel
@@ -260,14 +260,14 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
                   title="New highs vs new lows"
-                  subtitle="Daily · NYSE"
-                  hint="NYSE new highs (up) vs new lows (down). Combined tape breadth."
+                  subtitle="Daily · S&P 500"
+                  hint="S&P 500 stocks closing at a 52-week high (up) vs low (down)."
                 />
                 <div className="flex min-h-0 flex-1 flex-col">
                   <HighsLowsBarChart data={prepared.highsLows} colors={{ high: String(C.green), low: String(C.red) }} />
                 </div>
                 <p className="mt-1 shrink-0 text-[11px]" style={{ color: "var(--nd-muted)" }}>
-                  Source: NYSE (^NYHGH / ^NYLOW) via Yahoo
+                  Source: computed from S&P 500 constituent closes (Yahoo prices)
                 </p>
               </div>
 
@@ -275,7 +275,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
                 <ChartCardHeader
                   title="Breadth vs SPX"
                   subtitle="Daily · NYSI + SPX"
-                  hint="McClellan Summation Index (NYSI) vs S&P 500 close. Divergence (SPX up, NYSI down) often precedes breadth deterioration — classic warning when cumulative NYSE A/D is unavailable here."
+                  hint="McClellan Summation Index (NYSI) vs S&P 500 close. Divergence (SPX up, NYSI down) often precedes breadth deterioration — classic warning. Built from S&P 500 advancers/decliners."
                 />
                 <div className="flex min-h-0 flex-1 flex-col">
                   <NysiVersusSpxChart
@@ -284,7 +284,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
                   />
                 </div>
                 <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
-                  NYSI is a cumulative breadth oscillator — proxy when raw NYSE A/D line is not loaded.
+                  NYSI is the running total of the McClellan oscillator (S&P 500 advancers vs decliners).
                 </p>
               </div>
 
@@ -293,7 +293,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
                 <ChartCardHeader
                   title="US stocks total volume"
                   subtitle="Daily · TVOL"
-                  hint="NYSE consolidated tape volume (TVOL.US)."
+                  hint="Combined daily share volume of the S&P 500 constituents (TVOL.US)."
                 />
                 <div className="flex min-h-0 flex-1 flex-col">
                   <TvolBarChart rows={prepared.tvol} avgLine={prepared.tvolAvg} color={String(C.blue)} />
