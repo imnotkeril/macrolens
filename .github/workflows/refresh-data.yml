@@ -1,0 +1,64 @@
+name: Refresh data
+
+# The free HF Space sleeps, so its in-process scheduler is unreliable. This job wakes the
+# Space, starts the refresh and waits for it to finish. Needs repo secret ADMIN_API_KEY.
+
+on:
+  schedule:
+    - cron: "30 23 * * 1-5" # weekdays, after the US close (UTC)
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BACKEND_URL: ${{ vars.BACKEND_URL || 'https://imnotkeril-macrolens-api.hf.space' }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+    steps:
+      - name: Check secret
+        run: |
+          if [ -z "$ADMIN_API_KEY" ]; then echo "ADMIN_API_KEY repo secret is not set"; exit 1; fi
+
+      - name: Wake the Space
+        run: |
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$BACKEND_URL/api/health" || true)
+            echo "health attempt $i: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 15
+          done
+          echo "Space did not wake up"; exit 1
+
+      - name: Start refresh
+        run: |
+          code=$(curl -s -o resp.txt -w '%{http_code}' --max-time 60 -X POST \
+            -H "X-API-Key: $ADMIN_API_KEY" "$BACKEND_URL/api/data/refresh")
+          echo "refresh: $code"; cat resp.txt; echo
+          # 409 = a refresh is already running; just wait for it below
+          [ "$code" = "200" ] || [ "$code" = "202" ] || [ "$code" = "409" ] || exit 1
+
+      - name: Wait for completion
+        run: |
+          for i in $(seq 1 100); do
+            sleep 30
+            body=$(curl -s --max-time 30 "$BACKEND_URL/api/data/refresh-progress" || true)
+            rc=0
+            python3 - "$body" <<'EOF' || rc=$?
+          import json, sys
+          try:
+              p = json.loads(sys.argv[1])
+          except Exception:
+              print("progress: unreadable, retrying"); sys.exit(2)
+          print(f"progress: {p.get('percent')}% {p.get('message')}")
+          if p.get("done"):
+              err = p.get("error")
+              if err:
+                  print("refresh finished with errors:", err); sys.exit(1)
+              sys.exit(0)
+          sys.exit(2)
+          EOF
+            if [ $rc -eq 0 ]; then exit 0; fi
+            if [ $rc -eq 1 ]; then exit 1; fi
+          done
+          echo "timed out waiting for refresh"; exit 1
