@@ -14,6 +14,7 @@ from app.models.fed_policy import BalanceSheet, FedRate
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.market_data import MarketData, YieldData
 from app.services.data_sources import FredAdapter, SourceRouter, YahooAdapter
+from app.services.fed_documents import ingest_fed_documents
 from app.services.fed_press_service import backfill_fomc_signal_phrases
 from app.services.fred_client import (
     MARKET_SERIES,
@@ -306,6 +307,15 @@ class DataCollector:
                     logger.info("FOMC press excerpts backfilled: %s rows", n)
             except Exception:
                 logger.exception("FOMC signal phrase backfill failed")
+
+            try:
+                # Statements/minutes full text (newest first, bounded per run; backlog fills over days).
+                docs = await ingest_fed_documents(db, max_new=12)
+                if docs:
+                    logger.info("FOMC documents ingested: %s", docs)
+            except Exception:
+                await db.rollback()
+                logger.exception("FOMC document ingest failed")
 
             await db.commit()
         logger.info("Fed rate collection complete")
