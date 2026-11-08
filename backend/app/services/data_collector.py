@@ -10,7 +10,7 @@ from app.config import get_settings
 from app.database import async_session
 from app.models.economic_calendar import SourceHealthMetric
 from app.models.factor import FactorReturn, SectorPerformance
-from app.models.fed_policy import BalanceSheet, FedRate
+from app.models.fed_policy import BalanceSheet, FedDocument, FedRate
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.market_data import MarketData, YieldData
 from app.services.breadth_calculator import rebase_summation
@@ -311,7 +311,8 @@ class DataCollector:
 
             try:
                 # Statements/minutes full text (newest first, bounded per run; backlog fills over days).
-                docs = await ingest_fed_documents(db, max_new=12)
+                have_docs = await db.scalar(select(func.count()).select_from(FedDocument))
+                docs = await ingest_fed_documents(db, max_new=150 if not have_docs else 12)
                 if docs:
                     logger.info("FOMC documents ingested: %s", docs)
             except Exception:
@@ -613,10 +614,21 @@ class DataCollector:
                     await db.execute(stmt)
 
             # Breadth indicators (MMTW, MMFI, MMTH, PCC, NYHGH, NYLOW)
-            breadth = self.yahoo.get_breadth_data(start=yahoo_start)
+            # Self-healing: with no stored history, load the full window once (first run after
+            # deploy); afterwards only the last days.
+            stored_breadth = await db.scalar(
+                select(func.count()).select_from(MarketData).where(MarketData.symbol == "MMTH")
+            )
+            full_breadth_load = (stored_breadth or 0) < 250
+            breadth = self.yahoo.get_breadth_data(start=None if full_breadth_load else yahoo_start)
             # NYSI is a running total: continue it from the last stored level instead of
             # restarting the sum at the window start (which would shift it every day).
-            if "NYSI" in breadth and "NYMO" in breadth and not breadth["NYMO"].empty:
+            if (
+                not full_breadth_load
+                and "NYSI" in breadth
+                and "NYMO" in breadth
+                and not breadth["NYMO"].empty
+            ):
                 first_day = breadth["NYMO"].index.min().date()
                 anchor = await db.scalar(
                     select(MarketData.value)
