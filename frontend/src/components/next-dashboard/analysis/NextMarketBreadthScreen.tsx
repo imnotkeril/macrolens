@@ -170,7 +170,7 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
 
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
             <p className="max-w-[min(100%,52rem)] text-[12px] leading-snug" style={{ color: "var(--nd-muted)" }}>
-              Market breadth — S&P 500 participation, computed daily from the 500 constituents' prices (% above
+              Market breadth — S&P 500 participation, computed daily from the prices of the 500 constituents (% above
               200/50/20-day MA, new highs/lows, McClellan oscillator and Summation Index). Closing-price basis; current members only.
             </p>
             <MarketBreadthTfStrip selectedKey={tfKey} onSelect={setTfKey} />
