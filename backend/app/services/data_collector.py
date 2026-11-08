@@ -21,6 +21,7 @@ from app.services.fred_client import (
     MARKET_SERIES,
     FredClient,
 )
+from app.services.news_ingestion import ingest_news
 from app.services.yahoo_client import YAHOO_MACRO_ETFS, YahooClient
 
 logger = logging.getLogger(__name__)
@@ -321,6 +322,13 @@ class DataCollector:
 
             await db.commit()
         logger.info("Fed rate collection complete")
+
+    async def collect_news_data(self):
+        """News from official feeds and aggregators into `news_items` (deduplicated by URL)."""
+        async with async_session() as db:
+            stored = await ingest_news(db)
+            await db.commit()
+        logger.info("News ingested (new items per source): %s", stored)
 
     async def _load_historical_fed_data(self):
         async with async_session() as db:
