@@ -24,6 +24,7 @@ from app.models.intelligence import (
 )
 from app.models.market_data import MarketData, YieldData
 from app.models.news import NewsItem
+from app.models.tone import ToneScore
 
 __all__ = [
     "ForecastLabPredictionLog",
@@ -34,6 +35,7 @@ __all__ = [
     "FedRate",
     "FedDocument",
     "NewsItem",
+    "ToneScore",
     "BalanceSheet",
     "YieldData",
     "MarketData",

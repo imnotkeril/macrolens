@@ -22,6 +22,7 @@ from app.services.fred_client import (
     FredClient,
 )
 from app.services.news_ingestion import ingest_news
+from app.services.tone_scoring import score_pending
 from app.services.yahoo_client import YAHOO_MACRO_ETFS, YahooClient
 
 logger = logging.getLogger(__name__)
@@ -329,6 +330,12 @@ class DataCollector:
             stored = await ingest_news(db)
             await db.commit()
         logger.info("News ingested (new items per source): %s", stored)
+
+    async def collect_tone_data(self):
+        """Tone of new news (FinBERT) and FOMC documents (FOMC-RoBERTa), within a time budget."""
+        async with async_session() as db:
+            done = await score_pending(db)
+        logger.info("Tone scored (items): %s", done)
 
     async def _load_historical_fed_data(self):
         async with async_session() as db:
