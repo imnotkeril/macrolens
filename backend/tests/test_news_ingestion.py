@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.models.news import NewsItem
 from app.services.news_ingestion import (
     classify_topic,
+    keep_relevant,
     normalize_url,
     parse_finnhub,
     parse_gdelt,
@@ -129,3 +130,20 @@ def test_upsert_targets_unique_url_constraint():
     )
     sql = str(stmt.compile(dialect=postgresql.dialect()))
     assert "ON CONFLICT ON CONSTRAINT uq_news_url_hash DO NOTHING" in sql
+
+
+def test_topic_uses_whole_words_not_substrings():
+    assert classify_topic("Pirates attack ship near Yemen") == "other"
+    assert classify_topic("Goldman Sachs names new CFO") == "other"
+    assert classify_topic("Fed raises rates again") == "rates"
+    assert classify_topic("Treasury yields climb") == "rates"
+    assert classify_topic("Gold hits record as dollar slides") == "markets"
+    assert classify_topic("Trump tariffs hit the economy") == "growth"
+
+
+def test_keep_relevant_filters_only_general_news_sources():
+    drafts = [{"topic": "other", "title": "a"}, {"topic": "rates", "title": "b"}]
+    assert [d["title"] for d in keep_relevant("finnhub", drafts)] == ["b"]
+    assert [d["title"] for d in keep_relevant("gdelt", drafts)] == ["b"]
+    assert len(keep_relevant("fed_speeches", drafts)) == 2  # official sources keep everything
+    assert len(keep_relevant("marketaux", drafts)) == 2
