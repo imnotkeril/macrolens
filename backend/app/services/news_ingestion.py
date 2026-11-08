@@ -44,6 +44,9 @@ FINNHUB_URL = "https://finnhub.io/api/v1/news"
 GDELT_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 GDELT_QUERY = '("federal reserve" OR inflation OR "interest rates" OR recession) sourcelang:english'
 
+# General-news aggregators carry lots of non-economic stories; keep only those that match a topic.
+RELEVANCE_FILTERED_SOURCES = ("finnhub", "gdelt")
+
 _TRACKING_PARAMS = ("utm_", "fbclid", "gclid", "mc_", "ref")
 
 _TOPIC_RULES: list[tuple[str, tuple[str, ...]]] = [
@@ -64,6 +67,9 @@ _TOPIC_RULES: list[tuple[str, tuple[str, ...]]] = [
             "treasury",
             "powell",
             "lagarde",
+            "the fed",
+            "rates",
+            "bond yields",
         ),
     ),
     ("jobs", ("jobs", "payroll", "unemployment", "employment", "labor market", "jobless")),
@@ -79,9 +85,29 @@ _TOPIC_RULES: list[tuple[str, tuple[str, ...]]] = [
             "housing",
             "trade in goods",
             "trade deficit",
+            "economy",
+            "economic",
+            "tariff",
         ),
     ),
-    ("markets", ("stocks", "s&p 500", "nasdaq", "dow", "oil", "dollar", "earnings", "bond")),
+    (
+        "markets",
+        (
+            "stocks",
+            "s&p 500",
+            "nasdaq",
+            "dow jones",
+            "wall street",
+            "oil prices",
+            "crude",
+            "gold",
+            "dollar",
+            "earnings",
+            "bond",
+            "shares fall",
+            "shares rise",
+        ),
+    ),
 ]
 
 
@@ -101,11 +127,18 @@ def url_hash(url: str) -> str:
     return hashlib.sha256(normalize_url(url).encode("utf-8")).hexdigest()
 
 
+# Whole-word match (optional plural) so "rates" does not fire inside "pirates"/"operates".
+_TOPIC_PATTERNS = [
+    (topic, re.compile(r"\b(?:" + "|".join(re.escape(w) for w in words) + r")s?\b"))
+    for topic, words in _TOPIC_RULES
+]
+
+
 def classify_topic(title: str, summary: str | None = None) -> str:
     """Cheap keyword topic tag; the tone model replaces this later."""
     text = f"{title} {summary or ''}".lower()
-    for topic, words in _TOPIC_RULES:
-        if any(w in text for w in words):
+    for topic, pattern in _TOPIC_PATTERNS:
+        if pattern.search(text):
             return topic
     return "other"
 
@@ -255,6 +288,13 @@ def parse_gdelt(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def keep_relevant(source: str, drafts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop items that matched no macro topic, for general-news sources only."""
+    if source not in RELEVANCE_FILTERED_SOURCES:
+        return drafts
+    return [d for d in drafts if d["topic"] != "other"]
+
+
 async def _fetch_rss(client: httpx.AsyncClient) -> dict[str, list[dict[str, Any]]]:
     result: dict[str, list[dict[str, Any]]] = {}
     for source, url in RSS_FEEDS.items():
@@ -351,6 +391,7 @@ async def ingest_news(db: AsyncSession, *, now: datetime | None = None) -> dict[
     stored: dict[str, int] = {}
     seen: set[str] = set()
     for source, drafts in collected.items():
+        drafts = keep_relevant(source, drafts)
         fresh = []
         for d in drafts:
             if d["url_hash"] in seen:
