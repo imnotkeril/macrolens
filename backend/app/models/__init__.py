@@ -23,6 +23,7 @@ from app.models.intelligence import (
     RetrievalTrace,
 )
 from app.models.market_data import MarketData, YieldData
+from app.models.news import NewsItem
 
 __all__ = [
     "ForecastLabPredictionLog",
@@ -32,6 +33,7 @@ __all__ = [
     "IndicatorValue",
     "FedRate",
     "FedDocument",
+    "NewsItem",
     "BalanceSheet",
     "YieldData",
     "MarketData",

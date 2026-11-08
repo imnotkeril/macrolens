@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://macrolens:macrolens_secret@localhost:5432/macrolens"
     redis_url: str = "redis://localhost:6379/0"
     fred_api_key: str = ""
+    # News aggregators (free keys); empty = that source is skipped.
+    finnhub_api_key: str = ""
+    marketaux_api_key: str = ""
 
     # CORS: comma-separated allowed origins. Dev default = localhost; prod must set the
     # frontend origin (e.g. https://macrolens.vercel.app). "*" allows all (disables credentials).

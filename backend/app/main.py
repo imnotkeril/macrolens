@@ -15,6 +15,7 @@ from app.api import (
     indicators,
     market,
     navigator,
+    news,
     regime,
     yield_curve,
 )
@@ -133,6 +134,7 @@ app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
 app.include_router(calendar.router, prefix="/api/calendar", tags=["Calendar"])
 app.include_router(calendar_canary.router, prefix="/api/calendar-canary", tags=["Calendar Canary"])
 app.include_router(market.router, prefix="/api/market", tags=["Market"])
+app.include_router(news.router, prefix="/api/news", tags=["News"])
 app.include_router(regime.router, prefix="/api/regime", tags=["Regime"])
 app.include_router(data.router, prefix="/api/data", tags=["Data"])
 if _ml_available and ml is not None:
