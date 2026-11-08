@@ -4,6 +4,7 @@ from datetime import date, timedelta
 import pandas as pd
 import yfinance as yf
 
+from app.services.breadth_calculator import get_breadth_series
 from app.services.fed_futures import db_symbol, zq_symbol
 
 logger = logging.getLogger(__name__)
@@ -46,19 +47,6 @@ YAHOO_FACTOR_ETFS = {
 
 YAHOO_EXTRA = {
     "MOVE": "^MOVE",
-}
-
-YAHOO_BREADTH_SERIES = {
-    "MMTW": "^MMTW",  # % of S&P 500 stocks above 20-day MA
-    "MMFI": "^MMFI",  # % of S&P 500 stocks above 50-day MA
-    "MMTH": "^MMTH",  # % of S&P 500 stocks above 200-day MA
-    "NAA200": "^NAA200",  # % of Nasdaq stocks above 200-day MA
-    "NAA50": "^NAA50",  # % of Nasdaq stocks above 50-day MA
-    "PCC": "^PCC",  # CBOE Put/Call Ratio
-    "NYHGH": "^NYHGH",  # NYSE New Highs
-    "NYLOW": "^NYLOW",  # NYSE New Lows
-    "NYMO": "^NYMO",  # McClellan Oscillator
-    "NYSI": "^NYSI",  # McClellan Summation Index
 }
 
 YAHOO_MACRO_ETFS = {
@@ -186,13 +174,12 @@ class YahooClient:
         return result
 
     def get_breadth_data(self, start: str | None = None) -> dict[str, pd.Series]:
-        result = {}
-        for name, symbol in YAHOO_BREADTH_SERIES.items():
-            try:
-                result[name] = self.get_series(symbol, start=start)
-            except Exception:
-                logger.warning("Could not fetch breadth series %s (%s)", name, symbol)
-        return result
+        """S&P 500 breadth computed from constituent prices (Yahoo has no breadth symbols)."""
+        try:
+            return get_breadth_series(start=start, years=self._years)
+        except Exception:
+            logger.exception("Breadth computation failed")
+            return {}
 
     def get_zq_curve(self, months_ahead: int = 18) -> dict[str, pd.Series]:
         """Monthly 30-day fed funds futures (current month + `months_ahead`), keyed ZQ_YYYYMM.

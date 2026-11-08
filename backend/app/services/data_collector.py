@@ -13,6 +13,7 @@ from app.models.factor import FactorReturn, SectorPerformance
 from app.models.fed_policy import BalanceSheet, FedRate
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.market_data import MarketData, YieldData
+from app.services.breadth_calculator import rebase_summation
 from app.services.data_sources import FredAdapter, SourceRouter, YahooAdapter
 from app.services.fed_documents import ingest_fed_documents
 from app.services.fed_press_service import backfill_fomc_signal_phrases
@@ -613,6 +614,20 @@ class DataCollector:
 
             # Breadth indicators (MMTW, MMFI, MMTH, PCC, NYHGH, NYLOW)
             breadth = self.yahoo.get_breadth_data(start=yahoo_start)
+            # NYSI is a running total: continue it from the last stored level instead of
+            # restarting the sum at the window start (which would shift it every day).
+            if "NYSI" in breadth and "NYMO" in breadth and not breadth["NYMO"].empty:
+                first_day = breadth["NYMO"].index.min().date()
+                anchor = await db.scalar(
+                    select(MarketData.value)
+                    .where(MarketData.symbol == "NYSI", MarketData.date < first_day)
+                    .order_by(MarketData.date.desc())
+                    .limit(1)
+                )
+                if anchor is None:
+                    breadth.pop("NYSI")
+                else:
+                    breadth["NYSI"] = rebase_summation(breadth["NYMO"], float(anchor))
             for symbol, series in breadth.items():
                 for i, (ts, val) in enumerate(series.items()):
                     d = ts.date() if hasattr(ts, "date") else ts
@@ -1061,7 +1076,7 @@ class DataCollector:
                     )
                     await db.execute(stmt)
             await db.commit()
-        logger.info("Historical breadth data loaded (MMTW, MMFI, MMTH, PCC, NYHGH, NYLOW)")
+        logger.info("Historical breadth data loaded (S&P 500 computed: %s)", ", ".join(breadth))
 
     async def _load_historical_macro_etf_data(self):
         async with async_session() as db:
