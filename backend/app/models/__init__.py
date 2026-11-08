@@ -1,7 +1,7 @@
 from app.models.alert import Alert
 from app.models.economic_calendar import EconomicCalendarEvent, SourceHealthMetric
 from app.models.factor import FactorReturn, SectorPerformance
-from app.models.fed_policy import BalanceSheet, FedRate
+from app.models.fed_policy import BalanceSheet, FedDocument, FedRate
 from app.models.forecast_lab import ForecastLabPredictionLog, RecessionLabel, RegimeHistoryMonthly
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.intelligence import (
@@ -31,6 +31,7 @@ __all__ = [
     "Indicator",
     "IndicatorValue",
     "FedRate",
+    "FedDocument",
     "BalanceSheet",
     "YieldData",
     "MarketData",

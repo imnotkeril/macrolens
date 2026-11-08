@@ -56,8 +56,15 @@ class FomcMeetingProb(BaseModel):
 
 
 class RatePathPoint(BaseModel):
+    label: str | None = None
     fed_median: float
-    market: float
+    #: Market-implied rate (fed funds futures) on the target-midpoint scale; None if not priced.
+    market: float | None = None
+    #: SEP central tendency and full range of year-end projections (FRED), when available.
+    ct_low: float | None = None
+    ct_high: float | None = None
+    range_low: float | None = None
+    range_high: float | None = None
 
 
 class FomcDashboardResponse(BaseModel):
@@ -65,7 +72,7 @@ class FomcDashboardResponse(BaseModel):
     rate_path: dict[str, RatePathPoint]
     current_rate: float
     forward_rate: float | None
-    meetings_source: str | None = None  # "cme_fedwatch" | "zq_heuristic"
+    meetings_source: str | None = None  # "cme_fedwatch" | "zq_futures" | "zq_heuristic"
     rate_path_source: str | None = None  # "fred_sep" | "extrapolation"
 
 

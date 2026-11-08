@@ -26,9 +26,11 @@ export function FedPolicyFomcColumn({
   const src =
     usable.length > 0 && meetingsSource === "cme_fedwatch"
       ? "CME FedWatch"
-      : meetingsSource === "zq_heuristic"
-        ? "ZQ heuristic (fallback)"
-        : null;
+      : usable.length > 0 && meetingsSource === "zq_futures"
+        ? "Fed funds futures (ZQ), derived"
+        : meetingsSource === "zq_heuristic"
+          ? "ZQ heuristic (fallback)"
+          : null;
   return (
     <div className="flex min-h-0 flex-col gap-3 xl:col-span-5 print:col-span-5" style={panelStyle}>
       <div>

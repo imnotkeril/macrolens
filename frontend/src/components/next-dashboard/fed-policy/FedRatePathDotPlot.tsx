@@ -18,8 +18,7 @@ import type { FomcDashboard } from "@/types";
 
 type Palette = NextShellThemeContextValue["colors"];
 
-const RATE_PATH_ORDER = ["now", "q2_26", "q4_26", "2027", "lt"] as const;
-const X_LABELS = ["Now", "Q2 26", "Q4 26", "2027", "LT r*"] as const;
+const RATE_PATH_ORDER = ["now", "y0", "y1", "y2", "lt"] as const;
 
 const rechartsTooltipStyle = {
   backgroundColor: "var(--nd-panel-soft)",
@@ -32,44 +31,45 @@ const rechartsTooltipStyle = {
 type DotRow = { x: number; y: number };
 
 function buildSeries(fomc: FomcDashboard): {
-  fomcMembers: DotRow[];
+  ctPoints: DotRow[];
+  rangePoints: DotRow[];
   fedMedian: DotRow[];
   market: DotRow[];
+  xLabels: string[];
   yDomain: [number, number];
 } {
-  const fomcMembers: DotRow[] = [];
+  const ctPoints: DotRow[] = [];
+  const rangePoints: DotRow[] = [];
   const fedMedian: DotRow[] = [];
   const market: DotRow[] = [];
+  const xLabels: string[] = [];
   const ys: number[] = [];
 
-  RATE_PATH_ORDER.forEach((key, idx) => {
+  RATE_PATH_ORDER.forEach((key) => {
     const pt = fomc.rate_path[key];
     if (!pt) return;
-    const fed = pt.fed_median;
-    const mkt = pt.market;
-    ys.push(fed, mkt);
+    const idx = xLabels.length;
+    xLabels.push(pt.label ?? key);
+    fedMedian.push({ x: idx, y: pt.fed_median });
+    ys.push(pt.fed_median);
 
-    if (key === "lt") {
-      fedMedian.push({ x: idx, y: fed });
-      market.push({ x: idx + 0.02, y: mkt });
-      return;
+    // Real SEP spread (FRED): central tendency and full range of participants' projections.
+    for (const v of [pt.ct_low, pt.ct_high]) {
+      if (v != null) {
+        ctPoints.push({ x: idx, y: v });
+        ys.push(v);
+      }
     }
-
-    // Synthetic FOMC member spread (API has no per-member dots): cluster above Fed median.
-    const fomcOffsets = [0.1, 0.18, 0.26, 0.34];
-    fomcOffsets.forEach((dy, j) => {
-      fomcMembers.push({ x: idx + (j - 1.5) * 0.08, y: fed + dy });
-      ys.push(fed + dy);
-    });
-
-    const medOffsets = [-0.04, 0.02, 0.08];
-    medOffsets.forEach((dy, j) => {
-      fedMedian.push({ x: idx + (j - 1) * 0.07, y: fed + dy });
-      ys.push(fed + dy);
-    });
-
-    market.push({ x: idx, y: mkt });
-    ys.push(mkt);
+    for (const v of [pt.range_low, pt.range_high]) {
+      if (v != null) {
+        rangePoints.push({ x: idx, y: v });
+        ys.push(v);
+      }
+    }
+    if (pt.market != null) {
+      market.push({ x: idx + 0.06, y: pt.market });
+      ys.push(pt.market);
+    }
   });
 
   const rawLo = Math.min(...ys, 2.5);
@@ -85,7 +85,7 @@ function buildSeries(fomc: FomcDashboard): {
     hi = mid + 0.65;
   }
 
-  return { fomcMembers, fedMedian, market, yDomain: [lo, hi] };
+  return { ctPoints, rangePoints, fedMedian, market, xLabels, yDomain: [lo, hi] };
 }
 
 function DotShape({ cx, cy, fill, r = 4.5 }: { cx: number; cy: number; fill: string; r?: number }) {
@@ -106,14 +106,20 @@ export function FedRatePathDotPlot({
   /** True when the Fed status reports no rate inputs: the path is a fallback, not an observation. */
   inputsMissing?: boolean;
 }) {
-  const { fomcMembers, fedMedian, market, yDomain } = useMemo(() => buildSeries(fomc), [fomc]);
+  const { ctPoints, rangePoints, fedMedian, market, xLabels, yDomain } = useMemo(
+    () => buildSeries(fomc),
+    [fomc],
+  );
   // Recharts 3: root chart `data` drives axis ticks; per-Scatter `data` alone can leave ticks empty → blank chart.
   const chartData = useMemo(
-    () => [...fomcMembers, ...fedMedian, ...market],
-    [fomcMembers, fedMedian, market],
+    () => [...rangePoints, ...ctPoints, ...fedMedian, ...market],
+    [rangePoints, ctPoints, fedMedian, market],
   );
   const nowPt = fomc.rate_path.now;
-  const divBps = nowPt != null ? Math.round(Math.abs(nowPt.fed_median - nowPt.market) * 100) : null;
+  const divBps =
+    nowPt != null && nowPt.market != null
+      ? Math.round(Math.abs(nowPt.fed_median - nowPt.market) * 100)
+      : null;
   const showAlert = divBps != null && divBps >= 15;
 
   const blue = String(C.blue);
@@ -164,12 +170,12 @@ export function FedRatePathDotPlot({
             <XAxis
               type="number"
               dataKey="x"
-              domain={[-0.45, 4.45]}
-              ticks={[0, 1, 2, 3, 4]}
+              domain={[-0.45, Math.max(xLabels.length - 1, 1) + 0.45]}
+              ticks={xLabels.map((_, i) => i)}
               tick={{ fill: "var(--nd-muted)", fontSize: 11 }}
               tickLine={false}
               axisLine={{ stroke: "var(--nd-border-soft)" }}
-              tickFormatter={(v: number) => (Number.isInteger(v) && v >= 0 && v < X_LABELS.length ? X_LABELS[v] : "")}
+              tickFormatter={(v: number) => (Number.isInteger(v) && v >= 0 && v < xLabels.length ? xLabels[v] : "")}
             />
             <YAxis
               type="number"
@@ -203,8 +209,17 @@ export function FedRatePathDotPlot({
               formatter={(value) => <span style={{ color: "var(--nd-soft)" }}>{value}</span>}
             />
             <Scatter
-              name="FOMC members (illustrative)"
-              data={fomcMembers}
+              name="SEP range"
+              data={rangePoints}
+              fill={blue}
+              isAnimationActive={false}
+              shape={(props: { cx?: number; cy?: number }) => (
+                <DotShape cx={props.cx ?? 0} cy={props.cy ?? 0} fill="rgba(120,160,255,0.35)" r={3} />
+              )}
+            />
+            <Scatter
+              name="SEP central tendency"
+              data={ctPoints}
               fill={blue}
               isAnimationActive={false}
               shape={(props: { cx?: number; cy?: number }) => (

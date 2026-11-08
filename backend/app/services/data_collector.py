@@ -10,11 +10,12 @@ from app.config import get_settings
 from app.database import async_session
 from app.models.economic_calendar import SourceHealthMetric
 from app.models.factor import FactorReturn, SectorPerformance
-from app.models.fed_policy import BalanceSheet, FedRate
+from app.models.fed_policy import BalanceSheet, FedDocument, FedRate
 from app.models.indicator import Indicator, IndicatorValue
 from app.models.market_data import MarketData, YieldData
 from app.services.breadth_calculator import rebase_summation
 from app.services.data_sources import FredAdapter, SourceRouter, YahooAdapter
+from app.services.fed_documents import ingest_fed_documents
 from app.services.fed_press_service import backfill_fomc_signal_phrases
 from app.services.fred_client import (
     MARKET_SERIES,
@@ -307,6 +308,16 @@ class DataCollector:
                     logger.info("FOMC press excerpts backfilled: %s rows", n)
             except Exception:
                 logger.exception("FOMC signal phrase backfill failed")
+
+            try:
+                # Statements/minutes full text (newest first, bounded per run; backlog fills over days).
+                have_docs = await db.scalar(select(func.count()).select_from(FedDocument))
+                docs = await ingest_fed_documents(db, max_new=150 if not have_docs else 12)
+                if docs:
+                    logger.info("FOMC documents ingested: %s", docs)
+            except Exception:
+                await db.rollback()
+                logger.exception("FOMC document ingest failed")
 
             await db.commit()
         logger.info("Fed rate collection complete")
@@ -603,10 +614,21 @@ class DataCollector:
                     await db.execute(stmt)
 
             # Breadth indicators (MMTW, MMFI, MMTH, PCC, NYHGH, NYLOW)
-            breadth = self.yahoo.get_breadth_data(start=yahoo_start)
+            # Self-healing: with no stored history, load the full window once (first run after
+            # deploy); afterwards only the last days.
+            stored_breadth = await db.scalar(
+                select(func.count()).select_from(MarketData).where(MarketData.symbol == "MMTH")
+            )
+            full_breadth_load = (stored_breadth or 0) < 250
+            breadth = self.yahoo.get_breadth_data(start=None if full_breadth_load else yahoo_start)
             # NYSI is a running total: continue it from the last stored level instead of
             # restarting the sum at the window start (which would shift it every day).
-            if "NYSI" in breadth and "NYMO" in breadth and not breadth["NYMO"].empty:
+            if (
+                not full_breadth_load
+                and "NYSI" in breadth
+                and "NYMO" in breadth
+                and not breadth["NYMO"].empty
+            ):
                 first_day = breadth["NYMO"].index.min().date()
                 anchor = await db.scalar(
                     select(MarketData.value)
@@ -663,6 +685,19 @@ class DataCollector:
                         )
                     )
                     await db.execute(stmt)
+
+            # Monthly fed funds futures (ZQ_YYYYMM): market-implied policy path for the Fed page.
+            for symbol, series in self.yahoo.get_zq_curve().items():
+                for ts, val in series.items():
+                    d = ts.date() if hasattr(ts, "date") else ts
+                    await db.execute(
+                        pg_insert(MarketData)
+                        .values(date=d, symbol=symbol, value=float(val), change_pct=None)
+                        .on_conflict_do_update(
+                            constraint="uq_market_date_symbol",
+                            set_={"value": float(val)},
+                        )
+                    )
 
             # Full Yahoo history for macro symbols that only have ~14d from the loop above (IJH, BDIY, DBC, ZB_FUT).
             await self._backfill_sparse_yahoo_macro_symbols(
