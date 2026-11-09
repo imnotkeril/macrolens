@@ -22,7 +22,7 @@ from app.services.fred_client import (
     FredClient,
 )
 from app.services.news_ingestion import ingest_news
-from app.services.tone_scoring import score_pending
+from app.services.tone_scoring import FINBERT, FOMC, score_pending
 from app.services.yahoo_client import YAHOO_MACRO_ETFS, YahooClient
 
 logger = logging.getLogger(__name__)
@@ -334,8 +334,29 @@ class DataCollector:
     async def collect_tone_data(self):
         """Tone of new news (FinBERT) and FOMC documents (FOMC-RoBERTa), within a time budget."""
         async with async_session() as db:
-            done = await score_pending(db)
-        logger.info("Tone scored (items): %s", done)
+            run = await score_pending(db)
+            # Failures are otherwise only in container logs: surface them at /api/data/source-health.
+            for source, name, count in (
+                ("tone_finbert", FINBERT, run.news),
+                ("tone_fomc", FOMC, run.fed_documents),
+            ):
+                err = run.errors.get(name)
+                db.add(
+                    SourceHealthMetric(
+                        source=source,
+                        metric_name="items_scored",
+                        metric_value=float(count),
+                        status="error" if err else "ok",
+                        note=err,
+                    )
+                )
+            await db.commit()
+        logger.info(
+            "Tone scored: news=%s fed_documents=%s errors=%s",
+            run.news,
+            run.fed_documents,
+            run.errors,
+        )
 
     async def _load_historical_fed_data(self):
         async with async_session() as db:
