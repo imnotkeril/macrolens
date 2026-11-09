@@ -93,3 +93,8 @@ docs/
 
 # Playwright MCP local artifacts
 .playwright-mcp/
+
+# Internal agent/planning files (kept locally, not published)
+AGENTS.md
+CLAUDE.md
+HANDOFF.md
