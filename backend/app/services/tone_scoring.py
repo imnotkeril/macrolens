@@ -18,6 +18,7 @@ import logging
 import re
 import time
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from sqlalchemy import exists, select
@@ -48,6 +49,19 @@ _SANITY_HAWKISH = (
 _SANITY_DOVISH = (
     "The Committee decided to lower the target range to support a weakening labor market."
 )
+
+
+@dataclass
+class ToneRun:
+    """Outcome of one scoring run; `errors` maps model name -> short failure reason."""
+
+    news: int = 0
+    fed_documents: int = 0
+    errors: dict[str, str] = field(default_factory=dict)
+
+
+def _reason(exc: BaseException) -> str:
+    return f"{type(exc).__name__}: {exc}".replace("\n", " ")[:300]
 
 
 class Classifier(Protocol):
@@ -214,7 +228,7 @@ async def score_pending(
     max_news: int = 200,
     max_docs: int = 12,
     clock: Callable[[], float] = time.monotonic,
-) -> dict[str, int]:
+) -> ToneRun:
     """Score unscored news (FinBERT) and FOMC documents (FOMC-RoBERTa), newest first.
 
     Stops when the time budget is spent. A classifier that cannot load is skipped.
@@ -222,7 +236,7 @@ async def score_pending(
     settings = get_settings()
     budget = settings.tone_budget_seconds if budget_s is None else budget_s
     deadline = clock() + budget
-    done = {"news": 0, "fed_documents": 0}
+    run = ToneRun()
     token = settings.hf_token or None
 
     # --- news headlines
@@ -246,9 +260,10 @@ async def score_pending(
             for r, p in zip(chunk, probs, strict=True):
                 await _save(db, "news", r.id, FINBERT, finbert_result(p))
             await db.commit()
-            done["news"] += len(chunk)
-    except Exception:
+            run.news += len(chunk)
+    except Exception as exc:
         await db.rollback()
+        run.errors[FINBERT] = _reason(exc)
         logger.exception("FinBERT news scoring failed")
 
     # --- FOMC statements and minutes
@@ -264,6 +279,7 @@ async def score_pending(
         ).all()
         if docs and not await asyncio.to_thread(fomc_sanity_ok, fomc):
             logger.error("FOMC-RoBERTa sanity check failed; label mapping may be wrong: skipping")
+            run.errors[FOMC] = "sanity check failed: label mapping looks swapped; nothing stored"
             docs = []
         for d in docs:
             if clock() > deadline:
@@ -274,9 +290,10 @@ async def score_pending(
             probs = await asyncio.to_thread(fomc.classify, sentences)
             await _save(db, "fed_document", d.id, FOMC, aggregate_fomc(sentences, probs))
             await db.commit()
-            done["fed_documents"] += 1
-    except Exception:
+            run.fed_documents += 1
+    except Exception as exc:
         await db.rollback()
+        run.errors[FOMC] = _reason(exc)
         logger.exception("FOMC-RoBERTa scoring failed (gated model access or missing HF_TOKEN?)")
 
-    return done
+    return run
