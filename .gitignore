@@ -83,7 +83,9 @@ htmlcov/
 .cache/
 
 # Strategy / internal docs and plans (do not publish to GitHub)
-docs/
+docs/*
+!docs/USER_GUIDE.md
+!docs/DEPLOY.md
 
 # Cursor / IDE plans
 .cursor/
