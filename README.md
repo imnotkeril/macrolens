@@ -6,9 +6,9 @@ confirmation, Forecast Lab diagnostics, and report-ready market intelligence.
 <p align="center">
   <a href="https://macrolenz.vercel.app/dashboard"><strong>Live demo</strong></a>
   &nbsp;·&nbsp;
-  <a href="DEPLOY.md">Deploy</a>
+  <a href="docs/DEPLOY.md">Deploy</a>
   &nbsp;·&nbsp;
-  <a href="USER_GUIDE.md">User guide</a>
+  <a href="docs/USER_GUIDE.md">User guide</a>
   &nbsp;·&nbsp;
   <a href="llms.txt">API reference (llms.txt)</a>
 </p>
@@ -28,7 +28,7 @@ cross-asset signals, AI-assisted context, and Forecast Lab model artifacts into 
 dashboard for macro trading decisions.
 
 Production (as configured by the owner): web on Vercel, API on Hugging Face Spaces, Postgres on
-Supabase. See [DEPLOY.md](DEPLOY.md) for the hosting setup.
+Supabase. See [DEPLOY.md](docs/DEPLOY.md) for the hosting setup.
 
 ---
 
@@ -258,9 +258,9 @@ frontend/
 llms.txt                          API reference in Markdown (102 operations)
 docker-compose.yml                dev stack: db, redis, backend (reload), frontend (dev server)
 docker-compose.prod.yml           production overlay (required secrets, restart policies, standalone frontend)
-compose-up.ps1                    Windows helper: docker compose up --build with BuildKit provenance off
+scripts/compose-up.ps1                   Windows helper: docker compose up --build with BuildKit provenance off
 .env.example                      compose and shared variables (copy to .env in the root)
-USER_GUIDE.md, DEPLOY.md          user guide and deployment runbook
+docs/USER_GUIDE.md, docs/DEPLOY.md        user guide and deployment runbook
 ```
 
 ---
@@ -337,7 +337,7 @@ for local runs. Variables never have a value committed in this README; secrets g
 | Variable | Default | Purpose |
 |---|---|---|
 | `PROJECT_ROOT` | `.` | Project path for Compose bind mounts |
-| `POSTGRES_PASSWORD` | empty | Postgres password. Dev default `macrolens_secret`; required by the prod overlay. Applies only when the volume is first created (see [DEPLOY.md](DEPLOY.md)) |
+| `POSTGRES_PASSWORD` | empty | Postgres password. Dev default `macrolens_secret`; required by the prod overlay. Applies only when the volume is first created (see [DEPLOY.md](docs/DEPLOY.md)) |
 | `REDIS_PASSWORD` | empty | Redis password; required by the prod overlay |
 | `FRONTEND_BIND` | `127.0.0.1` | Host address for the frontend port (`0.0.0.0` only behind a firewall) |
 | `FRED_API_KEY` | empty | FRED API key for macro series |
@@ -519,14 +519,14 @@ not serverless.
 
 Self-hosting on one machine is also supported: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`
 (needs `POSTGRES_PASSWORD`, `REDIS_PASSWORD` and `ADMIN_API_KEY` in `.env`). Step-by-step instructions
-are in **[DEPLOY.md](DEPLOY.md)**.
+are in **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
 ---
 
 ## Documentation
 
-- **[USER_GUIDE.md](USER_GUIDE.md)**: pages, workflows, data notes and troubleshooting
-- **[DEPLOY.md](DEPLOY.md)**: deployment runbook and self-hosting
+- **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**: pages, workflows, data notes and troubleshooting
+- **[docs/DEPLOY.md](docs/DEPLOY.md)**: deployment runbook and self-hosting
 - **[backend/README.md](backend/README.md)**: backend layout, migrations, scheduler jobs
 - **[llms.txt](llms.txt)**: API reference in Markdown, all 102 operations
 - Interactive API docs on a running backend: `/docs` (Swagger UI) and `/openapi.json`
