@@ -36,6 +36,10 @@ logging.basicConfig(
     stream=sys.stdout,
     force=True,
 )
+# HTTP client loggers print full request URLs at INFO, and several data APIs (Finnhub,
+# Marketaux, FRED) take the API key as a query parameter: keep keys out of the container logs.
+for _noisy in ("httpx", "httpx2", "httpcore"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
 
 try:
     from app.api import ml
