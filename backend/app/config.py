@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     # News aggregators (free keys); empty = that source is skipped.
     finnhub_api_key: str = ""
     marketaux_api_key: str = ""
+    # Tone scoring (nightly): HF read token for the gated FOMC-RoBERTa model, time budget per run.
+    hf_token: str = ""
+    tone_budget_seconds: int = 480
 
     # CORS: comma-separated allowed origins. Dev default = localhost; prod must set the
     # frontend origin (e.g. https://macrolens.vercel.app). "*" allows all (disables credentials).

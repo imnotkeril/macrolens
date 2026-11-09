@@ -17,6 +17,7 @@ from app.api import (
     navigator,
     news,
     regime,
+    tone,
     yield_curve,
 )
 from app.config import get_settings
@@ -135,6 +136,7 @@ app.include_router(calendar.router, prefix="/api/calendar", tags=["Calendar"])
 app.include_router(calendar_canary.router, prefix="/api/calendar-canary", tags=["Calendar Canary"])
 app.include_router(market.router, prefix="/api/market", tags=["Market"])
 app.include_router(news.router, prefix="/api/news", tags=["News"])
+app.include_router(tone.router, prefix="/api/tone", tags=["Tone"])
 app.include_router(regime.router, prefix="/api/regime", tags=["Regime"])
 app.include_router(data.router, prefix="/api/data", tags=["Data"])
 if _ml_available and ml is not None:

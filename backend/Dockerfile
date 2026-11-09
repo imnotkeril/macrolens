@@ -17,8 +17,10 @@ RUN apt-get update \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY requirements.txt requirements-tone.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+# Tone models (CPU only): torch from the CPU wheel index, then transformers.
+RUN pip install --no-cache-dir "torch>=2.4,<3" --index-url https://download.pytorch.org/whl/cpu     && pip install --no-cache-dir -r requirements-tone.txt
 
 COPY . .
 

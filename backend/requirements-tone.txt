@@ -1,0 +1,4 @@
+# Tone scoring (nightly job). Installed only in the Docker image, NOT in CI: the code imports
+# torch/transformers lazily and tests use fake classifiers. torch comes from the CPU index
+# (see Dockerfile), because the default Linux wheel pulls ~2 GB of CUDA libraries.
+transformers>=4.46,<6

@@ -133,7 +133,7 @@ async def _run_refresh_pipeline() -> None:
 
 async def _run_refresh_locked() -> None:
     init_refresh_progress()
-    total_steps = 9  # 8 collectors + alert_checks
+    total_steps = 10  # 9 collectors + alert_checks
 
     async with _refresh_lock:
         collector = DataCollector()
@@ -220,6 +220,7 @@ async def _run_refresh_locked() -> None:
             ("balance_sheet", collector.collect_balance_sheet),
             ("regime", collector.collect_regime_data),
             ("news", collector.collect_news_data),
+            ("tone", collector.collect_tone_data),
         ]
 
         for i, (name, fn) in enumerate(steps):
@@ -244,15 +245,15 @@ async def _run_refresh_locked() -> None:
             phase="alert_checks",
             percent=(len(steps) / total_steps) * 100.0,
             message="Running alert checks…",
-            log_line="[89%] Starting alert_checks…",
+            log_line="[90%] Starting alert_checks…",
         )
         try:
             await run_alert_checks()
-            set_refresh_progress(log_line="[89%] alert_checks completed.")
+            set_refresh_progress(log_line="[90%] alert_checks completed.")
         except Exception as e:
             logger.exception("Alert checks failed during refresh")
             errors.append(f"alert_checks: {str(e)}")
-            set_refresh_progress(log_line=f"[89%] alert_checks failed: {e}")
+            set_refresh_progress(log_line=f"[90%] alert_checks failed: {e}")
 
         set_refresh_progress(
             percent=100.0,
