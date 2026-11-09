@@ -4,7 +4,7 @@
 confirmation, Forecast Lab diagnostics, and report-ready market intelligence.
 
 <p align="center">
-  <a href="https://macrolens-terminal.vercel.app/dashboard"><strong>Live app</strong></a>
+  <a href="https://macrolenz.vercel.app/dashboard"><strong>Live demo</strong></a>
   &nbsp;·&nbsp;
   <a href="DEPLOY.md">Deploy</a>
   &nbsp;·&nbsp;
@@ -547,7 +547,7 @@ are in **[DEPLOY.md](DEPLOY.md)**.
 
 ## License
 
-Proprietary: Copyright (c) 2026 imnotkeril. All rights reserved. The source is viewable for reference
+**Proprietary, not open source.** Copyright (c) 2026 imnotkeril. All rights reserved. The source is viewable for reference
 only; use, copying, modification or redistribution requires written permission. See [LICENSE](LICENSE).
 
 ---
