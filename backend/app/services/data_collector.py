@@ -23,7 +23,13 @@ from app.services.fred_client import (
 )
 from app.services.news_ingestion import ingest_news
 from app.services.tone_scoring import FINBERT, FOMC, score_pending
-from app.services.yahoo_client import YAHOO_MACRO_ETFS, YahooClient
+from app.services.yahoo_client import (
+    YAHOO_EXTRA,
+    YAHOO_INDEX_SERIES,
+    YAHOO_MACRO_ETFS,
+    YAHOO_MARKET_SERIES,
+    YahooClient,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -553,6 +559,24 @@ class DataCollector:
             await db.commit()
         logger.info("Regime data collection complete")
 
+    async def _upsert_market_series(self, db, series_map: dict[str, pd.Series]) -> None:
+        """Upsert Yahoo daily series into market_data (value + day-over-day change)."""
+        for symbol, series in series_map.items():
+            for i, (ts, val) in enumerate(series.items()):
+                d = ts.date() if hasattr(ts, "date") else ts
+                change = None
+                if i > 0:
+                    prev = float(series.iloc[i - 1])
+                    change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
+                await db.execute(
+                    pg_insert(MarketData)
+                    .values(date=d, symbol=symbol, value=float(val), change_pct=change)
+                    .on_conflict_do_update(
+                        constraint="uq_market_date_symbol",
+                        set_={"value": float(val), "change_pct": change},
+                    )
+                )
+
     async def collect_daily_market_data(self):
         if not self.fred.is_configured:
             return
@@ -650,6 +674,36 @@ class DataCollector:
                     await db.execute(stmt)
 
             # Breadth indicators (MMTW, MMFI, MMTH, PCC, NYHGH, NYLOW)
+            # Commodities/BTC, equity indices and MOVE were only ever loaded by the one-off
+            # historical backfill and froze there; keep them current in the daily run too.
+            for loader, symbols in (
+                (self.yahoo.get_market_data, YAHOO_MARKET_SERIES),
+                (self.yahoo.get_index_data, YAHOO_INDEX_SERIES),
+                (self.yahoo.get_extra_data, YAHOO_EXTRA),
+            ):
+                try:
+                    # Self-healing gap fill: start from the oldest stored "last day" of the group
+                    # when it is older than the usual 14-day window (e.g. after months of staleness).
+                    last_days = (
+                        (
+                            await db.execute(
+                                select(func.max(MarketData.date))
+                                .where(MarketData.symbol.in_(list(symbols)))
+                                .group_by(MarketData.symbol)
+                            )
+                        )
+                        .scalars()
+                        .all()
+                    )
+                    start_from = yahoo_start
+                    if last_days:
+                        start_from = min(
+                            yahoo_start, (min(last_days) - timedelta(days=3)).isoformat()
+                        )
+                    await self._upsert_market_series(db, loader(start=start_from))
+                except Exception:
+                    logger.exception("Daily Yahoo refresh failed for %s", loader.__name__)
+
             # Self-healing: with no stored history, load the full window once (first run after
             # deploy); afterwards only the last days.
             stored_breadth = await db.scalar(
