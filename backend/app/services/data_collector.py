@@ -23,7 +23,13 @@ from app.services.fred_client import (
 )
 from app.services.news_ingestion import ingest_news
 from app.services.tone_scoring import FINBERT, FOMC, score_pending
-from app.services.yahoo_client import YAHOO_MACRO_ETFS, YahooClient
+from app.services.yahoo_client import (
+    YAHOO_EXTRA,
+    YAHOO_INDEX_SERIES,
+    YAHOO_MACRO_ETFS,
+    YAHOO_MARKET_SERIES,
+    YahooClient,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -670,13 +676,31 @@ class DataCollector:
             # Breadth indicators (MMTW, MMFI, MMTH, PCC, NYHGH, NYLOW)
             # Commodities/BTC, equity indices and MOVE were only ever loaded by the one-off
             # historical backfill and froze there; keep them current in the daily run too.
-            for loader in (
-                self.yahoo.get_market_data,
-                self.yahoo.get_index_data,
-                self.yahoo.get_extra_data,
+            for loader, symbols in (
+                (self.yahoo.get_market_data, YAHOO_MARKET_SERIES),
+                (self.yahoo.get_index_data, YAHOO_INDEX_SERIES),
+                (self.yahoo.get_extra_data, YAHOO_EXTRA),
             ):
                 try:
-                    await self._upsert_market_series(db, loader(start=yahoo_start))
+                    # Self-healing gap fill: start from the oldest stored "last day" of the group
+                    # when it is older than the usual 14-day window (e.g. after months of staleness).
+                    last_days = (
+                        (
+                            await db.execute(
+                                select(func.max(MarketData.date))
+                                .where(MarketData.symbol.in_(list(symbols)))
+                                .group_by(MarketData.symbol)
+                            )
+                        )
+                        .scalars()
+                        .all()
+                    )
+                    start_from = yahoo_start
+                    if last_days:
+                        start_from = min(
+                            yahoo_start, (min(last_days) - timedelta(days=3)).isoformat()
+                        )
+                    await self._upsert_market_series(db, loader(start=start_from))
                 except Exception:
                     logger.exception("Daily Yahoo refresh failed for %s", loader.__name__)
 
