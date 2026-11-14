@@ -249,7 +249,7 @@ export function NextMacroRatiosScreen({
 
   const ismOrdersInvQ = useQuery({
     queryKey: [NEXT_MACRO_RATIOS_ROOT, "ratio-ism-no-invt", FETCH_DAYS],
-    queryFn: () => getMarketRatios("ISM_NO", "ISM_INVT", FETCH_DAYS),
+    queryFn: () => getMarketSeries("MFG_NEW_ORDERS", FETCH_DAYS),
     staleTime: 120_000,
   });
 
@@ -268,7 +268,7 @@ export function NextMacroRatiosScreen({
       out.push({ label: "Consumer credit (credit impulse)", message: String(consumerCreditQ.error) });
     if (commodityBondsQ.isError)
       out.push({ label: "DBC/ZB commodity vs bonds", message: String(commodityBondsQ.error) });
-    if (ismOrdersInvQ.isError) out.push({ label: "ISM orders/inventories", message: String(ismOrdersInvQ.error) });
+    if (ismOrdersInvQ.isError) out.push({ label: "Regional new orders", message: String(ismOrdersInvQ.error) });
     return out;
   }, [
     macroQ.isError,
@@ -555,7 +555,7 @@ export function NextMacroRatiosScreen({
                     rows={page2Series?.inflation ?? []}
                     lineColor={String(C.purple)}
                     valueLabel="TIP/IEF"
-                    formatY={(v) => v.toFixed(2)}
+                    formatY={(v) => v.toFixed(1)}
                     references={[]}
                   />
                   <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
@@ -574,7 +574,7 @@ export function NextMacroRatiosScreen({
                     rows={page2Series?.realYield ?? []}
                     lineColor={String(C.blue)}
                     valueLabel="Real yield"
-                    formatY={(v) => v.toFixed(2)}
+                    formatY={(v) => v.toFixed(1)}
                     references={[]}
                   />
                   <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
@@ -612,7 +612,7 @@ export function NextMacroRatiosScreen({
                     rows={page2Series?.fwdFed ?? []}
                     lineColor={String(C.green)}
                     valueLabel="Fwd Fed"
-                    formatY={(v) => v.toFixed(2)}
+                    formatY={(v) => v.toFixed(1)}
                     references={[]}
                   />
                   <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
@@ -701,15 +701,15 @@ export function NextMacroRatiosScreen({
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="US leading economic index"
-                  subtitle="Monthly · Conference Board LEI (USSLIND)"
-                  hint="Macro overview LEI series from MarketData."
+                  title="US leading index (MacroLens composite)"
+                  subtitle="Monthly · LEI-style composite of live FRED series"
+                  hint="Conference Board-style composite (yield curve, claims, permits, sentiment, credit spread, regional manufacturing, S&P 500); the official LEI series stopped in 2020."
                 />
                 <div className="flex min-h-0 flex-1 flex-col">
                   <LineMetricChart
                     rows={page2Series?.usLei ?? []}
                     lineColor={String(C.blue)}
-                    valueLabel="US LEI"
+                    valueLabel="Leading index"
                     formatY={(v) => v.toFixed(1)}
                     references={[]}
                   />
@@ -758,20 +758,20 @@ export function NextMacroRatiosScreen({
               </div>
               <div className={chartCard} style={panel}>
                 <MacroRatioCardHeader
-                  title="ISM new orders / inventories"
-                  subtitle="Monthly · NAPMNO / NAPMII (FRED)"
-                  hint="FRED NAPMNO / NAPMII (ISM manufacturing new orders / inventories diffusion indices)."
+                  title="Regional manufacturing new orders"
+                  subtitle="Monthly · Philly + Empire State Fed average (FRED)"
+                  hint="Average of the Philadelphia and New York Fed manufacturing new-orders diffusion indices (0 = neutral). The ISM series is not freely available."
                 />
                 <div className="flex min-h-0 flex-1 flex-col">
                   <LineMetricChart
                     rows={page2Series?.ismOrdersInv ?? []}
                     lineColor={String(C.purple)}
-                    valueLabel="NO/Inv"
-                    formatY={(v) => v.toFixed(2)}
+                    valueLabel="New orders"
+                    formatY={(v) => v.toFixed(1)}
                     references={[]}
                   />
                   <p className="mt-1 shrink-0 text-[11px] leading-snug" style={{ color: "var(--nd-muted)" }}>
-                    Rising = expansion ahead · Falling = inventory buildup / slowdown.
+                    Above 0 = expanding orders · below 0 = contracting.
                   </p>
                 </div>
               </div>

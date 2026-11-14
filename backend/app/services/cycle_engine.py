@@ -32,6 +32,7 @@ from app.schemas.regime import (
     RegimeSnapshot,
     TacticalAllocationRow,
 )
+from app.services.regime_composites import mfg_status
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ CYCLE_WEIGHTS = {
 }
 
 CYCLE_LABELS = {
-    "ism_new_orders": "ISM Manufacturing New Orders",
+    "ism_new_orders": "Durable goods orders (proxy)",
     "yield_curve_10y2y": "Yield Curve 10Y-2Y",
     "lei_6m_change": "LEI 6M Change",
     "payrolls_3m_avg": "Nonfarm Payrolls (3M Avg)",
@@ -328,7 +329,7 @@ class CycleEngine:
 
         result["ism_new_orders"] = await self._get_market_latest("ISM_NEW_ORDERS")
         result["yield_curve_10y2y"] = await self._get_yield_spread("10Y", "2Y")
-        result["lei_6m_change"] = await self._get_market_pct_change("LEI", 180)
+        result["lei_6m_change"] = await self._get_market_pct_change("LEI_PROXY", 180)
         result["payrolls_3m_avg"] = await self._get_payrolls_3m_change()
         result["gdp_gap"] = await self._get_gdp_gap()
         result["hy_spread"] = await self._get_market_latest("HY_SPREAD")
@@ -344,7 +345,7 @@ class CycleEngine:
         result = {}
         result["ism_new_orders"] = await self._get_market_at("ISM_NEW_ORDERS", target)
         result["yield_curve_10y2y"] = await self._get_yield_spread_at("10Y", "2Y", target)
-        result["lei_6m_change"] = await self._get_market_pct_change_at("LEI", 180, target)
+        result["lei_6m_change"] = await self._get_market_pct_change_at("LEI_PROXY", 180, target)
         result["payrolls_3m_avg"] = await self._get_payrolls_3m_change_at(target)
         result["gdp_gap"] = await self._get_gdp_gap_at(target)
         result["hy_spread"] = await self._get_market_at("HY_SPREAD", target)
@@ -563,7 +564,7 @@ class CycleEngine:
             norm["yield_curve_10y2y"] = 0.0
 
         if raw["lei_6m_change"] is not None:
-            all_lei = await self._get_market_series("LEI")
+            all_lei = await self._get_market_series("LEI_PROXY")
             if len(all_lei) >= 7:
                 pct_changes = [
                     (
@@ -669,7 +670,9 @@ class CycleEngine:
                 )
                 series = [g - 2.0 for g in all_gdp]
             elif key == "lei_6m_change":
-                all_lei = await self._get_market_series_before("LEI", target, days=lookback_days)
+                all_lei = await self._get_market_series_before(
+                    "LEI_PROXY", target, days=lookback_days
+                )
                 series = []
                 for i in range(6, len(all_lei)):
                     prev = all_lei[max(0, i - 6)]
@@ -868,21 +871,23 @@ class CycleEngine:
         else:
             signals.append(self._na_signal("Yield Curve 10Y-2Y", "< 0 bps = inversion"))
 
-        # 2. ISM Manufacturing PMI
-        ism = await self._get_market_latest("ISM_PMI")
+        # 2. Regional manufacturing survey (Philly + Empire State Fed; no free ISM PMI exists)
+        ism = await self._get_market_latest("MFG_SURVEY")
         if ism is not None:
-            status = "red" if ism < 50 else ("yellow" if ism < 52 else "green")
+            status = mfg_status(ism)
             signals.append(
                 PhaseTransitionSignal(
-                    name="ISM Manufacturing PMI",
-                    current_value=f"{ism:.1f}",
-                    threshold="< 50 = contraction",
+                    name="Manufacturing survey (Philly+Empire Fed)",
+                    current_value=f"{ism:+.1f}",
+                    threshold="< 0 = contraction",
                     status=status,
-                    description="Below 50 signals manufacturing contraction",
+                    description="Average of regional Fed manufacturing diffusion indices; below 0 signals contraction",
                 )
             )
         else:
-            signals.append(self._na_signal("ISM Manufacturing PMI", "< 50 = contraction"))
+            signals.append(
+                self._na_signal("Manufacturing survey (Philly+Empire Fed)", "< 0 = contraction")
+            )
 
         # 3. Initial Jobless Claims (4W avg); stored value is weekly count (persons)
         claims = await self._get_indicator_latest("Initial Jobless Claims")
@@ -907,15 +912,17 @@ class CycleEngine:
             status = "red" if lei_6m < -4 else ("yellow" if lei_6m < -2 else "green")
             signals.append(
                 PhaseTransitionSignal(
-                    name="Leading Economic Index (6M)",
+                    name="Leading index, MacroLens composite (6M)",
                     current_value=f"{lei_6m:+.1f}%",
                     threshold="< -4% = recession signal",
                     status=status,
-                    description="Sustained decline in LEI precedes economic downturns",
+                    description="Sustained decline in the leading composite precedes downturns",
                 )
             )
         else:
-            signals.append(self._na_signal("Leading Economic Index (6M)", "< -4% = recession"))
+            signals.append(
+                self._na_signal("Leading index, MacroLens composite (6M)", "< -4% = recession")
+            )
 
         # 5. HY Credit Spread
         hy = raw.get("hy_spread")

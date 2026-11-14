@@ -464,7 +464,7 @@ class MarketService:
         taiex = await self._raw_market("TAIEX", cutoff)
 
         ipo = await self._raw_market("IPO_ETF", cutoff)
-        lei = await self._raw_market("LEI", cutoff)
+        lei = await self._raw_market("LEI_PROXY", cutoff)
         cnlei = await self._raw_market("CNLEI", cutoff)
 
         # ── Page 3: Risk Appetite & Relative Performance ──
