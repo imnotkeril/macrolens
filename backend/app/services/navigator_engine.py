@@ -814,8 +814,6 @@ class NavigatorEngine:
 
     async def get_recession_check(self) -> RecessionCheck:
         """Eight-slot recession checklist: rows always returned; use N/A when data is missing."""
-        from app.models.indicator import Indicator, IndicatorValue
-
         items: list[RecessionCheckItem] = []
 
         # 1. 2Y10Y curve
@@ -833,53 +831,36 @@ class NavigatorEngine:
             )
         )
 
-        # 2. ISM Manufacturing PMI (3 consecutive < 50)
+        # 2. Regional manufacturing survey (Philly + Empire State Fed; 3 consecutive < 0).
+        # There is no free ISM PMI, and the old OECD proxy was never on the 50 scale.
         ism_triggered = False
         ism_str = "N/A"
         ism_as_of: str | None = None
-        ind_q = select(Indicator).where(Indicator.name == "ISM Manufacturing PMI")
-        ind = (await self.db.execute(ind_q)).scalar_one_or_none()
-        if ind:
-            val_q = (
-                select(IndicatorValue)
-                .where(IndicatorValue.indicator_id == ind.id)
-                .order_by(desc(IndicatorValue.date))
-                .limit(3)
-            )
-            vals = (await self.db.execute(val_q)).scalars().all()
-            if vals:
-                ism_str = f"{vals[0].value:.1f}"
-                ism_as_of = vals[0].date.isoformat()
-                ism_triggered = all(v.value < 50 for v in vals)
-        else:
-            ism_row_q = (
-                select(MarketData.value, MarketData.date)
-                .where(MarketData.symbol == "ISM_PMI")
-                .order_by(desc(MarketData.date))
-                .limit(3)
-            )
-            ism_rows = (await self.db.execute(ism_row_q)).all()
-            if len(ism_rows) >= 3:
-                ism_str = f"{float(ism_rows[0][0]):.1f}"
-                ism_as_of = ism_rows[0][1].isoformat()
-                ism_triggered = all(float(r[0]) < 50 for r in ism_rows)
-            elif ism_rows:
-                ism_str = f"{float(ism_rows[0][0]):.1f}"
-                ism_as_of = ism_rows[0][1].isoformat()
+        ism_row_q = (
+            select(MarketData.value, MarketData.date)
+            .where(MarketData.symbol == "MFG_SURVEY")
+            .order_by(desc(MarketData.date))
+            .limit(3)
+        )
+        ism_rows = (await self.db.execute(ism_row_q)).all()
+        if ism_rows:
+            ism_str = f"{float(ism_rows[0][0]):+.1f}"
+            ism_as_of = ism_rows[0][1].isoformat()
+            ism_triggered = len(ism_rows) >= 3 and all(float(r[0]) < 0 for r in ism_rows)
         items.append(
             RecessionCheckItem(
-                name="ISM Manufacturing PMI",
+                name="Manufacturing survey (Philly+Empire Fed)",
                 triggered=ism_triggered,
                 current_value=ism_str,
-                threshold="< 50 for 3 consecutive months",
-                description="Recession signal from ISM Manufacturing PMI",
+                threshold="< 0 for 3 consecutive months",
+                description="Recession signal from the regional Fed manufacturing surveys",
                 data_as_of=ism_as_of,
             )
         )
 
         # 3. LEI (level vs ~6 months ago)
-        lei_cur, lei_d = await self._latest_market_row("LEI")
-        lei_prev = await self._get_market_n_days_ago("LEI", 180)
+        lei_cur, lei_d = await self._latest_market_row("LEI_PROXY")
+        lei_prev = await self._get_market_n_days_ago("LEI_PROXY", 180)
         if lei_cur is not None and lei_prev is not None:
             lei_declining = lei_cur < lei_prev
             lei_note = f"{lei_cur:.2f}"
@@ -890,11 +871,11 @@ class NavigatorEngine:
             lei_as_of = lei_d.isoformat() if lei_d else None
         items.append(
             RecessionCheckItem(
-                name="Leading Economic Index",
+                name="Leading index (MacroLens composite)",
                 triggered=lei_declining,
                 current_value=lei_note,
                 threshold="declining vs 6 months ago",
-                description="Sustained decline in LEI precedes economic downturns",
+                description="Sustained decline in the leading composite precedes downturns",
                 data_as_of=lei_as_of,
             )
         )

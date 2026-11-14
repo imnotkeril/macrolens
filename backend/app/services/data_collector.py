@@ -22,6 +22,7 @@ from app.services.fred_client import (
     FredClient,
 )
 from app.services.news_ingestion import ingest_news
+from app.services.regime_composites import build_regime_composites
 from app.services.tone_scoring import FINBERT, FOMC, score_pending
 from app.services.yahoo_client import (
     YAHOO_EXTRA,
@@ -32,6 +33,20 @@ from app.services.yahoo_client import (
 )
 
 logger = logging.getLogger(__name__)
+
+# FRED inputs of the regime composites (regime_composites.py).
+REGIME_COMPOSITE_INPUTS = {
+    "PHILLY_MFG": "GACDFSA066MSFRBPHI",
+    "EMPIRE_MFG": "GACDISA066MSFRBNY",
+    "PHILLY_NO": "NOCDFSA066MSFRBPHI",
+    "EMPIRE_NO": "NOCDISA066MSFRBNY",
+    "T10Y3M": "T10Y3M",
+    "ICSA": "ICSA",
+    "PERMIT": "PERMIT",
+    "UMCSENT": "UMCSENT",
+    "HY_SPREAD": "BAMLH0A0HYM2",
+    "SP500": "SP500",
+}
 
 
 class DataCollector:
@@ -577,6 +592,48 @@ class DataCollector:
                     )
                 )
 
+    async def collect_regime_composites(self):
+        """Live replacements for dead regime inputs (see regime_composites.py): regional
+        manufacturing survey, its new-orders average and the LEI-style composite."""
+        if not self.fred.is_configured:
+            return
+        raw: dict[str, pd.Series] = {}
+        for name, series_id in REGIME_COMPOSITE_INPUTS.items():
+            try:
+                raw[name] = self.fred.get_series(series_id, start="2004-01-01")
+            except Exception:
+                logger.warning("Composite input %s (%s) unavailable", name, series_id)
+        composites = build_regime_composites(raw)
+        cutoff = pd.Timestamp("2010-01-01")
+        async with async_session() as db:
+            for symbol, series in composites.items():
+                series = series[series.index >= cutoff]
+                for i, (ts, val) in enumerate(series.items()):
+                    change = None
+                    if i > 0:
+                        prev = float(series.iloc[i - 1])
+                        change = ((float(val) - prev) / abs(prev)) * 100 if prev != 0 else None
+                    await db.execute(
+                        pg_insert(MarketData)
+                        .values(
+                            date=ts.date(),
+                            symbol=symbol,
+                            value=float(val),
+                            change_pct=change,
+                            source="macrolens_composite",
+                        )
+                        .on_conflict_do_update(
+                            constraint="uq_market_date_symbol",
+                            set_={
+                                "value": float(val),
+                                "change_pct": change,
+                                "source": "macrolens_composite",
+                            },
+                        )
+                    )
+            await db.commit()
+        logger.info("Regime composites stored: %s", {k: len(v) for k, v in composites.items()})
+
     async def collect_daily_market_data(self):
         if not self.fred.is_configured:
             return
@@ -842,7 +899,7 @@ class DataCollector:
             # Ensure sparse legacy/context series are backfilled at least once.
             await self._backfill_sparse_market_series(
                 db=db,
-                symbols=("TERM_PREMIUM_10Y", "TED_SPREAD", "ISM_NO", "ISM_INVT"),
+                symbols=("TERM_PREMIUM_10Y", "TED_SPREAD"),
                 min_points=120,
             )
 
