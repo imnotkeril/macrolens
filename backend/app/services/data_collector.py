@@ -553,6 +553,24 @@ class DataCollector:
             await db.commit()
         logger.info("Regime data collection complete")
 
+    async def _upsert_market_series(self, db, series_map: dict[str, pd.Series]) -> None:
+        """Upsert Yahoo daily series into market_data (value + day-over-day change)."""
+        for symbol, series in series_map.items():
+            for i, (ts, val) in enumerate(series.items()):
+                d = ts.date() if hasattr(ts, "date") else ts
+                change = None
+                if i > 0:
+                    prev = float(series.iloc[i - 1])
+                    change = ((float(val) - prev) / prev) * 100 if prev != 0 else None
+                await db.execute(
+                    pg_insert(MarketData)
+                    .values(date=d, symbol=symbol, value=float(val), change_pct=change)
+                    .on_conflict_do_update(
+                        constraint="uq_market_date_symbol",
+                        set_={"value": float(val), "change_pct": change},
+                    )
+                )
+
     async def collect_daily_market_data(self):
         if not self.fred.is_configured:
             return
@@ -650,6 +668,18 @@ class DataCollector:
                     await db.execute(stmt)
 
             # Breadth indicators (MMTW, MMFI, MMTH, PCC, NYHGH, NYLOW)
+            # Commodities/BTC, equity indices and MOVE were only ever loaded by the one-off
+            # historical backfill and froze there; keep them current in the daily run too.
+            for loader in (
+                self.yahoo.get_market_data,
+                self.yahoo.get_index_data,
+                self.yahoo.get_extra_data,
+            ):
+                try:
+                    await self._upsert_market_series(db, loader(start=yahoo_start))
+                except Exception:
+                    logger.exception("Daily Yahoo refresh failed for %s", loader.__name__)
+
             # Self-healing: with no stored history, load the full window once (first run after
             # deploy); afterwards only the last days.
             stored_breadth = await db.scalar(
