@@ -15,11 +15,12 @@ MAX_AGE_DAYS = {"daily": 8, "weekly": 14, "monthly": 75}
 # Frequency of the series collected by the daily market job (symbol -> frequency).
 SERIES_FREQUENCY = {
     "WTI_OIL": "daily",
-    "DXY": "daily",
+    # Daily series that FRED publishes about a week late (updated Mon/Tue): weekly tolerance.
+    "DXY": "weekly",
     "VIX": "daily",
     "SP500": "daily",
     "RRP": "daily",
-    "TERM_PREMIUM_10Y": "daily",
+    "TERM_PREMIUM_10Y": "weekly",
     "TGA": "weekly",
     "COPPER": "monthly",
     "USREC": "monthly",

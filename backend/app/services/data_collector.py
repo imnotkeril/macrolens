@@ -643,7 +643,10 @@ class DataCollector:
 
         async with async_session() as db:
             start = (date.today() - timedelta(days=14)).isoformat()
-            market, market_source = self.market_router.fetch_market_data(start=start)
+            # Monthly FRED series (COPPER) are dated the 1st of the month and published weeks
+            # later: a 14-day window never contains a new point, so fetch a longer FRED window.
+            fred_start = (date.today() - timedelta(days=120)).isoformat()
+            market, market_source = self.market_router.fetch_market_data(start=fred_start)
             fx, fx_source = self.market_router.fetch_fx_data(start=start)
             # FRED H.10 lags ~1 week: fill the days after its last observation from Yahoo daily
             # closes (FRED overwrites them once it catches up).
