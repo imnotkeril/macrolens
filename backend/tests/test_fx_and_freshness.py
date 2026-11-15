@@ -56,3 +56,10 @@ def test_weekend_bars_from_secondary_are_dropped():
     yahoo = _s([1.11, 1.12, 1.13, 1.14], "2026-11-13")  # Fri, Sat, Sun, Mon
     out = fill_recent_from_secondary(fred, yahoo)
     assert list(out.index.strftime("%a")) == ["Thu", "Fri", "Mon"]
+
+
+def test_lagged_daily_fred_series_are_not_flagged_during_the_weekly_lag():
+    today = date(2026, 11, 15)  # FRED last obs 2026-11-06, updated 2026-11-09/10
+    assert not is_stale("DXY", date(2026, 11, 6), today)
+    assert not is_stale("TERM_PREMIUM_10Y", date(2026, 11, 6), today)
+    assert is_stale("DXY", date(2026, 10, 25), today)  # three weeks: really stale
