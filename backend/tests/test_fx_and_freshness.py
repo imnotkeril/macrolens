@@ -11,10 +11,10 @@ def _s(values, start):
 
 
 def test_yahoo_fills_only_days_after_fred_last_observation():
-    fred = _s([1.10, 1.11], "2026-11-05")  # 5th, 6th
-    yahoo = _s([9.0, 9.0, 1.12, 1.13], "2026-11-05")  # 5th..8th (older days must NOT replace FRED)
+    fred = _s([1.10, 1.11], "2026-11-09")  # Mon, Tue
+    yahoo = _s([9.0, 9.0, 1.12, 1.13], "2026-11-09")  # Mon..Thu (older days must NOT replace FRED)
     out = fill_recent_from_secondary(fred, yahoo)
-    assert list(out.index.strftime("%d")) == ["05", "06", "07", "08"]
+    assert list(out.index.strftime("%d")) == ["09", "10", "11", "12"]
     assert list(out.values) == [1.10, 1.11, 1.12, 1.13]
 
 
