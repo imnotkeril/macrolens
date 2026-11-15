@@ -32,7 +32,7 @@ from app.schemas.regime import (
     RegimeSnapshot,
     TacticalAllocationRow,
 )
-from app.services.regime_composites import mfg_status
+from app.services.regime_composites import hy_spread_bps, mfg_status
 
 logger = logging.getLogger(__name__)
 
@@ -823,6 +823,7 @@ class CycleEngine:
         sahm = await self._get_market_latest("SAHM_RULE")
         lei_6m = raw.get("lei_6m_change")
         hy = raw.get("hy_spread")
+        hy = hy_spread_bps(hy) if hy is not None else None
         prob_c = self._recession_prob_3factor(sahm, lei_6m, hy)
 
         models = [
@@ -927,6 +928,7 @@ class CycleEngine:
         # 5. HY Credit Spread
         hy = raw.get("hy_spread")
         if hy is not None:
+            hy = hy_spread_bps(hy)
             status = "red" if hy > 500 else ("yellow" if hy > 400 else "green")
             signals.append(
                 PhaseTransitionSignal(

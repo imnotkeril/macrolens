@@ -48,6 +48,12 @@ def symmetric_pct_change(series: pd.Series) -> pd.Series:
     return 200.0 * (series - prev) / (series + prev)
 
 
+def hy_spread_bps(value: float) -> float:
+    """HY OAS in basis points. FRED (BAMLH0A0HYM2) stores percent (3.2 = 320 bps); engine
+    thresholds are in bps. Values below 30 cannot be bps for HY, so they are scaled."""
+    return value * 100.0 if value < 30 else value
+
+
 def mfg_status(value: float) -> str:
     """Traffic light for the regional manufacturing survey (0 = neutral)."""
     if value < 0:

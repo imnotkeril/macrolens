@@ -122,3 +122,10 @@ def test_build_regime_composites_survives_missing_inputs():
     )
     assert "LEI_PROXY" not in out or out["LEI_PROXY"].empty
     assert "MFG_SURVEY" not in out
+
+
+def test_hy_spread_bps_handles_percent_and_bps():
+    from app.services.regime_composites import hy_spread_bps
+
+    assert hy_spread_bps(3.2) == pytest.approx(320.0)  # FRED percent
+    assert hy_spread_bps(450.0) == 450.0  # already bps
