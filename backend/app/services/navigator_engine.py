@@ -43,6 +43,7 @@ from app.services.navigator_yield_expectations import (
     curve_pattern_matches_quadrant,
     expected_curve_patterns_for_quadrant,
 )
+from app.services.regime_composites import hy_spread_bps
 from app.services.trading_state_engine import build_trading_state
 from app.services.yield_analyzer import YieldAnalyzer
 
@@ -862,8 +863,9 @@ class NavigatorEngine:
         lei_cur, lei_d = await self._latest_market_row("LEI_PROXY")
         lei_prev = await self._get_market_n_days_ago("LEI_PROXY", 180)
         if lei_cur is not None and lei_prev is not None:
-            lei_declining = lei_cur < lei_prev
-            lei_note = f"{lei_cur:.2f}"
+            lei_change = (lei_cur / lei_prev - 1.0) * 100.0 if lei_prev else 0.0
+            lei_declining = lei_change < -2.0
+            lei_note = f"{lei_cur:.1f} ({lei_change:+.1f}% 6M)"
             lei_as_of = lei_d.isoformat() if lei_d else None
         else:
             lei_declining = False
@@ -874,7 +876,7 @@ class NavigatorEngine:
                 name="Leading index (MacroLens composite)",
                 triggered=lei_declining,
                 current_value=lei_note,
-                threshold="declining vs 6 months ago",
+                threshold="down more than 2% vs 6 months ago",
                 description="Sustained decline in the leading composite precedes downturns",
                 data_as_of=lei_as_of,
             )
@@ -882,13 +884,14 @@ class NavigatorEngine:
 
         # 4. HY spread / OAS
         hy, hy_key, hy_d = await self._latest_hy_market()
+        hy = hy_spread_bps(hy) if hy is not None else None
         hy_triggered = hy >= 500.0 if hy is not None else False
         items.append(
             RecessionCheckItem(
                 name=f"High Yield ({hy_key})",
                 triggered=hy_triggered,
-                current_value=f"{hy:.1f}" if hy is not None else "N/A",
-                threshold=">= 500 (proxy for stress)",
+                current_value=f"{hy:.0f} bps" if hy is not None else "N/A",
+                threshold=">= 500 bps (proxy for stress)",
                 description="Elevated HY OAS / spread indicates credit stress",
                 data_as_of=hy_d.isoformat() if hy_d else None,
             )
