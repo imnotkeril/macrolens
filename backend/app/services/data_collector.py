@@ -18,11 +18,14 @@ from app.services.data_sources import FredAdapter, SourceRouter, YahooAdapter
 from app.services.fed_documents import ingest_fed_documents
 from app.services.fed_press_service import backfill_fomc_signal_phrases
 from app.services.fred_client import (
+    FX_SERIES,
     MARKET_SERIES,
     FredClient,
 )
+from app.services.fx_merge import fill_recent_from_secondary
 from app.services.news_ingestion import ingest_news
 from app.services.regime_composites import build_regime_composites
+from app.services.series_freshness import SERIES_FREQUENCY, stale_report
 from app.services.tone_scoring import FINBERT, FOMC, score_pending
 from app.services.yahoo_client import (
     YAHOO_EXTRA,
@@ -642,6 +645,17 @@ class DataCollector:
             start = (date.today() - timedelta(days=14)).isoformat()
             market, market_source = self.market_router.fetch_market_data(start=start)
             fx, fx_source = self.market_router.fetch_fx_data(start=start)
+            # FRED H.10 lags ~1 week: fill the days after its last observation from Yahoo daily
+            # closes (FRED overwrites them once it catches up).
+            try:
+                yahoo_fx = self.yahoo.get_fx_data(start=start)
+            except Exception:
+                logger.exception("Yahoo FX overlay failed")
+                yahoo_fx = {}
+            for fx_symbol in FX_SERIES:
+                merged = fill_recent_from_secondary(fx.get(fx_symbol), yahoo_fx.get(fx_symbol))
+                if not merged.empty:
+                    fx[fx_symbol] = merged
             market.update(fx)
 
             for symbol, series in market.items():
@@ -903,11 +917,7 @@ class DataCollector:
                 min_points=120,
             )
 
-            await self._write_source_health_metrics(
-                db=db,
-                source_name=market_source,
-                market=market,
-            )
+            await self._write_source_health_metrics(db=db, source_name=market_source)
             await db.commit()
         logger.info("Daily market data collection complete")
 
@@ -1329,29 +1339,27 @@ class DataCollector:
             return "outlier"
         return "ok"
 
-    async def _write_source_health_metrics(
-        self,
-        db,
-        source_name: str,
-        market: dict[str, pd.Series],
-    ) -> None:
-        total = len(market)
-        stale = 0
-        for series in market.values():
-            if series.empty:
-                stale += 1
-                continue
-            last_ts = series.index.max()
-            last_d = last_ts.date() if hasattr(last_ts, "date") else last_ts
-            if (date.today() - last_d).days > 5:
-                stale += 1
+    async def _write_source_health_metrics(self, db, source_name: str) -> None:
+        """Share of daily-market series whose latest stored day is older than their release
+        frequency allows (see series_freshness.py); the note names the stale ones."""
+        rows = (
+            await db.execute(
+                select(MarketData.symbol, func.max(MarketData.date))
+                .where(MarketData.symbol.in_(list(SERIES_FREQUENCY)))
+                .group_by(MarketData.symbol)
+            )
+        ).all()
+        last_obs: dict[str, date | None] = {sym: None for sym in SERIES_FREQUENCY}
+        last_obs.update({sym: d for sym, d in rows})
+        stale, total, names = stale_report(last_obs, date.today())
         ratio = (stale / total) if total else 1.0
-        status = "ok" if ratio < 0.2 else "degraded"
-        metric = SourceHealthMetric(
-            source=source_name,
-            metric_name="stale_series_ratio",
-            metric_value=float(ratio),
-            status=status,
-            note=f"stale={stale}, total={total}",
+        db.add(
+            SourceHealthMetric(
+                source=source_name,
+                metric_name="stale_series_ratio",
+                metric_value=float(ratio),
+                status="ok" if ratio < 0.2 else "degraded",
+                note=f"stale={stale}, total={total}"
+                + (f": {', '.join(names)}" if names else "")[:400],
+            )
         )
-        db.add(metric)

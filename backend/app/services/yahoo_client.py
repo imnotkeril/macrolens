@@ -45,6 +45,17 @@ YAHOO_FACTOR_ETFS = {
     "EFA": "EFA",
 }
 
+# Daily FX closes; same quote conventions as the FRED H.10 series (USD per EUR/GBP/AUD,
+# JPY/CAD/CHF per USD).
+YAHOO_FX_SERIES = {
+    "EURUSD": "EURUSD=X",
+    "USDJPY": "JPY=X",
+    "GBPUSD": "GBPUSD=X",
+    "USDCAD": "CAD=X",
+    "AUDUSD": "AUDUSD=X",
+    "USDCHF": "CHF=X",
+}
+
 YAHOO_EXTRA = {
     "MOVE": "^MOVE",
 }
@@ -162,6 +173,15 @@ class YahooClient:
                 result[name] = self.get_series(symbol, start=start)
             except Exception:
                 logger.warning("Could not fetch factor ETF %s (%s)", name, symbol)
+        return result
+
+    def get_fx_data(self, start: str | None = None) -> dict[str, pd.Series]:
+        result = {}
+        for name, symbol in YAHOO_FX_SERIES.items():
+            try:
+                result[name] = self.get_series(symbol, start=start)
+            except Exception:
+                logger.warning("Could not fetch Yahoo FX %s (%s)", name, symbol)
         return result
 
     def get_extra_data(self, start: str | None = None) -> dict[str, pd.Series]:
