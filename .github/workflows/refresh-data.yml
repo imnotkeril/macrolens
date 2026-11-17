@@ -98,6 +98,15 @@ jobs:
           done
           echo "timed out waiting for refresh"; exit 1
 
+      - name: Materialize Forecast Lab regime history
+        # The monthly regime table is not part of the refresh itself; without this it stops at
+        # whatever month it was last built. Re-building the last 6 months is idempotent.
+        run: |
+          from=$(date -u -d '6 months ago' +%Y-%m-01)
+          curl -s -o /dev/null --max-time 280 -w "materialize %{http_code} %{time_total}s\n" \
+            -X POST -H "X-API-Key: $ADMIN_API_KEY" \
+            "$BACKEND_URL/api/forecast-lab/regime-history/materialize?date_from=$from" || true
+
       - name: Warm the API cache
         # Refresh clears the response cache; prime the heavy dashboard endpoints so the first
         # visitor does not pay the cold-query cost. Failures here never fail the job.
