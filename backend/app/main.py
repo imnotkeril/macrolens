@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 from contextlib import asynccontextmanager
@@ -28,6 +29,7 @@ from app.security import SecurityMiddleware
 from app.services.indicator_analyzer import IndicatorAnalyzer
 from app.services.memory_bootstrap import bootstrap_memory_schemas
 from app.tasks.scheduler import shutdown_scheduler, start_scheduler
+from app.warmup import warm_caches
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +98,9 @@ async def lifespan(app: FastAPI):
         logger.exception("Failed to compute startup analytics")
 
     start_scheduler()
+    warm_task = asyncio.create_task(warm_caches(app))
     yield
+    warm_task.cancel()
     shutdown_scheduler()
     await engine.dispose()
 

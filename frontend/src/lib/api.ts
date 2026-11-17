@@ -192,6 +192,26 @@ export const getInflationSeries = (name: string, transform = "yoy", days = 365 *
 export const getInflationLatest = () =>
   fetchJSON<InflationLatest[]>("/api/indicators/inflation-latest");
 
+// News (RSS + Finnhub + Marketaux + GDELT) with FinBERT tone
+export interface LiveNewsItem {
+  id: number;
+  source: string;
+  title: string;
+  summary: string | null;
+  url: string;
+  published_at: string;
+  topic: string | null;
+  tone: { label: string; score: number } | null;
+}
+
+export const getNews = (params: { days?: number; limit?: number; topic?: string } = {}) => {
+  const q = new URLSearchParams();
+  q.set("days", String(params.days ?? 7));
+  q.set("limit", String(params.limit ?? 100));
+  if (params.topic) q.set("topic", params.topic);
+  return fetchJSON<LiveNewsItem[]>(`/api/news?${q.toString()}`);
+};
+
 // Regime / Cycle Radar
 export const getRegimeCurrent = () =>
   fetchJSON<import("@/types").RegimeSnapshot>("/api/regime/current");

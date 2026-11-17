@@ -48,5 +48,11 @@ def fresh(key: str, ttl: float) -> Any | None:
     return None
 
 
+def stale(key: str) -> Any | None:
+    """Cached value of any age (None if never computed): a degraded answer beats an empty one."""
+    hit = _store.get(key)
+    return hit[1] if hit else None
+
+
 def put(key: str, value: Any) -> None:
     _store[key] = (time.monotonic(), value)

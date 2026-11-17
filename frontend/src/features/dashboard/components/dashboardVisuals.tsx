@@ -227,7 +227,16 @@ export function QuickRow({
           <div className={`${titleSize} uppercase tracking-[0.06em]`} style={{ color: C.text }}>{label}</div>
           <div className={`mt-1 ${subSize} uppercase`} style={{ color: C.soft }}>{sub ?? (format === "percent" ? "composite" : "z-score")}</div>
         </div>
-        <div className={`${valueSize} leading-none tabular-nums whitespace-nowrap`}>{deltaDisplay}{value == null ? null : <> <span style={{ color: deltaColor }}>{deltaArrow}</span></>}</div>
+        <div className={`${valueSize} leading-none tabular-nums whitespace-nowrap`}>
+          {display}
+          {value == null ? null : (
+            <>
+              {" "}
+              <span style={{ color: deltaColor }}>{deltaArrow}</span>
+              <span className="ml-1 text-[11px]" style={{ color: C.soft }} title="Change vs previous observation">{deltaDisplay}</span>
+            </>
+          )}
+        </div>
       </div>
       <div className="relative h-[6px] w-full max-w-none rounded" style={{ background: C.border }}>
         <div className="h-[6px] rounded" style={{ width: value == null ? 0 : `${ratio * 100}%`, background: gradient ?? C.green }} />
@@ -288,8 +297,14 @@ export function InflationQuickRow({
           <div className="mt-1 text-[11px] uppercase" style={{ color: C.soft }}>CPI YoY</div>
         </div>
         <div className="text-right text-[18px] leading-none tabular-nums">
-          {cpiValue == null ? "—" : displayDelta.value}
-          {cpiValue == null ? null : <> <span style={{ color: displayDelta.color }}>{deltaArrow}</span></>}
+          {cpiValue == null ? "—" : cpiDisplay}
+          {cpiValue == null ? null : (
+            <>
+              {" "}
+              <span style={{ color: displayDelta.color }}>{deltaArrow}</span>
+              <span className="ml-1 text-[11px]" style={{ color: C.soft }} title="Change vs previous month">{displayDelta.value}</span>
+            </>
+          )}
         </div>
       </div>
       <div className="relative h-[6px] w-full max-w-none rounded" style={{ background: C.border }}>

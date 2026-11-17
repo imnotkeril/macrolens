@@ -26,7 +26,7 @@ CACHEABLE_PREFIXES = (
     "/api/news",
     "/api/tone/",
 )
-TTL_SECONDS = 600.0
+TTL_SECONDS = 3600.0  # refresh clears the cache, so data is never older than the last run
 MAX_BODY_BYTES = 4_000_000
 MAX_ENTRIES = 400  # bounds memory if clients vary query strings
 _KEY_PREFIX = "http:"

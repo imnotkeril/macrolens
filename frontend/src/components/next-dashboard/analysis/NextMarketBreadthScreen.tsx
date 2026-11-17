@@ -302,26 +302,6 @@ export function NextMarketBreadthScreen({ omitShell = false }: { omitShell?: boo
 
               <div className={`${chartCard}`} style={panel}>
                 <ChartCardHeader
-                  title="Put/call ratio"
-                  subtitle="Daily · PCC"
-                  hint="CBOE equity put/call ratio. &gt; 1.2 = extreme fear (contrarian bullish); &lt; 0.7 = complacency."
-                />
-                <div className="flex min-h-0 flex-1 flex-col">
-                <LineMetricChart
-                  rows={prepared.pcc}
-                  lineColor={String(C.blue)}
-                  valueLabel="PCC"
-                  formatY={(n) => n.toFixed(2)}
-                  references={[
-                    { y: 1.2, stroke: String(C.green), label: "1.2 fear" },
-                    { y: 0.7, stroke: String(C.red), label: "0.7 greed" },
-                  ]}
-                />
-                </div>
-              </div>
-
-              <div className={`${chartCard}`} style={panel}>
-                <ChartCardHeader
                   title="VIX"
                   subtitle="Daily"
                   hint="Implied volatility index. &gt; 30 panic; ~20 elevated; &lt; 15 low vol."
