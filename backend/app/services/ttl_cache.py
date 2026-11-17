@@ -11,6 +11,10 @@ _store: dict[str, tuple[float, Any]] = {}
 _locks: dict[str, asyncio.Lock] = {}
 
 
+def size() -> int:
+    return len(_store)
+
+
 def clear() -> None:
     _store.clear()
     _locks.clear()

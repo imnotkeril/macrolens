@@ -62,3 +62,17 @@ jobs:
             if [ $rc -eq 1 ]; then exit 1; fi
           done
           echo "timed out waiting for refresh"; exit 1
+
+      - name: Warm the API cache
+        # Refresh clears the response cache; prime the heavy dashboard endpoints so the first
+        # visitor does not pay the cold-query cost. Failures here never fail the job.
+        run: |
+          for p in regime/current regime/history navigator/current navigator/forward \
+            navigator/signals navigator/recession-check fed/current fed/fomc-dashboard \
+            fed/dot-plot indicators/kpi-bundle indicators/categories indicators/inflation-dashboard \
+            yield-curve/current yield-curve/spreads yield-curve/dynamics \
+            market/macro-overview market/cross-asset-radar market/breadth market/rates-dashboard \
+            market/sectors-dashboard market/currency-dashboard market/sentiment-dashboard \
+            market/indices-dashboard market/net-liquidity news; do
+            curl -s -o /dev/null --max-time 90 -w "$p %{http_code} %{time_total}s\n" "$BACKEND_URL/api/$p" || true
+          done

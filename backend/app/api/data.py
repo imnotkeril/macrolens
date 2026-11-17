@@ -8,6 +8,7 @@ from app.config import get_settings
 from app.database import async_session
 from app.models.economic_calendar import SourceHealthMetric
 from app.models.indicator import Indicator
+from app.services import ttl_cache
 from app.services.data_collector import DataCollector
 from app.services.progress_store import (
     get_refresh_progress,
@@ -256,6 +257,8 @@ async def _run_refresh_locked() -> None:
             errors.append(f"alert_checks: {str(e)}")
             set_refresh_progress(log_line=f"[91%] alert_checks failed: {e}")
 
+        # New data landed: drop cached API responses so pages show it immediately.
+        ttl_cache.clear()
         set_refresh_progress(
             percent=100.0,
             message="Refresh completed." if not errors else "Refresh completed with errors.",

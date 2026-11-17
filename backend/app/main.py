@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 import app.models  # noqa: F401 - register all ORM tables for create_all
 from app.api import (
@@ -22,6 +23,7 @@ from app.api import (
 )
 from app.config import get_settings
 from app.database import Base, async_session, engine
+from app.response_cache import ResponseCacheMiddleware
 from app.security import SecurityMiddleware
 from app.services.indicator_analyzer import IndicatorAnalyzer
 from app.services.memory_bootstrap import bootstrap_memory_schemas
@@ -111,6 +113,8 @@ app = FastAPI(
 _cors_origins = [o.strip() for o in get_settings().cors_allow_origins.split(",") if o.strip()]
 _allow_all = _cors_origins == ["*"]
 # Added before CORS so CORS stays outermost and error responses from the guard carry CORS headers.
+# Innermost: cached responses are replayed after rate limiting / CORS / security headers.
+app.add_middleware(ResponseCacheMiddleware)
 app.add_middleware(SecurityMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -129,6 +133,10 @@ async def security_headers(request: Request, call_next):
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     return response
+
+
+# Outermost: dashboards return up to ~1 MB of JSON, which compresses ~10x.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 
 app.include_router(indicators.router, prefix="/api/indicators", tags=["Indicators"])
