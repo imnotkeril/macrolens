@@ -26,10 +26,10 @@ from app.config import get_settings
 from app.database import Base, async_session, engine
 from app.response_cache import ResponseCacheMiddleware
 from app.security import SecurityMiddleware
-from app.warmup import warm_caches
 from app.services.indicator_analyzer import IndicatorAnalyzer
 from app.services.memory_bootstrap import bootstrap_memory_schemas
 from app.tasks.scheduler import shutdown_scheduler, start_scheduler
+from app.warmup import warm_caches
 
 logger = logging.getLogger(__name__)
 
