@@ -4,8 +4,8 @@ from app.warmup import WARMUP_PATHS
 
 
 def test_warmup_paths_are_real_get_routes():
-    routes = {r.path for r in app.routes if "GET" in getattr(r, "methods", set())}
-    missing = [p for p in WARMUP_PATHS if p not in routes]
+    paths = app.openapi()["paths"]
+    missing = [p for p in WARMUP_PATHS if "get" not in paths.get(p, {})]
     assert not missing
 
 
