@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/screenshots/social-preview.png" alt="MacroLens: macro trading terminal" width="100%"></p>
+
 # MacroLens
 
 **Macro trading terminal** for regime analysis, Fed policy, yield curves, inflation, cross-asset
@@ -16,6 +18,7 @@ confirmation, Forecast Lab diagnostics, and report-ready market intelligence.
 <p align="center">
   <a href="https://github.com/imnotkeril/macrolens/actions/workflows/ci.yml"><img src="https://github.com/imnotkeril/macrolens/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Proprietary-red.svg" alt="License: Proprietary"></a>
+  <img src="https://img.shields.io/badge/tests-59%20passed-brightgreen" alt="Tests: 59 passed">
   <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white" alt="Python 3.12">
   <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" alt="FastAPI"></a>
   <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white" alt="Next.js 16"></a>
@@ -58,13 +61,12 @@ Supabase. See [DEPLOY.md](docs/DEPLOY.md) for the hosting setup.
 
 ## Screenshots
 
-Captured from the local stack on 2026-11-02 (real FRED and market data, 1440×900).
+Captured from the [live demo](https://macrolenz.vercel.app/dashboard) on 2026-11-17 (real FRED and market data, 1440×900).
 
-| | |
-|---|---|
-| **Dashboard and Navigator**<br><img src="assets/screenshots/dashboard.png" alt="Dashboard" width="480"> | **Cycle Radar**<br><img src="assets/screenshots/radar.png" alt="Radar" width="480"> |
-| **Yield Curve**<br><img src="assets/screenshots/yield-curve.png" alt="Yield curve" width="480"> | **Fed Policy**<br><img src="assets/screenshots/fed-policy.png" alt="Fed policy" width="480"> |
-| **Forecast Lab**<br><img src="assets/screenshots/forecast-lab.png" alt="Forecast Lab" width="480"> | |
+| | | |
+|---|---|---|
+| <a href="assets/screenshots/dashboard.png"><img src="assets/screenshots/dashboard.png" alt="MacroLens dashboard with macro navigator, cross-asset signals and active regime" width="100%"></a><br><sub>Dashboard and Navigator</sub> | <a href="assets/screenshots/radar.png"><img src="assets/screenshots/radar.png" alt="Cycle Radar with cycle score, recession probability and checklist" width="100%"></a><br><sub>Cycle Radar</sub> | <a href="assets/screenshots/yield-curve.png"><img src="assets/screenshots/yield-curve.png" alt="Yield curve snapshot, dynamics and percentile table" width="100%"></a><br><sub>Yield Curve</sub> |
+| <a href="assets/screenshots/fed-policy.png"><img src="assets/screenshots/fed-policy.png" alt="Fed policy score, FOMC probabilities and balance sheet" width="100%"></a><br><sub>Fed Policy</sub> | <a href="assets/screenshots/forecast-lab.png"><img src="assets/screenshots/forecast-lab.png" alt="Forecast Lab regime ensemble, model weights and regime history" width="100%"></a><br><sub>Forecast Lab</sub> | <a href="assets/screenshots/inflation.png"><img src="assets/screenshots/inflation.png" alt="CPI, PCE and PPI charts with sticky vs headline inflation" width="100%"></a><br><sub>Inflation</sub> |
 
 ---
 
@@ -86,17 +88,14 @@ control in the UI (or `POST /api/data/refresh` with `X-API-Key`). Details: [Inst
 
 ## Architecture
 
-```text
-Browser ──> Next.js 16 (frontend, :3000)
-              │  rewrites /api/* (resolved at build time: BACKEND_URL / BACKEND_INTERNAL_URL)
-              v
-          FastAPI (backend, :8000) ── SecurityMiddleware (X-API-Key, rate limit, body limit)
-              │        │
-              │        └── APScheduler jobs: FRED / Yahoo / Fed / calendar ingestion, alerts, memory
-              v
-   PostgreSQL 16 (+ pgvector if present)      Redis 7 (cache)
-              ^
-   Forecast Lab artifacts (HMM + XGBoost bundle, backend/data/forecast_lab_artifacts)
+```mermaid
+flowchart TD
+    B[Browser] --> F["Next.js 16 frontend :3000"]
+    F -->|"rewrites /api/*"| API["FastAPI backend :8000<br/>SecurityMiddleware: X-API-Key, rate limit, body limit"]
+    API --> S["APScheduler jobs<br/>FRED, Yahoo, Fed, calendar ingestion, alerts, memory"]
+    API --> PG[("PostgreSQL 16<br/>+ pgvector if present")]
+    API --> R[("Redis 7 cache")]
+    API --> FL["Forecast Lab artifacts<br/>HMM + XGBoost bundle"]
 ```
 
 The backend owns all data and models; the frontend is a thin read-mostly client. Reads are public;
@@ -542,6 +541,12 @@ are in **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 - `/next/*` routes redirect to production routes (`next.config.js`).
 - The `.env` files, Postgres and Redis volumes and `backend/data` hold local state. Back up `pgdata`
   (the Postgres volume) before removing volumes.
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and checks, and [SECURITY.md](SECURITY.md) for private vulnerability reporting.
 
 ---
 
