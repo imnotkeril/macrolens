@@ -30,12 +30,18 @@ export function FedPolicyBalanceMetricsColumn({
           <FedPolicyCompactMetric
             label="QT pace"
             value={
-              bsMetrics.qtPaceMonthly != null && bsMetrics.qtPaceMonthly > 0
-                ? `$${(bsMetrics.qtPaceMonthly / 1e3).toFixed(0)}B/mo`
-                : "N/A"
+              bsMetrics.qtPaceMonthly == null
+                ? "N/A"
+                : bsMetrics.qtPaceMonthly > 0
+                  ? `$${(bsMetrics.qtPaceMonthly / 1e3).toFixed(0)}B/mo`
+                  : "Paused"
             }
             valueColor="var(--nd-text)"
-            sub="Recent slope"
+            sub={
+              bsMetrics.qtPaceMonthly != null && bsMetrics.qtPaceMonthly <= 0
+                ? `Balance sheet ${bsMetrics.qtPaceMonthly < 0 ? "growing" : "flat"} (recent slope)`
+                : "Recent slope"
+            }
           />
           <FedPolicyCompactMetric
             label="Treasuries"

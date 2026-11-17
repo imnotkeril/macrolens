@@ -145,12 +145,19 @@ export function NextFedPolicyScreen({ omitShell = false }: { omitShell?: boolean
     return sentiment.score <= -0.3 ? C.green : sentiment.score >= 0.3 ? C.red : C.yellow;
   }, [sentiment, C]);
 
+  // Freshest observation on the page: the last rate change can be months old, the balance sheet is weekly.
   const updatedAt = useMemo(() => {
-    if (status?.last_change_date) return formatDashboardAsOfLabel(status.last_change_date);
-    const d = rateHistQ.data?.[0]?.date;
-    if (d) return formatDashboardAsOfLabel(d);
+    const candidates = [
+      bsMetrics?.latestDate,
+      status?.last_change_date,
+      rateHistQ.data?.[0]?.date,
+    ].filter((d): d is string => Boolean(d));
+    if (candidates.length) {
+      const newest = candidates.reduce((a, b) => (a.slice(0, 10) >= b.slice(0, 10) ? a : b));
+      return formatDashboardAsOfLabel(newest);
+    }
     return statusQ.isPending ? "…" : "No data";
-  }, [status?.last_change_date, rateHistQ.data, statusQ.isPending]);
+  }, [bsMetrics?.latestDate, status?.last_change_date, rateHistQ.data, statusQ.isPending]);
 
   const queryErrors = useMemo(() => {
     const errs: Array<{ label: string; message: string }> = [];
