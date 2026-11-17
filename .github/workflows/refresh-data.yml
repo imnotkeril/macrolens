@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: "30 23 * * 1-5" # weekdays, after the US close (UTC)
   workflow_dispatch:
+    inputs:
+      backfill_years:
+        description: "Run a history backfill of N years before the refresh (heals gaps after outages); empty = skip"
+        required: false
+        default: ""
 
 jobs:
   refresh:
@@ -29,6 +34,36 @@ jobs:
             sleep 15
           done
           echo "Space did not wake up"; exit 1
+
+      - name: Backfill history (manual runs only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.backfill_years != '' }}
+        env:
+          YEARS: ${{ inputs.backfill_years }}
+        run: |
+          code=$(curl -s -o resp.txt -w '%{http_code}' --max-time 60 -X POST             -H "X-API-Key: $ADMIN_API_KEY" "$BACKEND_URL/api/data/backfill-history?years=$YEARS")
+          echo "backfill: $code"; cat resp.txt; echo
+          [ "$code" = "200" ] || exit 1
+          for i in $(seq 1 100); do
+            sleep 30
+            body=$(curl -s --max-time 30 "$BACKEND_URL/api/data/refresh-progress" || true)
+            rc=0
+            python3 - "$body" <<'EOF2' || rc=$?
+          import json, sys
+          try:
+              p = json.loads(sys.argv[1])
+          except Exception:
+              print("progress: unreadable, retrying"); sys.exit(2)
+          print(f"progress: {p.get('percent')}% {p.get('message')}")
+          if p.get("done"):
+              err = p.get("error")
+              if err:
+                  print("backfill finished with errors:", err)
+              sys.exit(0)
+          sys.exit(2)
+          EOF2
+            if [ $rc -eq 0 ]; then exit 0; fi
+          done
+          echo "timed out waiting for backfill"; exit 1
 
       - name: Start refresh
         run: |

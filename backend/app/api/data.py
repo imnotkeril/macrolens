@@ -41,16 +41,44 @@ async def backfill_history(
         description="Rolling window in years from today; omit to use HISTORICAL_YEARS from settings.",
     ),
 ):
-    """One-shot bulk load for the rolling window: all seeded indicators, yields, Fed, FX, market/regime/macro (FRED + Yahoo)."""
-    if _refresh_lock.locked():
-        raise HTTPException(status_code=409, detail="Another data job is already in progress")
+    """Start a bulk load of the rolling window in the background (indicators, yields, Fed, FX,
+    market/regime/macro from FRED + Yahoo). Idempotent, so it also heals gaps left by outages.
+    Poll GET /refresh-progress until done."""
+    global _refresh_background_task
+
     if not get_settings().fred_api_key:
         raise HTTPException(
             status_code=400,
             detail="FRED_API_KEY is not set; cannot run historical backfill.",
         )
-
     resolved = years if years is not None else get_settings().historical_years
+
+    async with _refresh_schedule_lock:
+        if _refresh_lock.locked() or (
+            _refresh_background_task is not None and not _refresh_background_task.done()
+        ):
+            raise HTTPException(status_code=409, detail="Another data job is already in progress")
+        _refresh_background_task = asyncio.create_task(_run_backfill(resolved))
+        _refresh_background_task.add_done_callback(_clear_refresh_task)
+
+    return {"status": "accepted", "historical_years": resolved, "errors": []}
+
+
+async def _run_backfill(resolved: int) -> None:
+    try:
+        await _run_backfill_locked(resolved)
+    except Exception as e:
+        logger.exception("Backfill crashed")
+        set_refresh_progress(
+            percent=100.0,
+            message="Backfill failed.",
+            log_line=f"[100%] Fatal error: {e}",
+            done=True,
+            error=str(e),
+        )
+
+
+async def _run_backfill_locked(resolved: int) -> None:
     init_refresh_progress()
 
     async with _refresh_lock:
@@ -102,6 +130,7 @@ async def backfill_history(
             errors.append(f"historical: {str(e)}")
             set_refresh_progress(log_line=f"[5%] Historical load failed: {e}", error=str(e))
 
+        ttl_cache.clear()
         set_refresh_progress(
             percent=100.0,
             message="Backfill completed." if not errors else "Backfill completed with errors.",
@@ -109,12 +138,6 @@ async def backfill_history(
             done=True,
             error="; ".join(errors) if errors else None,
         )
-
-    return {
-        "status": "completed" if not errors else "completed_with_errors",
-        "historical_years": resolved,
-        "errors": errors,
-    }
 
 
 async def _run_refresh_pipeline() -> None:
