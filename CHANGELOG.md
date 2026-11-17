@@ -5,7 +5,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 ## [Unreleased]
 
 ## [1.1.0] - 2026-11-03
-_Provisional version and date (best guess; the owner confirms at release; no tag created, package versions unchanged)._
+_Tagged as v1.1.0 (matches the package versions)._
 ### Security
 - Write, train, refresh and LLM endpoints now require `X-API-Key` (`ADMIN_API_KEY`); they answer 503 when no key is configured. Added per-IP rate limiting and a request body size limit.
 - Updated fastapi/starlette/python-dotenv and Next.js 16.4.3 (pip-audit and `npm audit --omit=dev` report no known vulnerabilities).
