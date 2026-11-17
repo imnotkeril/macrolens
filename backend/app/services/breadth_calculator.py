@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import io
 import logging
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -131,6 +131,11 @@ def compute_breadth(
     if volume is not None and not volume.empty:
         vol = volume.reindex(close.index).sum(axis=1, min_count=1).dropna()
         vol = vol[vol > 0]
+        # Yahoo returns the running volume of an unfinished session as today's bar; a
+        # partial day would plot as a collapse. US cash close is ~21:00 UTC.
+        now = datetime.now(UTC)
+        if not vol.empty and vol.index[-1].date() >= now.date() and now.hour < 22:
+            vol = vol.iloc[:-1]
         if not vol.empty:
             out["TVOL.US"] = vol
 

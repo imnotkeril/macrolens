@@ -9,12 +9,11 @@ import { useNextShellTheme } from "@/components/next-dashboard/nextShellTheme";
 import { useDataRefresh } from "@/lib/useDataRefresh";
 import { CalendarHubTopNav } from "@/components/next-dashboard/calendar/CalendarHubTopNav";
 
-/** Hub screens that still render static demo data (briefings, economic calendar, events explorer, news). */
+/** Hub screens that still render static demo data (briefings, economic calendar, events explorer). */
 const DEMO_DATA_PATHS = [
   "/calendar/briefings",
   "/calendar/economic-calendar",
   "/calendar/events",
-  "/calendar/news",
 ];
 
 export function NextCalendarHubLayout({ children }: { children: ReactNode }) {

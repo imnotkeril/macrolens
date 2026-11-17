@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # The recommendation reads many tables; against a remote database it must never hang the page.
-_CURRENT_TTL_S = 300.0
+# Data changes once a day and a refresh clears the cache, so keep the result for an hour.
+_CURRENT_TTL_S = 3600.0
 _CURRENT_BUDGET_S = 25.0
 _CURRENT_FAIL_TTL_S = 30.0
 
@@ -40,10 +41,11 @@ async def get_current_position():
     try:
         return await ttl_cache.cached(key, _CURRENT_TTL_S, _compute_current)
     except TimeoutError:
-        logger.warning("navigator/current exceeded %.0fs; returning empty state", _CURRENT_BUDGET_S)
-        empty = NavigatorEngine._empty_recommendation()
-        ttl_cache.put(key + ":fail", empty)
-        return empty
+        logger.warning("navigator/current exceeded %.0fs", _CURRENT_BUDGET_S)
+        # Last good answer (any age) beats an empty widget; only fall back to empty if none.
+        fallback = ttl_cache.stale(key) or NavigatorEngine._empty_recommendation()
+        ttl_cache.put(key + ":fail", fallback)
+        return fallback
 
 
 @router.get("/history")
