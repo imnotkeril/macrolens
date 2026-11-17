@@ -1,18 +1,15 @@
-<p align="center"><img src="assets/screenshots/social-preview.png" alt="MacroLens: macro trading terminal" width="100%"></p>
+<p align="center"><img src="assets/screenshots/social-preview.png" alt="MacroLens" width="900"></p>
 
-# MacroLens
-
-**Macro trading terminal** for regime analysis, Fed policy, yield curves, inflation, cross-asset
-confirmation, Forecast Lab diagnostics, and report-ready market intelligence.
+<h1 align="center">MacroLens</h1>
+<p align="center"><b>Macro trading terminal for regime analysis, Fed policy, yield curves and inflation</b><br>
+Cross-asset confirmation, Forecast Lab model diagnostics and report-ready market intelligence in one signal-first dashboard.</p>
 
 <p align="center">
-  <a href="https://macrolenz.vercel.app/dashboard"><strong>Live demo</strong></a>
-  &nbsp;·&nbsp;
-  <a href="docs/DEPLOY.md">Deploy</a>
-  &nbsp;·&nbsp;
-  <a href="docs/USER_GUIDE.md">User guide</a>
-  &nbsp;·&nbsp;
-  <a href="llms.txt">API reference (llms.txt)</a>
+  <a href="https://macrolenz.vercel.app/dashboard"><b>Live demo</b></a> &nbsp;·&nbsp;
+  <a href="#quick-start">Quickstart</a> &nbsp;·&nbsp;
+  <a href="docs/USER_GUIDE.md">Docs</a> &nbsp;·&nbsp;
+  <a href="llms.txt">API reference</a> &nbsp;·&nbsp;
+  <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 <p align="center">
@@ -26,12 +23,13 @@ confirmation, Forecast Lab diagnostics, and report-ready market intelligence.
   <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
 </p>
 
-MacroLens combines economic indicators, Fed policy, yield curve dynamics, inflation, market breadth,
-cross-asset signals, AI-assisted context, and Forecast Lab model artifacts into a signal-first
-dashboard for macro trading decisions.
+<p align="center">
+  <a href="https://macrolenz.vercel.app/dashboard"><img src="assets/screenshots/dashboard.png" alt="MacroLens dashboard: macro navigator, cross-asset signals and active regime" width="900"></a>
+</p>
 
-Production (as configured by the owner): web on Vercel, API on Hugging Face Spaces, Postgres on
-Supabase. See [DEPLOY.md](docs/DEPLOY.md) for the hosting setup.
+> MacroLens combines economic indicators, Fed policy, yield curve dynamics, inflation, market breadth, cross-asset signals, AI-assisted context and Forecast Lab model artifacts into one dashboard for macro trading decisions. Production setup: web on Vercel, API on Hugging Face Spaces, Postgres on Supabase (see [DEPLOY.md](docs/DEPLOY.md)).
+>
+> **Not investment advice.** Indicators and model output are research aids and can be wrong.
 
 ---
 
@@ -61,12 +59,20 @@ Supabase. See [DEPLOY.md](docs/DEPLOY.md) for the hosting setup.
 
 ## Screenshots
 
-Captured from the [live demo](https://macrolenz.vercel.app/dashboard) on 2026-11-17 (real FRED and market data, 1440×900).
+All shots are 1920x1080, taken from the [live demo](https://macrolenz.vercel.app/dashboard) on 2026-11-17 with real FRED and market data. The Reports page (a print-section picker) is not pictured.
 
-| | | |
-|---|---|---|
-| <a href="assets/screenshots/dashboard.png"><img src="assets/screenshots/dashboard.png" alt="MacroLens dashboard with macro navigator, cross-asset signals and active regime" width="100%"></a><br><sub>Dashboard and Navigator</sub> | <a href="assets/screenshots/radar.png"><img src="assets/screenshots/radar.png" alt="Cycle Radar with cycle score, recession probability and checklist" width="100%"></a><br><sub>Cycle Radar</sub> | <a href="assets/screenshots/yield-curve.png"><img src="assets/screenshots/yield-curve.png" alt="Yield curve snapshot, dynamics and percentile table" width="100%"></a><br><sub>Yield Curve</sub> |
-| <a href="assets/screenshots/fed-policy.png"><img src="assets/screenshots/fed-policy.png" alt="Fed policy score, FOMC probabilities and balance sheet" width="100%"></a><br><sub>Fed Policy</sub> | <a href="assets/screenshots/forecast-lab.png"><img src="assets/screenshots/forecast-lab.png" alt="Forecast Lab regime ensemble, model weights and regime history" width="100%"></a><br><sub>Forecast Lab</sub> | <a href="assets/screenshots/inflation.png"><img src="assets/screenshots/inflation.png" alt="CPI, PCE and PPI charts with sticky vs headline inflation" width="100%"></a><br><sub>Inflation</sub> |
+| | |
+|---|---|
+| ![MacroLens dashboard with macro navigator, cross-asset signals and active regime](assets/screenshots/dashboard.png) | ![Cycle Radar with cycle score, recession probability and checklist](assets/screenshots/radar.png) |
+| **Dashboard.** Macro navigator, cross-asset signals and the active regime at a glance | **Cycle Radar.** Cycle score, 12-month recession probability and the 8-point checklist |
+| ![Macro Sentiment page with composite score and Housing indicators](assets/screenshots/macro-sentiment.png) | ![Fed policy score, FOMC probabilities, rate path and balance sheet](assets/screenshots/fed-policy.png) |
+| **Macro Sentiment.** Composite score and FRED indicators by category, with z-scores | **Fed Policy.** Policy score, FOMC probabilities, rate path and balance sheet |
+| ![Yield curve snapshot, curve dynamics, spreads and percentile table](assets/screenshots/yield-curve.png) | ![CPI, PCE and PPI charts with sticky vs headline and breakevens](assets/screenshots/inflation.png) |
+| **Yield Curve.** Snapshot, curve dynamics, spreads and percentiles | **Inflation.** CPI, PCE and PPI with sticky vs headline, breakevens and components |
+| ![Analysis page: S&P 500 sectors, currency indices and sentiment groups](assets/screenshots/analysis.png) | ![Forecast Lab regime ensemble, model weights and regime history](assets/screenshots/forecast-lab.png) |
+| **Analysis.** Relative performance of S&P 500 sectors, currencies and sentiment groups | **Forecast Lab.** Regime ensemble, model weights, history and calibration |
+| ![News feed with tone scores per headline](assets/screenshots/calendar-news.png) | ![AI analysis of the latest FOMC minutes](assets/screenshots/calendar-fomc.png) |
+| **Calendar, News.** Scored headlines with tone, filtered by topic and period | **Calendar, FOMC minutes.** AI summary and key points of the latest meeting |
 
 ---
 
